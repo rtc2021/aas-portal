@@ -1,0 +1,68 @@
+[build]
+  publish = "."
+  command = "echo 'Static deploy'"
+
+[[redirects]]
+  from = "/favicon.svg"
+  to = "/public/favicon.svg"
+  status = 200
+
+[[redirects]]
+  from = "/auth.js"
+  to = "/public/auth.js"
+  status = 200
+
+# Tech routes
+[[redirects]]
+  from = "/tech/command"
+  to = "/tech/command/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/parts"
+  to = "/tech/parts/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/manuals"
+  to = "/tech/manuals/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/doors"
+  to = "/tech/doors/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/summary"
+  to = "/tech/summary/index.html"
+  status = 200
+
+# Customer routes
+[[redirects]]
+  from = "/customer/command"
+  to = "/customer/command/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/customer"
+  to = "/customer/command"
+  status = 302
+
+# Door routes
+[[redirects]]
+  from = "/door"
+  to = "/door/index.html"
+  status = 200
+
+# Service route (public)
+[[redirects]]
+  from = "/service"
+  to = "/service/index.html"
+  status = 200
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

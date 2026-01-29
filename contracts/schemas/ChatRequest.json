@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aas-portal.com/schemas/ChatRequest.json",
+  "title": "ChatRequest",
+  "description": "Request body for the /v1/chat endpoint",
+  "type": "object",
+  "required": ["message"],
+  "properties": {
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "User's message or question"
+    },
+    "context": {
+      "$ref": "#/definitions/PageContext",
+      "description": "Optional context from the current page"
+    },
+    "conversation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional conversation ID for multi-turn context"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["auto", "diagnose", "manual", "parts"],
+      "default": "auto",
+      "description": "Chat mode to optimize retrieval strategy"
+    }
+  },
+  "definitions": {
+    "PageContext": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "string",
+          "description": "Current page identifier"
+        },
+        "door_id": {
+          "type": "string",
+          "description": "Door ID if on a door-specific page"
+        },
+        "manufacturer": {
+          "type": "string",
+          "description": "Door manufacturer (e.g., Horton, Stanley)"
+        },
+        "model": {
+          "type": "string",
+          "description": "Door model (e.g., 4190, Dura-Glide)"
+        },
+        "door_type": {
+          "type": "string",
+          "description": "Door type (e.g., sliding, swing, folding)"
+        },
+        "controller": {
+          "type": "string",
+          "description": "Controller model if known"
+        },
+        "site_name": {
+          "type": "string",
+          "description": "Customer site name"
+        }
+      }
+    }
+  }
+}
