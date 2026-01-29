@@ -1,6 +1,6 @@
 [build]
   base = "portal"
-  command = "npm install @anthropic-ai/sdk @netlify/functions && npm run build"
+  command = "cd ../netlify/functions && npm install && cd ../../portal && npm run build"
   publish = "dist"
   functions = "../netlify/functions"
 
