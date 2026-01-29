@@ -1,5 +1,5 @@
 {
-  "name": "aas-portal-functions",
+  "name": "aas-copilot-functions",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {

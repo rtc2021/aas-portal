@@ -3,6 +3,7 @@
   command = "cd ../netlify/functions && npm install && cd ../../portal && npm run build"
   publish = "dist"
   functions = "../netlify/functions"
+  ignore = "exit 1"
 
 [functions]
   node_bundler = "esbuild"
