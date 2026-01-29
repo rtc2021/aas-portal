@@ -1,0 +1,51 @@
+[build]
+  base = "portal"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/door"
+  to = "/door/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/service"
+  to = "/service/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/command"
+  to = "/tech/command/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/parts"
+  to = "/tech/parts/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/doors"
+  to = "/tech/doors/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/manuals"
+  to = "/tech/manuals/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/summary"
+  to = "/tech/summary/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

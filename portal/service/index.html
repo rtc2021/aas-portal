@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Door Service • Automatic Access Solutions</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #050508;
+      --bg-glass: rgba(15, 15, 25, 0.85);
+      --bg-card: rgba(25, 25, 40, 0.7);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-glow: rgba(0, 212, 255, 0.4);
+      --text-primary: #f5f5fa;
+      --text-secondary: #a0a0b0;
+      --text-muted: #606070;
+      --accent-cyan: #00d4ff;
+      --accent-green: #22c55e;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --glow-cyan: 0 0 40px rgba(0, 212, 255, 0.25);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated Background */
+    .bg-effects {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-effects::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: 
+        radial-gradient(ellipse at 30% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 70%);
+      animation: bgPulse 15s ease-in-out infinite;
+    }
+    @keyframes bgPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+
+    /* Auth Overlay */
+    .auth-overlay { position: fixed; inset: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 48px; background: var(--bg-glass); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 24px; max-width: 420px; }
+    .auth-card img { height: 48px; margin-bottom: 24px; filter: drop-shadow(0 0 20px rgba(0,212,255,0.5)); }
+    .auth-title { font-size: 24px; font-weight: 700; margin: 0 0 8px; color: var(--text-primary); display: none; }
+    .auth-subtitle { color: var(--text-secondary); margin: 0 0 28px; font-size: 15px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, var(--accent-cyan), #0099cc); color: #0a0a0f; border: none; padding: 16px 40px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s; }
+    .auth-btn:hover { transform: translateY(-2px); box-shadow: var(--glow-cyan); }
+    .auth-spinner { width: 48px; height: 48px; border: 3px solid var(--border-subtle); border-top-color: var(--accent-cyan); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .page-content { display: none; position: relative; z-index: 1; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      padding: 24px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo {
+      height: 40px;
+      filter: drop-shadow(0 0 15px rgba(0,212,255,0.4));
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 40px;
+    }
+
+    /* Loading */
+    .loading-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+    .loading-state .spinner {
+      width: 56px; height: 56px;
+      border: 3px solid var(--border-subtle);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    /* Door Hero */
+    .door-hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .door-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 60px rgba(0, 212, 255, 0.3);
+      margin-bottom: 12px;
+      line-height: 1.1;
+    }
+
+    .door-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+    }
+    .door-type-badge svg { width: 16px; height: 16px; opacity: 0.7; }
+
+    /* Info Cards */
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      border-color: var(--border-glow);
+      box-shadow: var(--glow-cyan);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .card-icon {
+      width: 36px; height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 212, 255, 0.12);
+      border-radius: 10px;
+      color: var(--accent-cyan);
+    }
+    .card-icon svg { width: 18px; height: 18px; }
+    .card-icon.green { background: rgba(34, 197, 94, 0.12); color: var(--accent-green); }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 0;
+      gap: 16px;
+    }
+    .info-row:not(:last-child) { border-bottom: 1px solid var(--border-subtle); }
+
+    .info-label { 
+      font-size: 0.85rem; 
+      color: var(--text-muted); 
+      flex-shrink: 0;
+    }
+    .info-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: right;
+    }
+    .info-value.highlight { color: var(--accent-cyan); }
+    .info-value.address {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    /* Docs Link */
+    .docs-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 8px;
+      color: var(--accent-cyan);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .docs-link:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: rgba(0, 212, 255, 0.4);
+    }
+    .docs-link svg { width: 16px; height: 16px; }
+
+    /* CTA Button */
+    .cta-section {
+      margin-bottom: 32px;
+    }
+
+    .cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 20px 32px;
+      background: linear-gradient(135deg, var(--accent-cyan), #0099cc);
+      border: none;
+      border-radius: 16px;
+      color: #050508;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+    }
+    .cta-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 48px rgba(0, 212, 255, 0.4);
+    }
+    .cta-btn svg { width: 24px; height: 24px; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .footer-brand {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .footer-contact {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .footer-contact a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+    .footer-contact a:hover { text-decoration: underline; }
+
+    /* Powered By */
+    .powered {
+      text-align: center;
+      padding: 16px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* Not Found */
+    .not-found {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .not-found h2 { font-size: 1.4rem; margin-bottom: 12px; }
+    .not-found p { color: var(--text-muted); margin-bottom: 24px; }
+
+    /* User Badge - Small, unobtrusive */
+    .user-badge {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      z-index: 100;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .user-badge button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+    .user-badge button:hover { color: var(--accent-red); }
+    .user-badge svg { width: 14px; height: 14px; }
+
+    /* Animations */
+    .card, .cta-btn { animation: fadeInUp 0.5s ease-out backwards; }
+    .card:nth-child(1) { animation-delay: 0.1s; }
+    .card:nth-child(2) { animation-delay: 0.2s; }
+    .cta-btn { animation-delay: 0.3s; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      .door-id { font-size: 2.2rem; }
+      .container { padding: 24px 16px 32px; }
+      .cta-btn { padding: 18px 24px; font-size: 1rem; }
+      .info-row { flex-direction: column; gap: 4px; }
+      .info-value { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-effects"></div>
+
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <img src="https://images.squarespace-cdn.com/content/53292562e4b06710691770b4/c75debc4-7194-4008-875d-856c6fa3b205/dis+lis+logo.webp?content-type=image%2Fwebp" alt="AAS">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText" style="color: var(--text-muted);">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to view door information</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <header class="header">
+      <img src="https://images.squarespace-cdn.com/content/53292562e4b06710691770b4/c75debc4-7194-4008-875d-856c6fa3b205/dis+lis+logo.webp?content-type=image%2Fwebp" alt="Automatic Access Solutions" class="logo">
+    </header>
+
+    <div class="container">
+      <div id="serviceContent">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading door information...</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-brand">AUTOMATIC ACCESS SOLUTIONS</div>
+      <div class="footer-contact">
+        <a href="tel:+15043005560">(504) 300-5560</a> • <a href="mailto:service@automaticaccesssolutions.com">service@automaticaccesssolutions.com</a>
+      </div>
+    </footer>
+
+    <div class="powered">Powered by AAS Portal</div>
+  </div>
+
+  <!-- User badge (unobtrusive) -->
+  <div class="user-badge" id="userBadge" style="display:none;">
+    <span id="userEmail">user</span>
+    <button onclick="window.AASAuth?.logout()" title="Sign Out">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // SERVICE PAGE - CUSTOMER FACING
+    // Data: Customer, Address, Door Location, Door Type, Manufacturer, Model, Docs, Door ID
+    // ═══════════════════════════════════════════════════════════════
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcpq972LhvEzo3MA_iJzFeF7vJ1a7qudjvd3ooqxrfho-SZ7p1kvP0943VXsCfHWywDknQ-BHzC2Og/pub?gid=0&single=true&output=csv";
+    const FALLBACK_REQUEST_URL = "https://app.limblecmms.com/loc-problem/wtwsbc13448/50187";
+
+    const icons = {
+      location: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+      equipment: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+      door: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" /><circle cx="15" cy="12" r="1" fill="currentColor"/></svg>`,
+      doc: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`,
+      request: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`
+    };
+
+    function clean(v) { return (v == null ? "" : String(v)).trim(); }
+    function normId(v) { return clean(v).toUpperCase().replace(/\s+/g, " "); }
+    function compactId(v) { return normId(v).replace(/[^A-Z0-9]/g, ""); }
+
+    function parseCSV(text) {
+      const rows = []; let row = [], field = "", inQ = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQ) {
+          if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else { inQ = false; } }
+          else { field += c; }
+        } else {
+          if (c === '"') { inQ = true; }
+          else if (c === ',') { row.push(field); field = ""; }
+          else if (c === '\r') { }
+          else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+          else { field += c; }
+        }
+      }
+      if (field || row.length) { row.push(field); rows.push(row); }
+      return rows;
+    }
+
+    function toObjects(rows) {
+      if (!rows.length) return [];
+      const headers = rows[0].map(h => clean(h));
+      return rows.slice(1)
+        .filter(cells => cells && cells.some(c => clean(c)))
+        .map(cells => {
+          const o = {};
+          headers.forEach((h, i) => { o[h] = clean(cells[i]); });
+          return o;
+        });
+    }
+
+    function renderService(data, doorId) {
+      const name = data["Name"] || data["Door ID"] || doorId;
+      const customer = data["Customer"] || data["Facility"] || "";
+      const address = data["Address"] || "";
+      const location = data["Location"] || data["Door Location"] || data["Loc"] || "";
+      const doorType = data["Type"] || data["Door Type"] || "";
+      const manufacturer = data["Manufacturer"] || data["Mfr"] || "";
+      const model = data["Model"] || "";
+      const docsUrl = data["Docs"] || data["Docs URL"] || "";
+      const requestUrl = data["QR URL"] || data["Limble URL"] || FALLBACK_REQUEST_URL;
+
+      return `
+        <div class="door-hero">
+          <div class="door-id">${name}</div>
+          ${doorType ? `
+          <div class="door-type-badge">
+            ${icons.door}
+            ${doorType}
+          </div>` : ''}
+        </div>
+
+        <div class="cards">
+          <!-- Location Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon">${icons.location}</div>
+              <div class="card-title">Location</div>
+            </div>
+            ${customer ? `
+            <div class="info-row">
+              <span class="info-label">Customer</span>
+              <span class="info-value">${customer}</span>
+            </div>` : ''}
+            ${address ? `
+            <div class="info-row">
+              <span class="info-label">Address</span>
+              <span class="info-value address">${address}</span>
+            </div>` : ''}
+            ${location ? `
+            <div class="info-row">
+              <span class="info-label">Door Location</span>
+              <span class="info-value">${location}</span>
+            </div>` : ''}
+            <div class="info-row">
+              <span class="info-label">Door ID</span>
+              <span class="info-value highlight">${name}</span>
+            </div>
+          </div>
+
+          <!-- Equipment Card -->
+          ${(manufacturer || model || docsUrl) ? `
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon green">${icons.equipment}</div>
+              <div class="card-title">Equipment</div>
+            </div>
+            ${manufacturer ? `
+            <div class="info-row">
+              <span class="info-label">Manufacturer</span>
+              <span class="info-value highlight">${manufacturer}</span>
+            </div>` : ''}
+            ${model ? `
+            <div class="info-row">
+              <span class="info-label">Model</span>
+              <span class="info-value">${model}</span>
+            </div>` : ''}
+            ${docsUrl ? `
+            <div class="info-row">
+              <span class="info-label">Documentation</span>
+              <a href="${docsUrl}" target="_blank" rel="noopener" class="docs-link">
+                ${icons.doc}
+                View Docs
+              </a>
+            </div>` : ''}
+          </div>` : ''}
+        </div>
+
+        <div class="cta-section">
+          <a href="${requestUrl}" class="cta-btn" target="_blank" rel="noopener">
+            ${icons.request}
+            Request Service
+          </a>
+        </div>
+      `;
+    }
+
+    function renderNotFound(doorId) {
+      return `
+        <div class="not-found">
+          <h2>Door Not Found</h2>
+          <p>No information found for: <strong>${doorId || '(no ID)'}</strong></p>
+          <a href="${FALLBACK_REQUEST_URL}" class="cta-btn" style="display: inline-flex; max-width: 300px; margin: 0 auto;" target="_blank" rel="noopener">
+            ${icons.request}
+            Request Service Anyway
+          </a>
+        </div>
+      `;
+    }
+
+    async function loadService() {
+      const params = new URLSearchParams(window.location.search);
+      const rawId = clean(decodeURIComponent(
+        params.get('id') || params.get('doorId') || params.get('door') || params.get('name') || ''
+      ));
+      const container = document.getElementById('serviceContent');
+
+      if (!rawId) {
+        container.innerHTML = renderNotFound('');
+        return;
+      }
+
+      document.title = `Door ${rawId} • Automatic Access Solutions`;
+      const searchKey = compactId(rawId);
+
+      try {
+        const res = await fetch(CSV_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Fetch failed');
+        const text = await res.text();
+        const data = toObjects(parseCSV(text));
+
+        // Match on Name, Door ID, Asset ID, ID
+        const row = data.find(r => {
+          const checks = [
+            compactId(r["Name"]),
+            compactId(r["Door ID"]),
+            compactId(r["Asset ID"]),
+            compactId(r["ID"])
+          ];
+          return checks.includes(searchKey);
+        });
+
+        if (row) {
+          container.innerHTML = renderService(row, rawId);
+        } else {
+          container.innerHTML = renderNotFound(rawId);
+        }
+      } catch (e) {
+        console.error('[Service] Error:', e);
+        container.innerHTML = renderNotFound(rawId);
+      }
+    }
+
+    // Update user badge
+    function updateUserBadge(user) {
+      const badge = document.getElementById('userBadge');
+      const email = document.getElementById('userEmail');
+      if (badge && user) {
+        if (email) email.textContent = user.email?.split('@')[0] || 'user';
+        badge.style.display = 'flex';
+      }
+    }
+
+    // Load after auth
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(async () => {
+        loadService();
+        if (window.AASAuth) {
+          const client = await window.AASAuth.initAuth();
+          if (client) {
+            const user = await client.getUser();
+            updateUserBadge(user);
+          }
+        }
+      }, 300);
+    });
+  </script>
+
+  <script src="/auth.js"></script>
+</body>
+</html>
