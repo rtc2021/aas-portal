@@ -833,6 +833,25 @@
         
         const data = await response.json();
         
+        // Debug logging - check browser console for tool execution details
+        if (data.toolsUsed) {
+          console.group('[AAS Copilot] Tool Execution');
+          console.log('Tools Used:', data.toolsUsed);
+          console.log('Iterations:', data.iterations);
+          if (data.toolCalls) {
+            data.toolCalls.forEach((tc, i) => {
+              console.group(`Tool ${i + 1}: ${tc.name}`);
+              console.log('Input:', tc.input);
+              console.log('Result:', tc.result);
+              console.groupEnd();
+            });
+          }
+          console.log('Token Usage:', data.usage);
+          console.groupEnd();
+        } else {
+          console.log('[AAS Copilot] No tools used for this query');
+        }
+        
         // Add assistant message
         this.addMessage('assistant', data.response, data.manufacturer);
         

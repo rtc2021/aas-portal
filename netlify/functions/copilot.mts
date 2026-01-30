@@ -10,6 +10,10 @@ const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://134.199.203.192:80
 const LIMBLE_CLIENT_ID = Netlify.env.get("LIMBLE_CLIENT_ID");
 const LIMBLE_CLIENT_SECRET = Netlify.env.get("LIMBLE_CLIENT_SECRET");
 
+// Google Sheets IDs (set in Netlify env vars or use defaults)
+const PARTS_SHEET_ID = Netlify.env.get("PARTS_SHEET_ID") || "1VEC9agWIuajszDSQrz3pyJ30a3Gz_P5KO-uLWIru9Hk";
+const MANUALS_SHEET_ID = Netlify.env.get("MANUALS_SHEET_ID") || "1pDacinz2vl8nioHV_mmSGmokHVO7DnzXGyVPUO5_KPU";
+
 const LIMBLE_BASE_URL = "https://api.limblecmms.com/v2";
 function getLimbleAuth(): string {
   return "Basic " + btoa(`${LIMBLE_CLIENT_ID}:${LIMBLE_CLIENT_SECRET}`);
@@ -97,6 +101,20 @@ const TOOLS: Anthropic.Tool[] = [
         name_filter: { type: "string", description: "Optional: filter by technician name (partial match)" }
       }
     }
+  },
+  {
+    name: "search_manuals",
+    description: "Search technical manuals database by manufacturer, controller, door type, or model. Returns links to PDF manuals.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search term - manufacturer, controller name, model, or door type" },
+        manufacturer: { type: "string", description: "Filter by manufacturer (Horton, Stanley, Besam, BEA, etc.)" },
+        door_type: { type: "string", description: "Filter by door type (Slide, Swing, Sensor, etc.)" },
+        controller: { type: "string", description: "Filter by controller (MC521, 4190, iQ, etc.)" }
+      },
+      required: ["query"]
+    }
   }
 ];
 
@@ -142,7 +160,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const mfr = input.manufacturer as string | undefined;
         
         // Parts data is in Google Sheet
-        const PARTS_SHEET_ID = "1VEC9agWIuajszDSQrz3pyJ30a3Gz_P5KO-uLWIru9Hk";
+        // Columns: key, manufacturer, mfg_part, description, image_path, qr_payload, match_status, image_id
         const PARTS_CSV_URL = `https://docs.google.com/spreadsheets/d/${PARTS_SHEET_ID}/export?format=csv`;
         
         try {
@@ -158,35 +176,47 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
             return JSON.stringify({ error: "Parts sheet is empty or invalid" });
           }
           
-          // Parse CSV header
+          // Parse CSV header - exact columns from AAS parts sheet:
+          // key, manufacturer, mfg_part, description, image_path, qr_payload, match_status, image_id
           const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
           
-          // Find relevant column indices
-          const findCol = (names: string[]) => headers.findIndex(h => names.some(n => h.includes(n)));
-          const partNumCol = findCol(['part', 'number', 'pn', 'sku', 'item']);
-          const descCol = findCol(['desc', 'name', 'title']);
-          const mfrCol = findCol(['mfr', 'manufacturer', 'brand', 'make']);
-          const priceCol = findCol(['price', 'cost']);
-          const qtyCol = findCol(['qty', 'quantity', 'stock', 'on hand']);
+          const keyCol = headers.indexOf('key');
+          const mfrCol = headers.indexOf('manufacturer');
+          const partNumCol = headers.indexOf('mfg_part');
+          const descCol = headers.indexOf('description');
+          const imageIdCol = headers.indexOf('image_id');
           
           // Parse data rows and search
           const results: any[] = [];
           
-          for (let i = 1; i < lines.length && results.length < 30; i++) {
+          for (let i = 1; i < lines.length && results.length < 50; i++) {
             const line = lines[i];
             if (!line.trim()) continue;
             
-            // Simple CSV parse (handles basic cases)
-            const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            // CSV parse - handle commas within quotes
+            const values: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            for (const char of line) {
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            values.push(current.trim());
             
+            const key = keyCol >= 0 ? values[keyCol] || '' : '';
+            const manufacturer = mfrCol >= 0 ? values[mfrCol] || '' : '';
             const partNum = partNumCol >= 0 ? values[partNumCol] || '' : '';
             const desc = descCol >= 0 ? values[descCol] || '' : '';
-            const manufacturer = mfrCol >= 0 ? values[mfrCol] || '' : '';
-            const price = priceCol >= 0 ? values[priceCol] || '' : '';
-            const qty = qtyCol >= 0 ? values[qtyCol] || '' : '';
+            const imageId = imageIdCol >= 0 ? values[imageIdCol] || '' : '';
             
-            // Search in part number and description
-            const searchText = `${partNum} ${desc} ${manufacturer}`.toLowerCase();
+            // Search in key, part number, description, and manufacturer
+            const searchText = `${key} ${partNum} ${desc} ${manufacturer}`.toLowerCase();
             
             if (searchText.includes(query)) {
               // Filter by manufacturer if specified
@@ -195,11 +225,11 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               }
               
               results.push({
+                key: key,
+                manufacturer: manufacturer,
                 partNumber: partNum,
                 description: desc,
-                manufacturer: manufacturer,
-                price: price,
-                quantity: qty
+                imageUrl: imageId ? `https://drive.google.com/thumbnail?id=${imageId}&sz=w400` : null
               });
             }
           }
@@ -476,6 +506,122 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         });
       }
 
+      case "search_manuals": {
+        const query = (input.query as string).toLowerCase();
+        const mfrFilter = input.manufacturer as string | undefined;
+        const doorTypeFilter = input.door_type as string | undefined;
+        const controllerFilter = input.controller as string | undefined;
+        
+        // Check if manuals sheet is configured
+        if (!MANUALS_SHEET_ID) {
+          return JSON.stringify({ error: "Manuals database not configured. Set MANUALS_SHEET_ID in Netlify environment variables." });
+        }
+        
+        // Manuals database in Google Sheet
+        // Columns: Manufacturer, ProductLine, DoorType, Controller, Model, FileName, DriveLink, Tags, etc.
+        const MANUALS_CSV_URL = `https://docs.google.com/spreadsheets/d/${MANUALS_SHEET_ID}/export?format=csv`;
+        
+        try {
+          const response = await fetch(MANUALS_CSV_URL);
+          if (!response.ok) {
+            return JSON.stringify({ error: "Failed to fetch manuals database - check sheet ID and permissions", status: response.status });
+          }
+          
+          const csvText = await response.text();
+          const lines = csvText.split('\n');
+          
+          if (lines.length < 2) {
+            return JSON.stringify({ error: "Manuals sheet is empty or invalid" });
+          }
+          
+          // Parse CSV header - exact columns from AAS manuals sheet:
+          // Manufacturer, ProductLine, DoorType, Controller, Model, FileName, DriveLink, Tags, DoorType_Final, Controller_Auto, Model_Auto
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+          
+          // Find exact matches first, then partial
+          const findCol = (exact: string, partial?: string) => {
+            let idx = headers.indexOf(exact);
+            if (idx === -1 && partial) idx = headers.findIndex(h => h.includes(partial));
+            return idx;
+          };
+          
+          const mfrCol = findCol('manufacturer');
+          const productCol = findCol('productline');
+          const doorTypeCol = findCol('doortype_final', 'doortype');
+          const controllerCol = findCol('controller');
+          const modelCol = findCol('model');
+          const fileCol = findCol('filename');
+          const linkCol = findCol('drivelink');
+          const tagsCol = findCol('tags');
+          
+          const results: any[] = [];
+          
+          for (let i = 1; i < lines.length && results.length < 30; i++) {
+            const line = lines[i];
+            if (!line.trim()) continue;
+            
+            // Parse CSV
+            const values: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            for (const char of line) {
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            values.push(current.trim());
+            
+            const manufacturer = mfrCol >= 0 ? values[mfrCol] || '' : '';
+            const productLine = productCol >= 0 ? values[productCol] || '' : '';
+            const doorType = doorTypeCol >= 0 ? values[doorTypeCol] || '' : '';
+            const controller = controllerCol >= 0 ? values[controllerCol] || '' : '';
+            const model = modelCol >= 0 ? values[modelCol] || '' : '';
+            const fileName = fileCol >= 0 ? values[fileCol] || '' : '';
+            const driveLink = linkCol >= 0 ? values[linkCol] || '' : '';
+            const tags = tagsCol >= 0 ? values[tagsCol] || '' : '';
+            
+            // Build search text
+            const searchText = `${manufacturer} ${productLine} ${doorType} ${controller} ${model} ${fileName} ${tags}`.toLowerCase();
+            
+            if (!searchText.includes(query)) continue;
+            
+            // Apply filters
+            if (mfrFilter && !manufacturer.toLowerCase().includes(mfrFilter.toLowerCase())) continue;
+            if (doorTypeFilter && !doorType.toLowerCase().includes(doorTypeFilter.toLowerCase())) continue;
+            if (controllerFilter && !controller.toLowerCase().includes(controllerFilter.toLowerCase())) continue;
+            
+            results.push({
+              manufacturer,
+              productLine,
+              doorType,
+              controller,
+              model,
+              fileName,
+              driveLink: driveLink || null,
+              tags
+            });
+          }
+          
+          return JSON.stringify({
+            query,
+            filters: { manufacturer: mfrFilter, doorType: doorTypeFilter, controller: controllerFilter },
+            count: results.length,
+            manuals: results
+          });
+          
+        } catch (error) {
+          return JSON.stringify({ 
+            error: "Failed to search manuals", 
+            details: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
@@ -500,45 +646,48 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 {{CURRENT_DATE}}
 
 ## CRITICAL INSTRUCTIONS
-1. You HAVE ACCESS to work orders, doors, parts, technicians, and playbooks through your tools - USE THEM.
+1. You HAVE ACCESS to work orders, doors, parts, technicians, manuals, and playbooks through your tools - USE THEM.
 2. NEVER say "I don't have access" or "I can't see" - you CAN access data via tools.
 3. When asked about tasks/work orders, USE get_work_orders immediately.
 4. When asked about a door, USE get_door_info or search_doors.
-5. For any technical question, USE search_playbooks.
-6. If tools return stats, REPORT THOSE NUMBERS - don't guess or estimate.
+5. For technical questions, USE search_playbooks AND/OR search_manuals.
+6. For parts questions, USE search_parts.
+7. If tools return stats, REPORT THOSE NUMBERS - don't guess or estimate.
+8. NEVER HALLUCINATE - if a tool returns no results, say so. Don't make up part numbers or specs.
 
 ## YOUR TOOLS
-1. **search_playbooks** - Error codes, procedures, wiring, specs for Horton/Stanley/Besam/NABCO
-2. **get_work_orders** - Tasks from Limble. Parameters:
-   - status: "open", "completed", or "all"
-   - date_filter: "today", "yesterday", "this_week", "this_month", or "YYYY-MM-DD"
-   - user_id: filter by technician
-   - asset_id: filter by door/asset
-3. **get_technicians** - List techs with userIDs. Use to find userID by name.
-4. **get_service_history** - Service records for a door (needs asset_id)
-5. **get_door_info** - Door details by ID
-6. **search_doors** - Find doors by customer/location
-7. **search_parts** - Parts inventory search
+1. **search_playbooks** - Error codes, procedures, wiring, specs from technical playbooks
+2. **search_manuals** - Search manuals database for PDFs by manufacturer, controller, door type, model
+3. **search_parts** - Parts inventory with part numbers, descriptions, images
+4. **get_work_orders** - Tasks from Limble (status: open/completed/all, date_filter: today/yesterday/this_week/YYYY-MM-DD)
+5. **get_technicians** - List techs with userIDs
+6. **get_service_history** - Service records for a door (needs asset_id)
+7. **get_door_info** - Door details by ID
+8. **search_doors** - Find doors by customer/location
+
+## IMPORTANT TECHNICAL NOTES
+- Stanley MC521 can be programmed for BOTH slide AND swing doors - don't assume one or the other
+- Horton 4190 is primarily for swing/folding doors
+- When unsure about a controller's capabilities, search manuals first
 
 ## EXAMPLE QUERIES
-- "What did Ruben complete today?" → get_technicians(name: "ruben"), then get_work_orders(status: "completed", date_filter: "today", user_id: ID)
-- "Tasks completed yesterday" → get_work_orders(status: "completed", date_filter: "yesterday")
-- "How many tasks this week?" → get_work_orders(status: "completed", date_filter: "this_week")
-- "Jonas's open tasks" → get_technicians(name: "jonas"), then get_work_orders(status: "open", user_id: ID)
-- "All work orders" → get_work_orders(status: "all")
-- "Horton 4190 won't close" → search_playbooks(query: "horton 4190 won't close")
+- "MC521 parts" → search_parts(query: "mc521") - returns actual parts from inventory
+- "MC521 swing manual" → search_manuals(query: "mc521 swing")
+- "Ruben's tasks today" → get_technicians(name: "ruben"), then get_work_orders(status: "completed", date_filter: "today", user_id: ID)
+- "ADC 60 controller" → search_parts(query: "adc 60")
+- "Horton troubleshooting" → search_playbooks(query: "horton") + search_manuals(query: "horton")
 
 ## COMPANY
 - Louisiana-based, 700+ customer locations
 - Healthcare: Manning, Ochsner
 - Door IDs: AAS-XXX, FD-XXX, Names like MH-1.81
-- Limble: assetID = doors, userID = technicians
 
 ## RESPONSE STYLE
 - BE CONCISE - Techs are on mobile
-- ANSWER DIRECTLY - No explaining what you're doing
+- ANSWER DIRECTLY - No preamble
 - NUMBERED STEPS for procedures
-- Report actual numbers from tool results, not estimates`;
+- Include part numbers and manual links when available
+- If no results, say "No results found" - don't make up information`;
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface CopilotRequest {
@@ -602,6 +751,8 @@ export default async function handler(req: Request, context: Context): Promise<R
 
     let iterations = 0;
     let toolsUsed = false;
+    const toolCalls: { name: string; input: any; result: string }[] = [];
+    
     while (response.stop_reason === "tool_use" && iterations < 5) {
       iterations++;
       toolsUsed = true;
@@ -614,6 +765,13 @@ export default async function handler(req: Request, context: Context): Promise<R
       for (const toolUse of toolUseBlocks) {
         const result = await executeTool(toolUse.name, toolUse.input as Record<string, unknown>);
         toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result });
+        
+        // Track for debug output
+        toolCalls.push({
+          name: toolUse.name,
+          input: toolUse.input,
+          result: result.length > 500 ? result.substring(0, 500) + "... (truncated)" : result
+        });
       }
 
       messages.push({ role: "assistant", content: response.content });
@@ -641,6 +799,8 @@ export default async function handler(req: Request, context: Context): Promise<R
         response: responseText,
         manufacturer,
         toolsUsed,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        iterations,
         usage: { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens },
       }),
       {

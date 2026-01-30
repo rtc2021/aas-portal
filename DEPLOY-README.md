@@ -1,118 +1,90 @@
-# AAS Copilot UI Deployment
-## January 29, 2026
+# AAS Copilot v10 Deployment
+
+## What's Included
+- `portal/public/copilot.js` - Self-contained UI (button says "AAS Copilot")
+- `netlify/functions/copilot.mts` - Claude function with all tools
+- `netlify.toml` - Netlify config
 
 ---
 
-## WHAT'S IN THIS PACKAGE
+## Required Environment Variables
 
-```
-├── netlify.toml                 ← Updated config (includes copilot routes)
-├── netlify/
-│   └── functions/
-│       ├── copilot.mts          ← Working AI function (unchanged)
-│       └── package.json         ← Dependencies
-└── portal/
-    └── public/
-        └── copilot.js           ← NEW: Self-injecting Copilot UI
-```
+Set these in **Netlify Dashboard → Site settings → Environment variables**:
+
+### Required
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Your Anthropic API key |
+| `LIMBLE_CLIENT_ID` | Limble API client ID |
+| `LIMBLE_CLIENT_SECRET` | Limble API client secret |
+
+### Optional (with defaults)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORTAL_BASE_URL` | https://aas-portal.netlify.app | Portal URL |
+| `DROPLET_URL` | http://134.199.203.192:8000 | Qdrant/FastAPI server |
+| `PARTS_SHEET_ID` | 1VEC9a... | Google Sheet for parts |
+| `MANUALS_SHEET_ID` | (none) | Google Sheet for manuals database |
 
 ---
 
-## DEPLOYMENT STEPS
+## Google Sheets Setup
 
-### Step 1: Extract to your project folder
+Both sheets must be publicly viewable:
+1. Open sheet in Google Sheets
+2. Click **Share** (top right)
+3. Change "General access" to **"Anyone with the link"** → **Viewer**
+4. Copy Sheet ID from URL: `docs.google.com/spreadsheets/d/[SHEET_ID]/edit`
 
-**PowerShell:**
+### Parts Sheet Columns
+`key, manufacturer, mfg_part, description, image_path, qr_payload, match_status, image_id`
+
+### Manuals Sheet Columns
+`Manufacturer, ProductLine, DoorType, Controller, Model, FileName, DriveLink, Tags`
+
+---
+
+## Deploy Steps
+
 ```powershell
 cd C:\Users\rurbi_7znoraw\Downloads
-Expand-Archive -Path "aas-copilot-ui.zip" -DestinationPath "aas-portal-update" -Force
-```
-
-### Step 2: Push to GitHub
-
-```powershell
-cd C:\Users\rurbi_7znoraw\Downloads\aas-portal-update
+Expand-Archive -Path "aas-copilot-ui-v10.zip" -DestinationPath "aas-portal-update" -Force
+cd aas-portal-update
 git add .
-git commit -m "Add Copilot UI"
+git commit -m "Copilot v10"
 git push
 ```
 
-### Step 3: Enable Snippet Injection (ONE TIME)
+### One-Time: Enable Snippet Injection
+Netlify Dashboard → Site settings → Build & deploy → Post processing → Snippet injection
 
-Go to **Netlify Dashboard** → Your site → **Site settings** → **Build & deploy** → **Post processing** → **Snippet injection**
-
-Click **Add snippet** and configure:
-- **Insert before:** `</body>`
-- **Script:**
+Add snippet **before `</body>`**:
 ```html
 <script src="/copilot.js" defer></script>
 ```
 
-Click **Save**.
+---
 
-### Step 4: Trigger Redeploy
+## Available Tools
 
-Go to **Deploys** → **Trigger deploy** → **Clear cache and deploy site**
+| Tool | Description |
+|------|-------------|
+| `search_playbooks` | Technical docs from Qdrant droplet |
+| `search_manuals` | PDF manuals from Google Sheet |
+| `search_parts` | Parts inventory from Google Sheet |
+| `get_work_orders` | Limble tasks (with date filtering) |
+| `get_technicians` | Limble users |
+| `get_service_history` | Service history by asset |
+| `get_door_info` | Door registry lookup |
+| `search_doors` | Find doors by customer/location |
 
 ---
 
-## TEST IT
-
-After deployment:
-
-1. Go to your portal (e.g., https://aas-portal.netlify.app/tech/parts/)
-2. Sign in as Admin or Tech
-3. You should see the **AI Copilot** button in the bottom-right corner
-4. Click it and ask: "What is b1 on Stanley?"
-
----
-
-## FEATURES
-
-✅ **Role-Gated** - Only shows for Admin and Tech users
-✅ **Keyboard Shortcut** - Press Cmd/Ctrl + K to toggle
-✅ **Page Context** - Auto-detects door ID from URL
-✅ **Beautiful UI** - Dark glass aesthetic matching your portal
-✅ **Works Everywhere** - Auto-injects into any page
-
----
-
-## WHAT HAPPENS
-
-The `copilot.js` script:
-1. Waits for page load
-2. Checks if user has Admin or Tech role (via AASAuth)
-3. If yes, injects the floating button and panel
-4. If no, does nothing (invisible to customers)
-
-The script calls your working `/api/copilot` endpoint which connects to:
-- Claude API for AI responses
-- Your droplet RAG for playbook search
-- Limble CMMS for work orders
-
----
-
-## TROUBLESHOOTING
-
-**Copilot button doesn't appear?**
-- Check you're signed in as Admin or Tech
-- Check browser console for errors
-- Verify snippet injection is enabled
-
-**"Technical difficulties" error?**
-- Check droplet is running: `curl http://134.199.203.192:8000/health`
-- Restart API if needed (see backup README)
-
-**Snippet injection not working?**
-- Make sure you added it BEFORE `</body>` not `</head>`
-- Clear cache and redeploy
-
----
-
-## SAFE TO DEPLOY
-
-This package:
-- ✅ Preserves your existing copilot.mts
-- ✅ Only ADDS new files (copilot.js)
-- ✅ Updates netlify.toml (adds routes, keeps functions)
-- ✅ Doesn't touch any existing HTML pages
+## Changes in v10
+- ✅ Button text changed to "AAS Copilot"
+- ✅ Parts search uses correct columns (key, mfg_part, manufacturer, description, image_id)
+- ✅ Added `search_manuals` tool for PDF manual database
+- ✅ Date filtering by calendar day (today, yesterday, this_week)
+- ✅ Anti-hallucination instructions in system prompt
+- ✅ Technical accuracy note: MC521 works for BOTH slide AND swing doors
+- ✅ Env vars for sheet IDs (easy to reconfigure)
