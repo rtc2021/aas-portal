@@ -86,6 +86,16 @@ const TOOLS: Anthropic.Tool[] = [
       },
       required: ["asset_id"]
     }
+  },
+  {
+    name: "get_technicians",
+    description: "Get list of technicians/users from Limble CMMS. Use to find userID for a technician by name.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        name_filter: { type: "string", description: "Optional: filter by technician name (partial match)" }
+      }
+    }
   }
 ];
 
@@ -139,28 +149,151 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const status = (input.status as string) || "open";
         const assetId = input.asset_id as string | undefined;
         const userId = input.user_id as string | undefined;
-        let url = `${LIMBLE_BASE_URL}/tasks?`;
-        if (status === "open") url += "statuses=4,6,7,8";
-        else if (status === "completed") {
-          url += "statuses=9";
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          url += `&completedAfter=${sevenDaysAgo.toISOString().split("T")[0]}`;
-        }
-        if (assetId) url += `&assetID=${encodeURIComponent(assetId)}`;
-        if (userId) url += `&userID=${encodeURIComponent(userId)}`;
+        
+        // Fetch all tasks from Limble
+        const url = `${LIMBLE_BASE_URL}/tasks`;
         const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
-        if (!response.ok) return JSON.stringify({ error: "Failed to fetch work orders" });
-        return await response.text();
+        if (!response.ok) return JSON.stringify({ error: "Failed to fetch work orders", status: response.status });
+        
+        const allTasks = await response.json();
+        let tasks = Array.isArray(allTasks) ? allTasks : (allTasks.data || allTasks.tasks || []);
+        
+        // Limble uses Unix timestamps (seconds) and dateCompleted > 0 means completed
+        const now = Math.floor(Date.now() / 1000);
+        const sevenDaysAgoUnix = now - (7 * 24 * 60 * 60);
+        
+        if (status === "open") {
+          // Open = not completed (dateCompleted is 0 or missing)
+          tasks = tasks.filter((t: any) => !t.dateCompleted || t.dateCompleted === 0);
+        } else if (status === "completed") {
+          // Completed in last 7 days
+          tasks = tasks.filter((t: any) => 
+            t.dateCompleted && t.dateCompleted > 0 && t.dateCompleted >= sevenDaysAgoUnix
+          );
+        }
+        // status === "all" means no filtering
+        
+        // Filter by asset if provided
+        if (assetId) {
+          tasks = tasks.filter((t: any) => String(t.assetID) === assetId);
+        }
+        
+        // Filter by user if provided
+        if (userId) {
+          tasks = tasks.filter((t: any) => 
+            String(t.userID) === userId || String(t.completedByUser) === userId
+          );
+        }
+        
+        // Convert Unix timestamps to readable dates
+        const formatDate = (unix: number) => {
+          if (!unix || unix === 0) return null;
+          return new Date(unix * 1000).toLocaleDateString('en-US', { 
+            month: 'short', day: 'numeric', year: 'numeric',
+            timeZone: 'America/Chicago'
+          });
+        };
+        
+        // Return summary with key fields
+        const summary = tasks.slice(0, 50).map((t: any) => ({
+          taskID: t.taskID,
+          name: t.name,
+          description: t.description,
+          assetID: t.assetID,
+          locationID: t.locationID,
+          userID: t.userID,
+          teamID: t.teamID,
+          priority: t.priority,
+          due: formatDate(t.due),
+          dateCompleted: formatDate(t.dateCompleted),
+          completedByUser: t.completedByUser,
+          completionNotes: t.completionNotes ? t.completionNotes.substring(0, 200) : null
+        }));
+        
+        return JSON.stringify({ 
+          count: tasks.length, 
+          showing: summary.length,
+          status: status,
+          tasks: summary 
+        });
       }
 
       case "get_service_history": {
         const assetId = input.asset_id as string;
         const days = (input.days as number) || 365;
-        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-        const url = `${LIMBLE_BASE_URL}/tasks?assetID=${encodeURIComponent(assetId)}&statuses=9&completedAfter=${startDate.toISOString().split("T")[0]}`;
+        const startDateUnix = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+        
+        // Fetch all tasks and filter for this asset's completed work
+        const url = `${LIMBLE_BASE_URL}/tasks`;
         const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
         if (!response.ok) return JSON.stringify({ error: "Failed to fetch service history" });
-        return await response.text();
+        
+        const allTasks = await response.json();
+        let tasks = Array.isArray(allTasks) ? allTasks : (allTasks.data || allTasks.tasks || []);
+        
+        // Filter to completed tasks for this asset within date range
+        const filtered = tasks.filter((t: any) => {
+          if (String(t.assetID) !== assetId) return false;
+          if (!t.dateCompleted || t.dateCompleted === 0) return false;
+          return t.dateCompleted >= startDateUnix;
+        });
+        
+        const formatDate = (unix: number) => {
+          if (!unix || unix === 0) return null;
+          return new Date(unix * 1000).toLocaleDateString('en-US', { 
+            month: 'short', day: 'numeric', year: 'numeric',
+            timeZone: 'America/Chicago'
+          });
+        };
+        
+        const summary = filtered.slice(0, 30).map((t: any) => ({
+          taskID: t.taskID,
+          name: t.name,
+          dateCompleted: formatDate(t.dateCompleted),
+          completedByUser: t.completedByUser,
+          completionNotes: t.completionNotes
+        }));
+        
+        return JSON.stringify({ 
+          assetID: assetId, 
+          daysSearched: days,
+          count: filtered.length,
+          history: summary 
+        });
+      }
+
+      case "get_technicians": {
+        const nameFilter = (input.name_filter as string || "").toLowerCase();
+        
+        // Fetch users from Limble
+        const url = `${LIMBLE_BASE_URL}/users`;
+        const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
+        if (!response.ok) return JSON.stringify({ error: "Failed to fetch technicians" });
+        
+        const allUsers = await response.json();
+        let users = Array.isArray(allUsers) ? allUsers : (allUsers.data || allUsers.users || []);
+        
+        // Filter by name if provided
+        if (nameFilter) {
+          users = users.filter((u: any) => {
+            const fullName = `${u.firstName || ''} ${u.lastName || ''} ${u.name || ''}`.toLowerCase();
+            return fullName.includes(nameFilter);
+          });
+        }
+        
+        // Return summary
+        const summary = users.slice(0, 50).map((u: any) => ({
+          userID: u.userID || u.id,
+          name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+          email: u.email,
+          role: u.role || u.roleName
+        }));
+        
+        return JSON.stringify({
+          count: users.length,
+          showing: summary.length,
+          technicians: summary
+        });
       }
 
       default:
@@ -191,26 +324,30 @@ You MUST use your tools to answer questions. NEVER say "I don't have access" - y
 
 ## YOUR TOOLS - USE THEM!
 1. **search_playbooks** - Technical questions, error codes, procedures, wiring, specs for Horton/Stanley/Besam/NABCO
-2. **get_work_orders** - Get tasks/jobs from Limble CMMS (open, completed, or all)
-3. **get_service_history** - Past service records for a specific door (requires door/asset ID)
-4. **get_door_info** - Door details from registry (manufacturer, model, location, customer)
-5. **search_doors** - Find doors by customer name, location, or manufacturer
-6. **search_parts** - Find parts by name, number, or description
+2. **get_work_orders** - Get tasks/jobs from Limble CMMS (open, completed, or all). Can filter by user_id.
+3. **get_technicians** - Get list of technicians with their userIDs. Use to find a tech's userID by name.
+4. **get_service_history** - Past service records for a specific door (requires asset_id)
+5. **get_door_info** - Door details from registry (manufacturer, model, location, customer)
+6. **search_doors** - Find doors by customer name, location, or manufacturer
+7. **search_parts** - Find parts by name, number, or description
 
 ## WHEN TO USE EACH TOOL
-- "What are Jonas's tasks?" → get_work_orders (status: open)
-- "What work was done today?" → get_work_orders (status: completed)
+- "What are Jonas's tasks?" → First get_technicians(name_filter: "jonas") to get userID, then get_work_orders(user_id: that ID)
+- "Show open work orders" → get_work_orders(status: "open")
+- "What was completed this week?" → get_work_orders(status: "completed")
 - "Tell me about door AAS-123" → get_door_info
 - "Find Manning doors" → search_doors
-- "Service history for FD-001" → get_service_history
+- "Service history for asset 38" → get_service_history(asset_id: "38")
 - "How do I program Horton 4190?" → search_playbooks
 - "What's error b1 on Stanley?" → search_playbooks
 - "Find motor for SL500" → search_parts
+- "Who are our technicians?" → get_technicians
 
 ## COMPANY CONTEXT
 - 700+ customer locations in Louisiana
 - Healthcare: Manning, Ochsner facilities  
 - Door IDs: AAS-XXX, FD-XXX, or Names like MH-1.81
+- Limble uses assetID for doors, userID for technicians
 
 ## RESPONSE STYLE
 1. USE TOOLS FIRST - Don't guess, look it up
