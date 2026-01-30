@@ -65,12 +65,13 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "get_work_orders",
-    description: "Get work orders from Limble CMMS. Can filter by status (open, completed, all) and asset.",
+    description: "Get work orders from Limble CMMS. Can filter by status and optionally by technician or asset.",
     input_schema: {
       type: "object" as const,
       properties: {
         status: { type: "string", enum: ["open", "completed", "all"], description: "Filter by status (default: open)" },
-        asset_id: { type: "string", description: "Filter by asset/door ID" }
+        asset_id: { type: "string", description: "Filter by asset/door ID" },
+        user_id: { type: "string", description: "Filter by technician user ID" }
       }
     }
   },
@@ -137,14 +138,16 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       case "get_work_orders": {
         const status = (input.status as string) || "open";
         const assetId = input.asset_id as string | undefined;
+        const userId = input.user_id as string | undefined;
         let url = `${LIMBLE_BASE_URL}/tasks?`;
         if (status === "open") url += "statuses=4,6,7,8";
         else if (status === "completed") {
           url += "statuses=9";
-          const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-          url += `&completedAfter=${ninetyDaysAgo.toISOString().split("T")[0]}`;
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          url += `&completedAfter=${sevenDaysAgo.toISOString().split("T")[0]}`;
         }
         if (assetId) url += `&assetID=${encodeURIComponent(assetId)}`;
+        if (userId) url += `&userID=${encodeURIComponent(userId)}`;
         const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
         if (!response.ok) return JSON.stringify({ error: "Failed to fetch work orders" });
         return await response.text();
@@ -168,43 +171,53 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   }
 }
 
-const SYSTEM_PROMPT = `You are the AAS Technical Copilot for Automatic Access Solutions LLC.
+function getCurrentDate(): string {
+  return new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    timeZone: 'America/Chicago'
+  });
+}
 
-## YOUR ROLE
-Expert assistant for automatic door systems. Help technicians with:
-- Troubleshooting using manufacturer playbooks
-- Door information and service history
-- Parts and specifications
-- Error codes and procedures
-- Work orders
+const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Access Solutions LLC.
 
-## COMPANY
+## TODAY'S DATE
+{{CURRENT_DATE}}
+
+## CRITICAL INSTRUCTION
+You MUST use your tools to answer questions. NEVER say "I don't have access" - you DO have access through your tools. If someone asks about work orders, USE get_work_orders. If they ask about a door, USE get_door_info. If they ask technical questions, USE search_playbooks.
+
+## YOUR TOOLS - USE THEM!
+1. **search_playbooks** - Technical questions, error codes, procedures, wiring, specs for Horton/Stanley/Besam/NABCO
+2. **get_work_orders** - Get tasks/jobs from Limble CMMS (open, completed, or all)
+3. **get_service_history** - Past service records for a specific door (requires door/asset ID)
+4. **get_door_info** - Door details from registry (manufacturer, model, location, customer)
+5. **search_doors** - Find doors by customer name, location, or manufacturer
+6. **search_parts** - Find parts by name, number, or description
+
+## WHEN TO USE EACH TOOL
+- "What are Jonas's tasks?" → get_work_orders (status: open)
+- "What work was done today?" → get_work_orders (status: completed)
+- "Tell me about door AAS-123" → get_door_info
+- "Find Manning doors" → search_doors
+- "Service history for FD-001" → get_service_history
+- "How do I program Horton 4190?" → search_playbooks
+- "What's error b1 on Stanley?" → search_playbooks
+- "Find motor for SL500" → search_parts
+
+## COMPANY CONTEXT
 - 700+ customer locations in Louisiana
-- Healthcare: Manning, Ochsner facilities
-- Door IDs: AAS-XXX, FD-XXX, Name: MH-1.81
+- Healthcare: Manning, Ochsner facilities  
+- Door IDs: AAS-XXX, FD-XXX, or Names like MH-1.81
 
-## TOOLS
-**ALWAYS use search_playbooks first for technical questions.**
-
-- search_playbooks: Error codes, procedures, specs
-- get_door_info: Door details by ID
-- search_doors: Find by customer/location
-- search_parts: Parts inventory
-- get_work_orders: Limble work orders
-- get_service_history: Service history
-
-## GUIDELINES
-1. USE TOOLS - search_playbooks for ANY technical question
-2. BE CONCISE - techs on mobile
-3. LEAD WITH SOLUTION
+## RESPONSE STYLE
+1. USE TOOLS FIRST - Don't guess, look it up
+2. BE CONCISE - Techs are on mobile
+3. ANSWER DIRECTLY - No preamble about what you're doing
 4. NUMBERED STEPS for procedures
-5. SAFETY WARNINGS prominent
-
-## MANUFACTURER DETECTION
-- "Index 99" / "FIS" / "DuraGlide" → Stanley
-- "P01" / "double-click SET" → Horton
-- "Handy Terminal" / "U30" → NABCO
-- "SL500" / "Learn button" → Besam`;
+5. If a tool returns no results or errors, say that - don't pretend you don't have the tool`;
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface CopilotRequest {
@@ -242,7 +255,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       });
     }
 
-    let systemPrompt = SYSTEM_PROMPT;
+    let systemPrompt = SYSTEM_PROMPT_BASE.replace('{{CURRENT_DATE}}', getCurrentDate());
     if (body.doorId || body.doorContext) {
       systemPrompt += "\n\n## CURRENT CONTEXT";
       if (body.doorId) systemPrompt += `\nDoor ID: ${body.doorId}`;
@@ -262,6 +275,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       max_tokens: 1500,
       system: systemPrompt,
       tools: TOOLS,
+      tool_choice: { type: "auto" },
       messages,
     });
 

@@ -289,13 +289,6 @@
       border-radius: 10px;
       font-size: 13px;
       color: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .aas-copilot-welcome-list li:hover {
-      background: rgba(0, 212, 255, 0.1);
-      color: #fff;
     }
     
     .aas-copilot-welcome-list li svg {
@@ -559,6 +552,7 @@
   
   const ICONS = {
     robot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>`,
+    refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`,
     close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
     send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
     wrench: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
@@ -587,9 +581,14 @@
             <span class="aas-copilot-title-icon">${ICONS.robot}</span>
             <span class="aas-copilot-title-text">AAS Copilot</span>
           </h2>
-          <button class="aas-copilot-close" id="aasCopilotClose" aria-label="Close">
-            ${ICONS.close}
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button class="aas-copilot-close" id="aasCopilotClear" aria-label="Clear chat" title="Clear chat">
+              ${ICONS.refresh}
+            </button>
+            <button class="aas-copilot-close" id="aasCopilotClose" aria-label="Close">
+              ${ICONS.close}
+            </button>
+          </div>
         </header>
         
         <div class="aas-copilot-context">
@@ -601,13 +600,14 @@
         <div class="aas-copilot-messages" id="aasCopilotMessages">
           <div class="aas-copilot-welcome">
             <h3>👋 Hey! I'm your AAS Copilot</h3>
-            <p>I can help you troubleshoot doors, find parts, and answer technical questions.</p>
-            <ul class="aas-copilot-welcome-list" id="aasCopilotQuickActions">
-              <li data-query="What does error code b1 mean on Stanley?">${ICONS.zap}<span>Diagnose an error code</span></li>
-              <li data-query="How do I run a learn cycle on Horton C3150?">${ICONS.wrench}<span>Programming procedure</span></li>
-              <li data-query="What parts do I need for a Besam SL500 motor replacement?">${ICONS.search}<span>Find parts</span></li>
-              <li data-query="Show me the wiring diagram for NABCO U30">${ICONS.book}<span>Technical reference</span></li>
+            <p>I can help you with:</p>
+            <ul class="aas-copilot-welcome-list">
+              <li>${ICONS.zap}<span>Error codes & troubleshooting</span></li>
+              <li>${ICONS.wrench}<span>Programming & learn cycles</span></li>
+              <li>${ICONS.search}<span>Parts lookup</span></li>
+              <li>${ICONS.book}<span>Technical specs & wiring</span></li>
             </ul>
+            <p style="margin-top:16px;font-size:13px;color:rgba(255,255,255,0.5);">Just type your question below!</p>
           </div>
         </div>
         
@@ -705,24 +705,15 @@
       // Toggle button
       const toggle = document.getElementById('aasCopilotToggle');
       const close = document.getElementById('aasCopilotClose');
+      const clear = document.getElementById('aasCopilotClear');
       const overlay = document.getElementById('aasCopilotOverlay');
       const form = document.getElementById('aasCopilotForm');
-      const quickActions = document.getElementById('aasCopilotQuickActions');
 
       toggle?.addEventListener('click', () => this.toggle());
       close?.addEventListener('click', () => this.close());
+      clear?.addEventListener('click', () => this.clearChat());
       overlay?.addEventListener('click', () => this.close());
       form?.addEventListener('submit', (e) => this.handleSubmit(e));
-      
-      // Quick action clicks
-      quickActions?.addEventListener('click', (e) => {
-        const li = e.target.closest('li[data-query]');
-        if (li) {
-          const query = li.dataset.query;
-          document.getElementById('aasCopilotInput').value = query;
-          this.handleSubmit(new Event('submit'));
-        }
-      });
 
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
@@ -774,6 +765,26 @@
       document.getElementById('aasCopilotPanel')?.classList.remove('open');
       document.getElementById('aasCopilotOverlay')?.classList.remove('open');
       document.getElementById('aasCopilotToggle')?.classList.remove('active');
+    }
+
+    clearChat() {
+      this.messages = [];
+      const container = document.getElementById('aasCopilotMessages');
+      if (container) {
+        container.innerHTML = `
+          <div class="aas-copilot-welcome">
+            <h3>👋 Hey! I'm your AAS Copilot</h3>
+            <p>I can help you with:</p>
+            <ul class="aas-copilot-welcome-list">
+              <li>${ICONS.zap}<span>Error codes & troubleshooting</span></li>
+              <li>${ICONS.wrench}<span>Programming & learn cycles</span></li>
+              <li>${ICONS.search}<span>Parts lookup</span></li>
+              <li>${ICONS.book}<span>Technical specs & wiring</span></li>
+            </ul>
+            <p style="margin-top:16px;font-size:13px;color:rgba(255,255,255,0.5);">Just type your question below!</p>
+          </div>
+        `;
+      }
     }
 
     async handleSubmit(e) {
