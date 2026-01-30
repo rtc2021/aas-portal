@@ -65,11 +65,12 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "get_work_orders",
-    description: "Get work orders from Limble CMMS. Can filter by status and optionally by technician or asset.",
+    description: "Get work orders from Limble CMMS. Can filter by status, date, technician, or asset.",
     input_schema: {
       type: "object" as const,
       properties: {
         status: { type: "string", enum: ["open", "completed", "all"], description: "Filter by status (default: open)" },
+        date_filter: { type: "string", description: "Filter completed tasks by date: 'today', 'yesterday', 'this_week', 'this_month', or YYYY-MM-DD format" },
         asset_id: { type: "string", description: "Filter by asset/door ID" },
         user_id: { type: "string", description: "Filter by technician user ID" }
       }
@@ -147,6 +148,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       case "get_work_orders": {
         const status = (input.status as string) || "open";
+        const dateFilter = input.date_filter as string | undefined;
         const assetId = input.asset_id as string | undefined;
         const userId = input.user_id as string | undefined;
         
@@ -178,9 +180,46 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         
         let tasks = allTasks;
         
+        // Helper: Get start of day in Central Time (Unix seconds)
+        const getDateRangeUnix = (filter: string): { start: number; end: number } | null => {
+          const centralNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+          const year = centralNow.getFullYear();
+          const month = centralNow.getMonth();
+          const day = centralNow.getDate();
+          
+          let startDate: Date;
+          let endDate: Date;
+          
+          if (filter === 'today') {
+            startDate = new Date(year, month, day, 0, 0, 0);
+            endDate = new Date(year, month, day, 23, 59, 59);
+          } else if (filter === 'yesterday') {
+            startDate = new Date(year, month, day - 1, 0, 0, 0);
+            endDate = new Date(year, month, day - 1, 23, 59, 59);
+          } else if (filter === 'this_week') {
+            const dayOfWeek = centralNow.getDay();
+            startDate = new Date(year, month, day - dayOfWeek, 0, 0, 0);
+            endDate = new Date(year, month, day, 23, 59, 59);
+          } else if (filter === 'this_month') {
+            startDate = new Date(year, month, 1, 0, 0, 0);
+            endDate = new Date(year, month, day, 23, 59, 59);
+          } else if (/^\d{4}-\d{2}-\d{2}$/.test(filter)) {
+            // Specific date YYYY-MM-DD
+            const [y, m, d] = filter.split('-').map(Number);
+            startDate = new Date(y, m - 1, d, 0, 0, 0);
+            endDate = new Date(y, m - 1, d, 23, 59, 59);
+          } else {
+            return null;
+          }
+          
+          return {
+            start: Math.floor(startDate.getTime() / 1000),
+            end: Math.floor(endDate.getTime() / 1000)
+          };
+        };
+        
         // Limble uses Unix timestamps (seconds) and dateCompleted > 0 means completed
         const now = Math.floor(Date.now() / 1000);
-        const sevenDaysAgoUnix = now - (7 * 24 * 60 * 60);
         const oneYearAgoUnix = now - (365 * 24 * 60 * 60);
         
         // Calculate stats before filtering
@@ -190,16 +229,47 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         ).length;
         const openTasks = tasks.filter((t: any) => !t.dateCompleted || t.dateCompleted === 0).length;
         
+        // Get today's range for "completed today" stat
+        const todayRange = getDateRangeUnix('today');
+        const completedToday = todayRange ? tasks.filter((t: any) => 
+          t.dateCompleted && t.dateCompleted >= todayRange.start && t.dateCompleted <= todayRange.end
+        ).length : 0;
+        
         if (status === "open") {
           // Open = not completed (dateCompleted is 0 or missing)
           tasks = tasks.filter((t: any) => !t.dateCompleted || t.dateCompleted === 0);
         } else if (status === "completed") {
-          // Completed in last 7 days
-          tasks = tasks.filter((t: any) => 
-            t.dateCompleted && t.dateCompleted > 0 && t.dateCompleted >= sevenDaysAgoUnix
-          );
+          // First filter to only completed tasks
+          tasks = tasks.filter((t: any) => t.dateCompleted && t.dateCompleted > 0);
+          
+          // Then apply date filter if provided
+          if (dateFilter) {
+            const range = getDateRangeUnix(dateFilter);
+            if (range) {
+              tasks = tasks.filter((t: any) => 
+                t.dateCompleted >= range.start && t.dateCompleted <= range.end
+              );
+            }
+          } else {
+            // Default: last 7 days
+            const sevenDaysAgoUnix = now - (7 * 24 * 60 * 60);
+            tasks = tasks.filter((t: any) => t.dateCompleted >= sevenDaysAgoUnix);
+          }
         }
-        // status === "all" means no filtering
+        // status === "all" means no status filtering, but still apply date filter if present
+        else if (status === "all" && dateFilter) {
+          const range = getDateRangeUnix(dateFilter);
+          if (range) {
+            tasks = tasks.filter((t: any) => {
+              const completed = t.dateCompleted && t.dateCompleted > 0;
+              if (completed) {
+                return t.dateCompleted >= range.start && t.dateCompleted <= range.end;
+              }
+              // For open tasks, check creation date if available
+              return true;
+            });
+          }
+        }
         
         // Filter by asset if provided
         if (assetId) {
@@ -242,10 +312,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           stats: {
             totalTasksInSystem: totalTasks,
             completedThisYear: completedThisYear,
+            completedToday: completedToday,
             currentlyOpen: openTasks
           },
           filtered: {
             status: status,
+            dateFilter: dateFilter || null,
             count: tasks.length,
             showing: summary.length
           },
@@ -364,7 +436,11 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 
 ## YOUR TOOLS
 1. **search_playbooks** - Error codes, procedures, wiring, specs for Horton/Stanley/Besam/NABCO
-2. **get_work_orders** - Tasks from Limble (returns stats: total, completed this year, open). Filter by status/user_id/asset_id.
+2. **get_work_orders** - Tasks from Limble. Parameters:
+   - status: "open", "completed", or "all"
+   - date_filter: "today", "yesterday", "this_week", "this_month", or "YYYY-MM-DD"
+   - user_id: filter by technician
+   - asset_id: filter by door/asset
 3. **get_technicians** - List techs with userIDs. Use to find userID by name.
 4. **get_service_history** - Service records for a door (needs asset_id)
 5. **get_door_info** - Door details by ID
@@ -372,11 +448,12 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 7. **search_parts** - Parts inventory search
 
 ## EXAMPLE QUERIES
-- "How many tasks per year?" → get_work_orders(status: "all") - report the stats.completedThisYear number
-- "What are Jonas's tasks?" → get_technicians(name_filter: "jonas"), then get_work_orders(user_id: that ID)
-- "Show open work orders" → get_work_orders(status: "open")
+- "What did Ruben complete today?" → get_technicians(name: "ruben"), then get_work_orders(status: "completed", date_filter: "today", user_id: ID)
+- "Tasks completed yesterday" → get_work_orders(status: "completed", date_filter: "yesterday")
+- "How many tasks this week?" → get_work_orders(status: "completed", date_filter: "this_week")
+- "Jonas's open tasks" → get_technicians(name: "jonas"), then get_work_orders(status: "open", user_id: ID)
+- "All work orders" → get_work_orders(status: "all")
 - "Horton 4190 won't close" → search_playbooks(query: "horton 4190 won't close")
-- "Find motor for SL500" → search_parts(query: "SL500 motor")
 
 ## COMPANY
 - Louisiana-based, 700+ customer locations
