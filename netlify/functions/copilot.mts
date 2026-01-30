@@ -742,7 +742,7 @@ export default async function handler(req: Request, context: Context): Promise<R
 
     let response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1500,
+      max_tokens: 2048,
       system: systemPrompt,
       tools: TOOLS,
       tool_choice: { type: "auto" },
@@ -777,19 +777,38 @@ export default async function handler(req: Request, context: Context): Promise<R
       messages.push({ role: "assistant", content: response.content });
       messages.push({ role: "user", content: toolResults });
 
-      response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1500,
-        system: systemPrompt,
-        tools: TOOLS,
-        messages,
-      });
+      try {
+        response = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2048,
+          system: systemPrompt,
+          tools: TOOLS,
+          messages,
+        });
+      } catch (apiError) {
+        console.error("Claude API error during tool loop:", apiError);
+        // Return partial response with what we have so far
+        return new Response(
+          JSON.stringify({
+            response: "I gathered information but encountered an error synthesizing the response. Here's what I found in my tools - please check the browser console for details.",
+            toolsUsed,
+            toolCalls,
+            iterations,
+            error: apiError instanceof Error ? apiError.message : "API error"
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        );
+      }
     }
 
     const textBlocks = response.content.filter(
       (block): block is Anthropic.TextBlock => block.type === "text"
     );
-    const responseText = textBlocks.map((b) => b.text).join("\n");
+    
+    // Handle case where no text response (shouldn't happen but safety check)
+    const responseText = textBlocks.length > 0 
+      ? textBlocks.map((b) => b.text).join("\n")
+      : "I processed your request but couldn't generate a text response. Check the tool results in the browser console.";
 
     const latestUserMsg = body.messages.filter((m) => m.role === "user").pop()?.content || "";
     const manufacturer = detectManufacturer(latestUserMsg + " " + responseText) || body.doorContext?.manufacturer;
