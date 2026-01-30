@@ -563,10 +563,10 @@
 
   function createToggleButton() {
     return `
-      <button class="aas-copilot-toggle" id="aasCopilotToggle" aria-label="Open AI Copilot">
+      <button class="aas-copilot-toggle" id="aasCopilotToggle" aria-label="Open AAS Copilot">
         <span class="aas-copilot-toggle-badge"></span>
         ${ICONS.robot}
-        <span class="aas-copilot-toggle-text">AI Copilot</span>
+        <span class="aas-copilot-toggle-text">AAS Copilot</span>
         <span class="aas-copilot-kbd"><span>⌘</span><span>K</span></span>
       </button>
     `;
@@ -575,7 +575,7 @@
   function createPanel() {
     return `
       <div class="aas-copilot-overlay" id="aasCopilotOverlay"></div>
-      <aside class="aas-copilot-panel" id="aasCopilotPanel" role="dialog" aria-label="AI Copilot">
+      <aside class="aas-copilot-panel" id="aasCopilotPanel" role="dialog" aria-label="AAS Copilot">
         <header class="aas-copilot-header">
           <h2 class="aas-copilot-title">
             <span class="aas-copilot-title-icon">${ICONS.robot}</span>
