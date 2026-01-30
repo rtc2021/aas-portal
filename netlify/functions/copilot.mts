@@ -138,12 +138,85 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       }
 
       case "search_parts": {
-        const query = input.query as string;
+        const query = (input.query as string).toLowerCase();
         const mfr = input.manufacturer as string | undefined;
-        let url = `${PORTAL_BASE_URL}/api/search-index?q=${encodeURIComponent(query)}&type=parts`;
-        if (mfr) url += `&manufacturer=${encodeURIComponent(mfr)}`;
-        const response = await fetch(url);
-        return await response.text();
+        
+        // Parts data is in Google Sheet
+        const PARTS_SHEET_ID = "1VEC9agWIuajszDSQrz3pyJ30a3Gz_P5KO-uLWIru9Hk";
+        const PARTS_CSV_URL = `https://docs.google.com/spreadsheets/d/${PARTS_SHEET_ID}/export?format=csv`;
+        
+        try {
+          const response = await fetch(PARTS_CSV_URL);
+          if (!response.ok) {
+            return JSON.stringify({ error: "Failed to fetch parts data", status: response.status });
+          }
+          
+          const csvText = await response.text();
+          const lines = csvText.split('\n');
+          
+          if (lines.length < 2) {
+            return JSON.stringify({ error: "Parts sheet is empty or invalid" });
+          }
+          
+          // Parse CSV header
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+          
+          // Find relevant column indices
+          const findCol = (names: string[]) => headers.findIndex(h => names.some(n => h.includes(n)));
+          const partNumCol = findCol(['part', 'number', 'pn', 'sku', 'item']);
+          const descCol = findCol(['desc', 'name', 'title']);
+          const mfrCol = findCol(['mfr', 'manufacturer', 'brand', 'make']);
+          const priceCol = findCol(['price', 'cost']);
+          const qtyCol = findCol(['qty', 'quantity', 'stock', 'on hand']);
+          
+          // Parse data rows and search
+          const results: any[] = [];
+          
+          for (let i = 1; i < lines.length && results.length < 30; i++) {
+            const line = lines[i];
+            if (!line.trim()) continue;
+            
+            // Simple CSV parse (handles basic cases)
+            const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            
+            const partNum = partNumCol >= 0 ? values[partNumCol] || '' : '';
+            const desc = descCol >= 0 ? values[descCol] || '' : '';
+            const manufacturer = mfrCol >= 0 ? values[mfrCol] || '' : '';
+            const price = priceCol >= 0 ? values[priceCol] || '' : '';
+            const qty = qtyCol >= 0 ? values[qtyCol] || '' : '';
+            
+            // Search in part number and description
+            const searchText = `${partNum} ${desc} ${manufacturer}`.toLowerCase();
+            
+            if (searchText.includes(query)) {
+              // Filter by manufacturer if specified
+              if (mfr && !manufacturer.toLowerCase().includes(mfr.toLowerCase())) {
+                continue;
+              }
+              
+              results.push({
+                partNumber: partNum,
+                description: desc,
+                manufacturer: manufacturer,
+                price: price,
+                quantity: qty
+              });
+            }
+          }
+          
+          return JSON.stringify({
+            query: query,
+            manufacturerFilter: mfr || null,
+            count: results.length,
+            parts: results
+          });
+          
+        } catch (error) {
+          return JSON.stringify({ 
+            error: "Failed to search parts", 
+            details: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
       }
 
       case "get_work_orders": {
