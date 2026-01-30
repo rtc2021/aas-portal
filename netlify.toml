@@ -1,7 +1,10 @@
+# AAS Portal - Netlify Configuration
+# Includes: Copilot Function + Copilot UI Auto-Injection
+
 [build]
   base = "portal"
-  command = "cd ../netlify/functions && npm install && cd ../../portal && npm run build"
-  publish = "dist"
+  command = "cd ../netlify/functions && npm install && cd ../../portal && echo 'Build complete'"
+  publish = "."
   functions = "../netlify/functions"
   ignore = "exit 1"
 
@@ -11,10 +14,99 @@
 [functions."copilot"]
   timeout = 30
 
+# ============================================================================
+# ASSET REDIRECTS
+# ============================================================================
+
+[[redirects]]
+  from = "/favicon.svg"
+  to = "/public/favicon.svg"
+  status = 200
+
+[[redirects]]
+  from = "/auth.js"
+  to = "/public/auth.js"
+  status = 200
+
+[[redirects]]
+  from = "/copilot.js"
+  to = "/public/copilot.js"
+  status = 200
+
+# ============================================================================
+# API REDIRECTS
+# ============================================================================
+
 [[redirects]]
   from = "/api/copilot"
   to = "/.netlify/functions/copilot"
   status = 200
+
+[[redirects]]
+  from = "/api/copilot/*"
+  to = "/.netlify/functions/copilot"
+  status = 200
+
+# ============================================================================
+# TECH ROUTES
+# ============================================================================
+
+[[redirects]]
+  from = "/tech/command"
+  to = "/tech/command/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/parts"
+  to = "/tech/parts/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/manuals"
+  to = "/tech/manuals/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/doors"
+  to = "/tech/doors/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/summary"
+  to = "/tech/summary/index.html"
+  status = 200
+
+# ============================================================================
+# CUSTOMER ROUTES
+# ============================================================================
+
+[[redirects]]
+  from = "/customer/command"
+  to = "/customer/command/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/customer"
+  to = "/customer/command"
+  status = 302
+
+# ============================================================================
+# DOOR & SERVICE ROUTES
+# ============================================================================
+
+[[redirects]]
+  from = "/door"
+  to = "/door/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/service"
+  to = "/service/index.html"
+  status = 200
+
+# ============================================================================
+# CORS HEADERS FOR API
+# ============================================================================
 
 [[headers]]
   for = "/api/*"
@@ -22,3 +114,19 @@
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+# ============================================================================
+# POST-PROCESSING: AUTO-INJECT COPILOT SCRIPT
+# ============================================================================
+# This injects the copilot.js script into every HTML page automatically
+# The script itself checks for Admin/Tech roles before showing UI
+
+[build.processing]
+  skip_processing = false
+
+[build.processing.html]
+  pretty_urls = false
+
+# Snippet injection - adds copilot to all pages
+# Note: Configure in Netlify UI: Site settings > Build & deploy > Post processing > Snippet injection
+# Add: <script src="/copilot.js" defer></script> before </body>
