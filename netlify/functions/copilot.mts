@@ -255,31 +255,59 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const assetId = input.asset_id as string | undefined;
         const userId = input.user_id as string | undefined;
         
-        // Fetch all tasks from Limble (handle pagination)
-        let allTasks: any[] = [];
-        let page = 1;
-        let hasMore = true;
+        // Limble Status IDs:
+        // 0 = Open
+        // 1 = In Progress  
+        // 2 = Complete
+        // 2969 = Return/Quote for Parts (custom)
+        // 3100 = Work Complete - Pending Confirmation (custom)
+        const COMPLETED_STATUS_IDS = [2, 3100]; // statusID values that mean "completed"
+        const OPEN_STATUS_IDS = [0, 1, 2969];   // statusID values that mean "open/in progress"
         
-        while (hasMore && page <= 20) { // Max 20 pages to prevent infinite loops
+        // First, find the last page (binary search)
+        const findLastPage = async (): Promise<number> => {
+          let low = 1, high = 100, lastPage = 1;
+          while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            const resp = await fetch(`${LIMBLE_BASE_URL}/tasks?page=${mid}&limit=100`, { 
+              headers: { Authorization: getLimbleAuth() } 
+            });
+            if (!resp.ok) break;
+            const data = await resp.json();
+            const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
+            if (tasks.length > 0) {
+              lastPage = mid;
+              low = mid + 1;
+            } else {
+              high = mid - 1;
+            }
+          }
+          return lastPage;
+        };
+        
+        // Find max page number
+        const maxPage = await findLastPage();
+        
+        // Fetch tasks in REVERSE order (newest first) - start from last page
+        let allTasks: any[] = [];
+        const pagesToFetch = Math.min(maxPage, 50); // Fetch up to 50 pages
+        
+        for (let page = maxPage; page >= Math.max(1, maxPage - pagesToFetch + 1); page--) {
           const url = `${LIMBLE_BASE_URL}/tasks?page=${page}&limit=100`;
           const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
-          if (!response.ok) {
-            if (page === 1) return JSON.stringify({ error: "Failed to fetch work orders", status: response.status });
-            break; // Got some data, stop here
-          }
+          if (!response.ok) continue;
           
           const data = await response.json();
           const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
-          
-          if (tasks.length === 0) {
-            hasMore = false;
-          } else {
-            allTasks = allTasks.concat(tasks);
-            page++;
-            // If we got less than limit, we're done
-            if (tasks.length < 100) hasMore = false;
-          }
+          allTasks = allTasks.concat(tasks);
         }
+        
+        // SORT BY dateCompleted DESCENDING (most recent first)
+        allTasks.sort((a: any, b: any) => {
+          const aDate = a.dateCompleted || 0;
+          const bDate = b.dateCompleted || 0;
+          return bDate - aDate; // Descending order
+        });
         
         let tasks = allTasks;
         
@@ -321,42 +349,46 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           };
         };
         
-        // Limble uses Unix timestamps (seconds) and dateCompleted > 0 means completed
-        const now = Math.floor(Date.now() / 1000);
-        const oneYearAgoUnix = now - (365 * 24 * 60 * 60);
+        // Helper: Check if task is completed by statusID
+        const isCompleted = (t: any) => COMPLETED_STATUS_IDS.includes(t.statusID);
+        const isOpen = (t: any) => OPEN_STATUS_IDS.includes(t.statusID) || t.statusID === undefined;
         
         // Calculate stats before filtering
+        const now = Math.floor(Date.now() / 1000);
+        const oneYearAgoUnix = now - (365 * 24 * 60 * 60);
         const totalTasks = tasks.length;
+        
+        // Use statusID for completion status
         const completedThisYear = tasks.filter((t: any) => 
-          t.dateCompleted && t.dateCompleted > 0 && t.dateCompleted >= oneYearAgoUnix
+          isCompleted(t) && t.dateCompleted && t.dateCompleted >= oneYearAgoUnix
         ).length;
-        const openTasks = tasks.filter((t: any) => !t.dateCompleted || t.dateCompleted === 0).length;
+        const openTasks = tasks.filter((t: any) => isOpen(t)).length;
         
         // Get today's range for "completed today" stat
         const todayRange = getDateRangeUnix('today');
         const completedToday = todayRange ? tasks.filter((t: any) => 
-          t.dateCompleted && t.dateCompleted >= todayRange.start && t.dateCompleted <= todayRange.end
+          isCompleted(t) && t.dateCompleted && t.dateCompleted >= todayRange.start && t.dateCompleted <= todayRange.end
         ).length : 0;
         
         if (status === "open") {
-          // Open = not completed (dateCompleted is 0 or missing)
-          tasks = tasks.filter((t: any) => !t.dateCompleted || t.dateCompleted === 0);
+          // Open = statusID is 0, 1, or 2969
+          tasks = tasks.filter((t: any) => isOpen(t));
         } else if (status === "completed") {
-          // First filter to only completed tasks
-          tasks = tasks.filter((t: any) => t.dateCompleted && t.dateCompleted > 0);
+          // Completed = statusID is 2 or 3100
+          tasks = tasks.filter((t: any) => isCompleted(t));
           
           // Then apply date filter if provided
           if (dateFilter) {
             const range = getDateRangeUnix(dateFilter);
             if (range) {
               tasks = tasks.filter((t: any) => 
-                t.dateCompleted >= range.start && t.dateCompleted <= range.end
+                t.dateCompleted && t.dateCompleted >= range.start && t.dateCompleted <= range.end
               );
             }
           } else {
             // Default: last 7 days
             const sevenDaysAgoUnix = now - (7 * 24 * 60 * 60);
-            tasks = tasks.filter((t: any) => t.dateCompleted >= sevenDaysAgoUnix);
+            tasks = tasks.filter((t: any) => t.dateCompleted && t.dateCompleted >= sevenDaysAgoUnix);
           }
         }
         // status === "all" means no status filtering, but still apply date filter if present
@@ -364,11 +396,10 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           const range = getDateRangeUnix(dateFilter);
           if (range) {
             tasks = tasks.filter((t: any) => {
-              const completed = t.dateCompleted && t.dateCompleted > 0;
-              if (completed) {
+              if (isCompleted(t) && t.dateCompleted) {
                 return t.dateCompleted >= range.start && t.dateCompleted <= range.end;
               }
-              // For open tasks, check creation date if available
+              // For open tasks, include them all (or check creation date if available)
               return true;
             });
           }
@@ -395,10 +426,24 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           });
         };
         
-        // Return summary with key fields
+        // Map statusID to human-readable name
+        const getStatusName = (statusID: number): string => {
+          const statusMap: { [key: number]: string } = {
+            0: 'Open',
+            1: 'In Progress',
+            2: 'Complete',
+            2969: 'Return/Quote for Parts',
+            3100: 'Work Complete - Pending'
+          };
+          return statusMap[statusID] || `Unknown (${statusID})`;
+        };
+        
+        // Return summary with key fields (sorted by dateCompleted descending)
         const summary = tasks.slice(0, 50).map((t: any) => ({
           taskID: t.taskID,
           name: t.name,
+          status: getStatusName(t.statusID),
+          statusID: t.statusID,
           description: t.description,
           assetID: t.assetID,
           locationID: t.locationID,
@@ -414,6 +459,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         return JSON.stringify({ 
           stats: {
             totalTasksInSystem: totalTasks,
+            totalPagesInLimble: maxPage,
             completedThisYear: completedThisYear,
             completedToday: completedToday,
             currentlyOpen: openTasks
