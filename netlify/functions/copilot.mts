@@ -150,17 +150,45 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const assetId = input.asset_id as string | undefined;
         const userId = input.user_id as string | undefined;
         
-        // Fetch all tasks from Limble
-        const url = `${LIMBLE_BASE_URL}/tasks`;
-        const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
-        if (!response.ok) return JSON.stringify({ error: "Failed to fetch work orders", status: response.status });
+        // Fetch all tasks from Limble (handle pagination)
+        let allTasks: any[] = [];
+        let page = 1;
+        let hasMore = true;
         
-        const allTasks = await response.json();
-        let tasks = Array.isArray(allTasks) ? allTasks : (allTasks.data || allTasks.tasks || []);
+        while (hasMore && page <= 20) { // Max 20 pages to prevent infinite loops
+          const url = `${LIMBLE_BASE_URL}/tasks?page=${page}&limit=100`;
+          const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
+          if (!response.ok) {
+            if (page === 1) return JSON.stringify({ error: "Failed to fetch work orders", status: response.status });
+            break; // Got some data, stop here
+          }
+          
+          const data = await response.json();
+          const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
+          
+          if (tasks.length === 0) {
+            hasMore = false;
+          } else {
+            allTasks = allTasks.concat(tasks);
+            page++;
+            // If we got less than limit, we're done
+            if (tasks.length < 100) hasMore = false;
+          }
+        }
+        
+        let tasks = allTasks;
         
         // Limble uses Unix timestamps (seconds) and dateCompleted > 0 means completed
         const now = Math.floor(Date.now() / 1000);
         const sevenDaysAgoUnix = now - (7 * 24 * 60 * 60);
+        const oneYearAgoUnix = now - (365 * 24 * 60 * 60);
+        
+        // Calculate stats before filtering
+        const totalTasks = tasks.length;
+        const completedThisYear = tasks.filter((t: any) => 
+          t.dateCompleted && t.dateCompleted > 0 && t.dateCompleted >= oneYearAgoUnix
+        ).length;
+        const openTasks = tasks.filter((t: any) => !t.dateCompleted || t.dateCompleted === 0).length;
         
         if (status === "open") {
           // Open = not completed (dateCompleted is 0 or missing)
@@ -211,9 +239,16 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         }));
         
         return JSON.stringify({ 
-          count: tasks.length, 
-          showing: summary.length,
-          status: status,
+          stats: {
+            totalTasksInSystem: totalTasks,
+            completedThisYear: completedThisYear,
+            currentlyOpen: openTasks
+          },
+          filtered: {
+            status: status,
+            count: tasks.length,
+            showing: summary.length
+          },
           tasks: summary 
         });
       }
@@ -319,42 +354,41 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 ## TODAY'S DATE
 {{CURRENT_DATE}}
 
-## CRITICAL INSTRUCTION
-You MUST use your tools to answer questions. NEVER say "I don't have access" - you DO have access through your tools. If someone asks about work orders, USE get_work_orders. If they ask about a door, USE get_door_info. If they ask technical questions, USE search_playbooks.
+## CRITICAL INSTRUCTIONS
+1. You HAVE ACCESS to work orders, doors, parts, technicians, and playbooks through your tools - USE THEM.
+2. NEVER say "I don't have access" or "I can't see" - you CAN access data via tools.
+3. When asked about tasks/work orders, USE get_work_orders immediately.
+4. When asked about a door, USE get_door_info or search_doors.
+5. For any technical question, USE search_playbooks.
+6. If tools return stats, REPORT THOSE NUMBERS - don't guess or estimate.
 
-## YOUR TOOLS - USE THEM!
-1. **search_playbooks** - Technical questions, error codes, procedures, wiring, specs for Horton/Stanley/Besam/NABCO
-2. **get_work_orders** - Get tasks/jobs from Limble CMMS (open, completed, or all). Can filter by user_id.
-3. **get_technicians** - Get list of technicians with their userIDs. Use to find a tech's userID by name.
-4. **get_service_history** - Past service records for a specific door (requires asset_id)
-5. **get_door_info** - Door details from registry (manufacturer, model, location, customer)
-6. **search_doors** - Find doors by customer name, location, or manufacturer
-7. **search_parts** - Find parts by name, number, or description
+## YOUR TOOLS
+1. **search_playbooks** - Error codes, procedures, wiring, specs for Horton/Stanley/Besam/NABCO
+2. **get_work_orders** - Tasks from Limble (returns stats: total, completed this year, open). Filter by status/user_id/asset_id.
+3. **get_technicians** - List techs with userIDs. Use to find userID by name.
+4. **get_service_history** - Service records for a door (needs asset_id)
+5. **get_door_info** - Door details by ID
+6. **search_doors** - Find doors by customer/location
+7. **search_parts** - Parts inventory search
 
-## WHEN TO USE EACH TOOL
-- "What are Jonas's tasks?" → First get_technicians(name_filter: "jonas") to get userID, then get_work_orders(user_id: that ID)
+## EXAMPLE QUERIES
+- "How many tasks per year?" → get_work_orders(status: "all") - report the stats.completedThisYear number
+- "What are Jonas's tasks?" → get_technicians(name_filter: "jonas"), then get_work_orders(user_id: that ID)
 - "Show open work orders" → get_work_orders(status: "open")
-- "What was completed this week?" → get_work_orders(status: "completed")
-- "Tell me about door AAS-123" → get_door_info
-- "Find Manning doors" → search_doors
-- "Service history for asset 38" → get_service_history(asset_id: "38")
-- "How do I program Horton 4190?" → search_playbooks
-- "What's error b1 on Stanley?" → search_playbooks
-- "Find motor for SL500" → search_parts
-- "Who are our technicians?" → get_technicians
+- "Horton 4190 won't close" → search_playbooks(query: "horton 4190 won't close")
+- "Find motor for SL500" → search_parts(query: "SL500 motor")
 
-## COMPANY CONTEXT
-- 700+ customer locations in Louisiana
-- Healthcare: Manning, Ochsner facilities  
-- Door IDs: AAS-XXX, FD-XXX, or Names like MH-1.81
-- Limble uses assetID for doors, userID for technicians
+## COMPANY
+- Louisiana-based, 700+ customer locations
+- Healthcare: Manning, Ochsner
+- Door IDs: AAS-XXX, FD-XXX, Names like MH-1.81
+- Limble: assetID = doors, userID = technicians
 
 ## RESPONSE STYLE
-1. USE TOOLS FIRST - Don't guess, look it up
-2. BE CONCISE - Techs are on mobile
-3. ANSWER DIRECTLY - No preamble about what you're doing
-4. NUMBERED STEPS for procedures
-5. If a tool returns no results or errors, say that - don't pretend you don't have the tool`;
+- BE CONCISE - Techs are on mobile
+- ANSWER DIRECTLY - No explaining what you're doing
+- NUMBERED STEPS for procedures
+- Report actual numbers from tool results, not estimates`;
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface CopilotRequest {
