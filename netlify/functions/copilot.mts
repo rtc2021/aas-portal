@@ -7,6 +7,8 @@ const anthropic = new Anthropic({
 
 const PORTAL_BASE_URL = Netlify.env.get("PORTAL_BASE_URL") || "https://aas-portal.netlify.app";
 const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://134.199.203.192:8000";
+const QDRANT_URL = Netlify.env.get("QDRANT_URL") || "http://134.199.203.192:6333";
+const OPENAI_API_KEY = Netlify.env.get("OPENAI_API_KEY");
 const LIMBLE_CLIENT_ID = Netlify.env.get("LIMBLE_CLIENT_ID");
 const LIMBLE_CLIENT_SECRET = Netlify.env.get("LIMBLE_CLIENT_SECRET");
 
@@ -104,7 +106,7 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "search_manuals",
-    description: "Search technical manuals database by manufacturer, controller, door type, or model. Returns links to PDF manuals.",
+    description: "Search technical manuals database by manufacturer, controller, door type, or model. Returns links to PDF manuals in Google Drive.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -112,6 +114,20 @@ const TOOLS: Anthropic.Tool[] = [
         manufacturer: { type: "string", description: "Filter by manufacturer (Horton, Stanley, Besam, BEA, etc.)" },
         door_type: { type: "string", description: "Filter by door type (Slide, Swing, Sensor, etc.)" },
         controller: { type: "string", description: "Filter by controller (MC521, 4190, iQ, etc.)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_manuals_rag",
+    description: "Search 2,200+ technical manuals using AI semantic search. Returns actual content excerpts with source citations. Use this for detailed technical questions about installation, troubleshooting, programming, wiring, specifications, and maintenance procedures. Can filter by manufacturer and door type.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Natural language search - describe what you're looking for" },
+        manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax" },
+        door_type: { type: "string", description: "Filter by door type: slide, swing, folding, icu, fire, revolving" },
+        limit: { type: "number", description: "Number of results (default 5, max 10)" }
       },
       required: ["query"]
     }
@@ -668,6 +684,123 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         }
       }
 
+      case "search_manuals_rag": {
+        const query = input.query as string;
+        const manufacturer = input.manufacturer as string | undefined;
+        const doorType = input.door_type as string | undefined;
+        const limit = Math.min((input.limit as number) || 5, 10);
+        
+        if (!OPENAI_API_KEY) {
+          return JSON.stringify({ error: "OpenAI API key not configured" });
+        }
+        
+        try {
+          // Step 1: Get query embedding from OpenAI
+          const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "text-embedding-3-small",
+              input: query
+            })
+          });
+          
+          if (!embeddingResponse.ok) {
+            const errText = await embeddingResponse.text();
+            return JSON.stringify({ error: "Failed to generate query embedding", details: errText });
+          }
+          
+          const embeddingData = await embeddingResponse.json();
+          const queryVector = embeddingData.data[0].embedding;
+          
+          // Step 2: Build Qdrant filter
+          const mustFilters: any[] = [];
+          
+          if (manufacturer) {
+            mustFilters.push({
+              key: "manufacturer",
+              match: { value: manufacturer.toLowerCase() }
+            });
+          }
+          
+          if (doorType) {
+            mustFilters.push({
+              key: "door_types",
+              match: { any: [doorType.toLowerCase()] }
+            });
+          }
+          
+          // Step 3: Query Qdrant
+          const searchBody: any = {
+            vector: queryVector,
+            limit: limit,
+            with_payload: true,
+            score_threshold: 0.25
+          };
+          
+          if (mustFilters.length > 0) {
+            searchBody.filter = { must: mustFilters };
+          }
+          
+          const qdrantResponse = await fetch(
+            `${QDRANT_URL}/collections/manual_chunks_v1/points/search`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(searchBody)
+            }
+          );
+          
+          if (!qdrantResponse.ok) {
+            const errText = await qdrantResponse.text();
+            return JSON.stringify({ error: "Failed to search manuals database", details: errText });
+          }
+          
+          const searchResults = await qdrantResponse.json();
+          const results = searchResults.result || [];
+          
+          if (results.length === 0) {
+            return JSON.stringify({
+              query: query,
+              filters: { manufacturer, door_type: doorType },
+              count: 0,
+              message: "No matching documentation found. Try broadening your search or removing filters.",
+              results: []
+            });
+          }
+          
+          // Format results
+          const formattedResults = results.map((hit: any, index: number) => {
+            const payload = hit.payload || {};
+            return {
+              rank: index + 1,
+              score: hit.score.toFixed(3),
+              manufacturer: payload.manufacturer || "unknown",
+              source: payload.doc_key || "unknown",
+              controllers: payload.controllers || [],
+              door_types: payload.door_types || [],
+              text: payload.text || ""
+            };
+          });
+          
+          return JSON.stringify({
+            query: query,
+            filters: { manufacturer, door_type: doorType },
+            count: formattedResults.length,
+            results: formattedResults
+          });
+          
+        } catch (error) {
+          return JSON.stringify({ 
+            error: "Failed to search manuals RAG", 
+            details: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
@@ -696,20 +829,27 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 2. NEVER say "I don't have access" or "I can't see" - you CAN access data via tools.
 3. When asked about tasks/work orders, USE get_work_orders immediately.
 4. When asked about a door, USE get_door_info or search_doors.
-5. For technical questions, USE search_playbooks AND/OR search_manuals.
+5. For technical questions, USE search_manuals_rag FIRST (returns actual content), then search_playbooks if needed.
 6. For parts questions, USE search_parts.
 7. If tools return stats, REPORT THOSE NUMBERS - don't guess or estimate.
 8. NEVER HALLUCINATE - if a tool returns no results, say so. Don't make up part numbers or specs.
+9. CITE YOUR SOURCES - when using search_manuals_rag, mention which manual the info came from.
 
 ## YOUR TOOLS
-1. **search_playbooks** - Error codes, procedures, wiring, specs from technical playbooks
-2. **search_manuals** - Search manuals database for PDFs by manufacturer, controller, door type, model
-3. **search_parts** - Parts inventory with part numbers, descriptions, images
-4. **get_work_orders** - Tasks from Limble (status: open/completed/all, date_filter: today/yesterday/this_week/YYYY-MM-DD)
-5. **get_technicians** - List techs with userIDs
-6. **get_service_history** - Service records for a door (needs asset_id)
-7. **get_door_info** - Door details by ID
-8. **search_doors** - Find doors by customer/location
+1. **search_manuals_rag** - AI semantic search of 2,200+ manuals - returns ACTUAL CONTENT excerpts. Use for detailed technical questions!
+2. **search_playbooks** - Error codes, procedures, wiring, specs from troubleshooting playbooks
+3. **search_manuals** - Search manuals database for PDF links by manufacturer, controller, door type
+4. **search_parts** - Parts inventory with part numbers, descriptions, images
+5. **get_work_orders** - Tasks from Limble (status: open/completed/all, date_filter: today/yesterday/this_week/YYYY-MM-DD)
+6. **get_technicians** - List techs with userIDs
+7. **get_service_history** - Service records for a door (needs asset_id)
+8. **get_door_info** - Door details by ID
+9. **search_doors** - Find doors by customer/location
+
+## WHEN TO USE WHICH MANUAL SEARCH
+- **search_manuals_rag**: For HOW-TO questions - "How do I adjust speed?", "What's the wiring?", "Troubleshooting steps"
+- **search_manuals**: For finding PDF links - "I need the Horton 4190 manual", "Link to MC521 guide"
+- **search_playbooks**: For quick troubleshooting procedures and common fixes
 
 ## IMPORTANT TECHNICAL NOTES
 - Stanley MC521 can be programmed for BOTH slide AND swing doors - don't assume one or the other
@@ -717,11 +857,11 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - When unsure about a controller's capabilities, search manuals first
 
 ## EXAMPLE QUERIES
-- "MC521 parts" → search_parts(query: "mc521") - returns actual parts from inventory
-- "MC521 swing manual" → search_manuals(query: "mc521 swing")
+- "How do I adjust door speed on C4190?" → search_manuals_rag(query: "C4190 door speed adjustment")
+- "MC521 parts" → search_parts(query: "mc521")
+- "I need the Besam SL500 manual" → search_manuals(query: "besam sl500")
 - "Ruben's tasks today" → get_technicians(name: "ruben"), then get_work_orders(status: "completed", date_filter: "today", user_id: ID)
-- "ADC 60 controller" → search_parts(query: "adc 60")
-- "Horton troubleshooting" → search_playbooks(query: "horton") + search_manuals(query: "horton")
+- "Horton swing door troubleshooting" → search_manuals_rag(query: "horton swing door troubleshooting")
 
 ## COMPANY
 - Louisiana-based, 700+ customer locations
@@ -733,6 +873,7 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - ANSWER DIRECTLY - No preamble
 - NUMBERED STEPS for procedures
 - Include part numbers and manual links when available
+- CITE the source manual when using search_manuals_rag results
 - If no results, say "No results found" - don't make up information`;
 
 interface Message { role: "user" | "assistant"; content: string; }
