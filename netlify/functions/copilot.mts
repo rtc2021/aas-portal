@@ -874,7 +874,9 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - NUMBERED STEPS for procedures
 - Include part numbers and manual links when available
 - CITE the source manual when using search_manuals_rag results
-- If no results, say "No results found" - don't make up information`;
+- If no results, say "No results found" - don't make up information
+- FORMAT LINKS as clickable markdown: [Manual Name](url) - NEVER show raw URLs
+- Example: [Horton C4190 Manual](https://drive.google.com/file/d/xxx/view)`;
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface CopilotRequest {
