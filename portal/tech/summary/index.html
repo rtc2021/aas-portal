@@ -33,791 +33,849 @@
   <div id="pageContent" class="page-content">
 <style>
 /* =========================
-   Workdash (NO STICKY) Theme
-   COMPLETE-only / Status removed
+   WORK SUMMARY v2.0
+   Light/Dark Theme Support
    ========================= */
 
-#workdash{
-  --wd-bg: #0b1220;
-  --wd-surface: rgba(255,255,255,.04);
-  --wd-surface2: rgba(255,255,255,.06);
-  --wd-border: rgba(255,255,255,.10);
-  --wd-border2: rgba(255,255,255,.16);
-  --wd-text: rgba(255,255,255,.92);
-  --wd-muted: rgba(255,255,255,.60);
-  --wd-accent: #6ea8fe;
+#workSummary {
+  /* Dark theme (default) */
+  --ws-bg: #0a0a0f;
+  --ws-surface: rgba(255,255,255,0.03);
+  --ws-card: rgba(255,255,255,0.05);
+  --ws-card-hover: rgba(255,255,255,0.08);
+  --ws-border: rgba(255,255,255,0.08);
+  --ws-border-hover: rgba(0,212,255,0.3);
+  --ws-text: #ffffff;
+  --ws-text-secondary: rgba(255,255,255,0.7);
+  --ws-text-muted: rgba(255,255,255,0.5);
+  --ws-accent: #00d4ff;
+  --ws-accent-bg: rgba(0,212,255,0.12);
+  --ws-input-bg: rgba(255,255,255,0.06);
+  --ws-table-header: rgba(0,212,255,0.08);
+  --ws-table-row-hover: rgba(255,255,255,0.04);
+  --ws-shadow: 0 8px 32px rgba(0,0,0,0.3);
 
-  color: var(--wd-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  min-height: 100vh;
+  padding: 80px 20px 40px;
+  background: var(--ws-bg);
+  color: var(--ws-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
 }
 
-#workdash, #workdash *{ box-sizing: border-box; }
-
-/* Wrapper */
-#workdash.workdash-wrapper{
-  padding: clamp(16px, 2.5vw, 28px);
-  border-radius: 18px;
-  border: 1px solid var(--wd-border);
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
-  box-shadow: 0 30px 80px rgba(0,0,0,.35);
-  backdrop-filter: blur(10px);
+#workSummary *, #workSummary *::before, #workSummary *::after {
+  box-sizing: border-box;
 }
 
-/* Title */
-#workdash .workdash-title{
-  font-size: clamp(28px, 3vw, 44px);
-  font-weight: 750;
+/* Light theme overrides */
+body.light-theme #workSummary {
+  --ws-bg: #f4f6f8;
+  --ws-surface: rgba(0,0,0,0.02);
+  --ws-card: #ffffff;
+  --ws-card-hover: #ffffff;
+  --ws-border: rgba(0,0,0,0.1);
+  --ws-border-hover: rgba(0,102,170,0.4);
+  --ws-text: #1a1a2e;
+  --ws-text-secondary: rgba(26,26,46,0.75);
+  --ws-text-muted: rgba(26,26,46,0.55);
+  --ws-accent: #0077aa;
+  --ws-accent-bg: rgba(0,119,170,0.1);
+  --ws-input-bg: #ffffff;
+  --ws-table-header: rgba(0,119,170,0.06);
+  --ws-table-row-hover: rgba(0,0,0,0.03);
+  --ws-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+/* Container */
+.ws-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.ws-header {
+  margin-bottom: 24px;
+}
+
+.ws-title {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  color: var(--ws-text);
+  margin: 0 0 8px;
   letter-spacing: -0.02em;
-  margin: 2px 0 18px;
 }
 
-/* Filters */
-#workdash .workdash-filters{
+.ws-subtitle {
+  color: var(--ws-text-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Filters Card */
+.ws-filters {
+  background: var(--ws-card);
+  border: 1px solid var(--ws-border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--ws-shadow);
+}
+
+.ws-filters-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  align-items: end;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-#workdash .wd-daterange{
-  grid-column: span 2;
+.ws-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ws-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ws-text-muted);
+}
+
+.ws-input,
+.ws-select {
+  height: 44px;
+  padding: 0 14px;
+  background: var(--ws-input-bg);
+  border: 1px solid var(--ws-border);
+  border-radius: 10px;
+  color: var(--ws-text);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.ws-input:focus,
+.ws-select:focus {
+  outline: none;
+  border-color: var(--ws-accent);
+  box-shadow: 0 0 0 3px var(--ws-accent-bg);
+}
+
+.ws-input::placeholder {
+  color: var(--ws-text-muted);
+}
+
+.ws-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23888'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+/* Date Range Section */
+.ws-date-section {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ws-border);
 }
 
-#workdash .wd-date-label{
+.ws-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ws-date-preset {
+  padding: 8px 14px;
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 20px;
+  color: var(--ws-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ws-date-preset:hover {
+  border-color: var(--ws-accent);
+  color: var(--ws-accent);
+}
+
+.ws-date-preset.active {
+  background: var(--ws-accent-bg);
+  border-color: var(--ws-accent);
+  color: var(--ws-accent);
+}
+
+.ws-date-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ws-date-custom label {
   font-size: 12px;
-  letter-spacing: .02em;
-  color: var(--wd-muted);
+  color: var(--ws-text-muted);
 }
 
-/* Inputs/selects */
-#workdash .wd-input,
-#workdash .wd-select{
-  height: 44px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--wd-border);
-  background: rgba(0,0,0,.18);
-  color: var(--wd-text);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+.ws-date-input {
+  height: 38px;
+  padding: 0 12px;
+  background: var(--ws-input-bg);
+  border: 1px solid var(--ws-border);
+  border-radius: 8px;
+  color: var(--ws-text);
+  font-size: 14px;
+  cursor: pointer;
 }
 
-#workdash .wd-input::placeholder{ color: rgba(255,255,255,.40); }
-
-#workdash .wd-input:focus,
-#workdash .wd-select:focus{
+.ws-date-input:focus {
   outline: none;
-  border-color: rgba(110,168,254,.60);
-  box-shadow: 0 0 0 4px rgba(110,168,254,.18);
-  background: rgba(0,0,0,.26);
+  border-color: var(--ws-accent);
 }
 
-/* Select arrow */
-#workdash .wd-select{
-  appearance: none;
-  padding-right: 38px;
-  background-image:
-    linear-gradient(45deg, transparent 50%, rgba(255,255,255,.65) 50%),
-    linear-gradient(135deg, rgba(255,255,255,.65) 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) 50%,
-    calc(100% - 12px) 50%;
-  background-size: 6px 6px, 6px 6px;
-  background-repeat: no-repeat;
-}
-
-/* Table wrap */
-#workdash .workdash-tablewrap{
-  border: 1px solid var(--wd-border);
+/* Results Card */
+.ws-results {
+  background: var(--ws-card);
+  border: 1px solid var(--ws-border);
   border-radius: 16px;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  background: rgba(0,0,0,.16);
+  overflow: hidden;
+  box-shadow: var(--ws-shadow);
 }
 
 /* Table */
-#workdash .workdash-table{
+.ws-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ws-table {
   width: 100%;
-  min-width: 1000px;
-  table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-/* Header (NO sticky) */
-#workdash .workdash-table thead th{
-  position: static !important;
-  background: rgba(10, 16, 32, .92);
-  backdrop-filter: blur(10px);
-
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .12em;
-  color: rgba(255,255,255,.62);
-
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--wd-border);
-  text-align: left;
-}
-
-/* Cells */
-#workdash .workdash-table tbody td{
-  position: static !important;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  vertical-align: top;
+  border-collapse: collapse;
   font-size: 14px;
-  line-height: 1.45;
 }
 
-#workdash .workdash-table tbody tr:hover{
-  background: rgba(255,255,255,.035);
-}
-
-/* Column sizing */
-#workdash .wd-col-task{ width: 110px; }
-#workdash .wd-col-location{ width: 260px; }
-#workdash .wd-col-date{ width: 130px; }
-#workdash .wd-col-tech{
-  width: 120px;
+.ws-table thead th {
+  background: var(--ws-table-header);
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ws-text-secondary);
+  border-bottom: 1px solid var(--ws-border);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-#workdash .wd-col-wo{ width: 110px; }
-
-/* Summary full */
-#workdash .wd-summary-cell{
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  color: rgba(255,255,255,.86);
 }
 
-/* WO button */
-#workdash .wd-link{
+.ws-table tbody td {
+  padding: 16px;
+  border-bottom: 1px solid var(--ws-border);
+  color: var(--ws-text);
+  vertical-align: top;
+}
+
+.ws-table tbody tr:hover {
+  background: var(--ws-table-row-hover);
+}
+
+.ws-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Column styles */
+.ws-col-task {
+  width: 100px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--ws-accent) !important;
+}
+
+.ws-col-location {
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.ws-col-date {
+  width: 110px;
+  white-space: nowrap;
+}
+
+.ws-col-tech {
+  width: 100px;
+}
+
+.ws-col-summary {
+  min-width: 250px;
+  line-height: 1.5;
+  color: var(--ws-text-secondary) !important;
+}
+
+.ws-col-wo {
+  width: 90px;
+  text-align: center;
+}
+
+/* WO Button */
+.ws-wo-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px;
-  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--ws-accent-bg);
+  border: 1px solid var(--ws-accent);
+  border-radius: 20px;
+  color: var(--ws-accent);
+  font-size: 12px;
+  font-weight: 600;
   text-decoration: none;
-  font-weight: 700;
-
-  background: rgba(110,168,254,.14);
-  border: 1px solid rgba(110,168,254,.35);
-  color: rgba(255,255,255,.92);
-
-  transition: background .15s ease, transform .08s ease;
+  transition: all 0.2s ease;
 }
-#workdash .wd-link:hover{ background: rgba(110,168,254,.22); }
-#workdash .wd-link:active{ transform: scale(.98); }
 
-/* Meta + show more */
-#workdash .workdash-meta{
-  margin-top: 10px;
-  color: var(--wd-muted);
+.ws-wo-btn:hover {
+  background: var(--ws-accent);
+  color: #fff;
+}
+
+/* Footer */
+.ws-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid var(--ws-border);
+  background: var(--ws-surface);
+}
+
+.ws-meta {
   font-size: 13px;
+  color: var(--ws-text-muted);
 }
 
-#workdash .wd-showmore{
-  margin-top: 10px;
+.ws-showmore {
   display: none;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--wd-border2);
-  background: var(--wd-surface2);
-  color: var(--wd-text);
+  gap: 6px;
+  padding: 10px 18px;
+  background: var(--ws-accent-bg);
+  border: 1px solid var(--ws-accent);
+  border-radius: 20px;
+  color: var(--ws-accent);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: 750;
+  transition: all 0.2s ease;
 }
-#workdash .wd-showmore[disabled]{ opacity: .55; cursor: not-allowed; }
 
-@media (max-width: 1100px){
-  #workdash .workdash-filters{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #workdash .wd-daterange{ grid-column: 1 / -1; }
+.ws-showmore:hover {
+  background: var(--ws-accent);
+  color: #fff;
 }
-@media (max-width: 640px){
-  #workdash .workdash-filters{ grid-template-columns: 1fr; }
-  #workdash .workdash-table{ min-width: 980px; }
-}/* =========================
-   Mobile: render table rows as cards
-   ========================= */
-@media (max-width: 640px){
 
-  /* Make the wrapper more solid so your site background doesn’t fight readability */
-  #workdash.workdash-wrapper{
-    background: rgba(11,18,32,.92);
-    backdrop-filter: blur(10px);
+.ws-showmore:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading state */
+.ws-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--ws-text-muted);
+}
+
+.ws-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ws-border);
+  border-top-color: var(--ws-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+/* Empty state */
+.ws-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--ws-text-muted);
+}
+
+.ws-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Mobile Cards */
+@media (max-width: 768px) {
+  #workSummary {
+    padding: 70px 12px 30px;
   }
 
-  /* Filters: already 1 column, just tighten spacing */
-  #workdash .workdash-filters{ gap: 10px; }
-  #workdash .wd-input, #workdash .wd-select{ height: 46px; }
-
-  /* Table: remove forced width so it doesn't require horizontal scrolling */
-  #workdash .workdash-table{
-    min-width: 0 !important;
-    table-layout: auto !important;
+  .ws-filters {
+    padding: 16px;
   }
 
-  /* Hide header */
-  #workdash .workdash-table thead{ display:none; }
-
-  /* Turn rows into cards */
-  #workdash .workdash-table tbody tr{
-    display:block;
-    margin: 12px 10px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 16px;
-    background: rgba(255,255,255,.05);
-    overflow: hidden;
+  .ws-filters-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  /* Cells become stacked sections */
-  #workdash .workdash-table tbody td{
-    display:flex;
-    gap: 10px;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  #workdash .workdash-table tbody td:last-child{ border-bottom: 0; }
-
-  /* Add labels using nth-child (matches your current column order) */
-  #workdash .workdash-table tbody td:nth-child(1)::before{ content:"Task"; }
-  #workdash .workdash-table tbody td:nth-child(2)::before{ content:"Location"; }
-  #workdash .workdash-table tbody td:nth-child(3)::before{ content:"Date"; }
-  #workdash .workdash-table tbody td:nth-child(4)::before{ content:"Tech"; }
-  #workdash .workdash-table tbody td:nth-child(5)::before{ content:"Summary"; }
-  #workdash .workdash-table tbody td:nth-child(6)::before{ content:"WO"; }
-
-  #workdash .workdash-table tbody td::before{
-    flex: 0 0 78px;
-    font-size: 12px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.55);
-    font-weight: 800;
-    padding-top: 2px;
-  }
-
-  /* Summary should be full-width, multi-line, and left-aligned */
-  #workdash .workdash-table tbody td:nth-child(5){
+  .ws-date-section {
     flex-direction: column;
     align-items: stretch;
   }
-  #workdash .workdash-table tbody td:nth-child(5)::before{
-    padding-bottom: 6px;
-  }
-  #workdash .wd-summary-cell{
-    white-space: normal !important;
-    overflow-wrap: anywhere;
-    line-height: 1.5;
-    font-size: 14px;
+
+  .ws-date-custom {
+    margin-left: 0;
+    flex-wrap: wrap;
   }
 
-  /* WO button: bigger touch target */
-  #workdash .workdash-table tbody td:nth-child(6){
-    align-items: center;
-  }
-  #workdash .wd-link{
-    padding: 10px 14px;
-    min-width: 86px;
-    justify-content: center;
-  }
-}@media (max-width: 640px){
-
-  /* STOP truncating values on mobile cards */
-  #workdash .workdash-table tbody td{
-    overflow: visible !important;
-    text-overflow: clip !important;
-    white-space: normal !important;
+  .ws-table thead {
+    display: none;
   }
 
-  /* specifically ensure TECH row shows fully */
-  #workdash .workdash-table tbody td:nth-child(4){
-    overflow: visible !important;
-    text-overflow: clip !important;
-    white-space: normal !important;
+  .ws-table tbody tr {
+    display: block;
+    margin: 12px;
+    background: var(--ws-surface);
+    border: 1px solid var(--ws-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .ws-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--ws-border);
+  }
+
+  .ws-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .ws-table tbody td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    width: 80px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ws-text-muted);
+  }
+
+  .ws-col-summary {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .ws-col-summary::before {
+    margin-bottom: 8px;
+  }
+
+  .ws-footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
   }
 }
 </style>
 
-<div
-  class="workdash-wrapper"
-  id="workdash"
-  data-csv-url="https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=379834637&single=true&output=csv"
->
-  <h1 class="workdash-title">Completed Work Orders</h1>
+<div id="workSummary">
+  <div class="ws-container">
+    <header class="ws-header">
+      <h1 class="ws-title">Completed Work Orders</h1>
+      <p class="ws-subtitle">View and filter completed service records</p>
+    </header>
 
-  <div class="workdash-filters">
-    <input id="taskFilter" class="wd-input" placeholder="Filter by Task ID…" autocomplete="off" />
-    <input id="locationFilter" class="wd-input" placeholder="Filter by Location Name…" autocomplete="off" />
-    <input id="searchFilter" class="wd-input" placeholder="Search summary, tech, date…" autocomplete="off" />
+    <div class="ws-filters">
+      <div class="ws-filters-grid">
+        <div class="ws-filter-group">
+          <label class="ws-filter-label">Task ID</label>
+          <input type="text" id="wsTaskFilter" class="ws-input" placeholder="Filter by Task ID…" autocomplete="off">
+        </div>
+        <div class="ws-filter-group">
+          <label class="ws-filter-label">Location</label>
+          <input type="text" id="wsLocationFilter" class="ws-input" placeholder="Filter by Location…" autocomplete="off">
+        </div>
+        <div class="ws-filter-group">
+          <label class="ws-filter-label">Search</label>
+          <input type="text" id="wsSearchFilter" class="ws-input" placeholder="Search summary, tech…" autocomplete="off">
+        </div>
+        <div class="ws-filter-group">
+          <label class="ws-filter-label">Technician</label>
+          <select id="wsTechFilter" class="ws-select">
+            <option value="">All Technicians</option>
+          </select>
+        </div>
+      </div>
 
-    <div class="wd-daterange">
-      <label class="wd-date-label" for="dateFrom">From:</label>
-      <input id="dateFrom" class="wd-input" type="date" />
-      <label class="wd-date-label" for="dateTo">To:</label>
-      <input id="dateTo" class="wd-input" type="date" />
+      <div class="ws-date-section">
+        <div class="ws-date-presets">
+          <button type="button" class="ws-date-preset" data-range="today">Today</button>
+          <button type="button" class="ws-date-preset" data-range="week">This Week</button>
+          <button type="button" class="ws-date-preset" data-range="month">This Month</button>
+          <button type="button" class="ws-date-preset" data-range="quarter">Last 90 Days</button>
+          <button type="button" class="ws-date-preset active" data-range="all">All Time</button>
+        </div>
+        <div class="ws-date-custom">
+          <label>From:</label>
+          <input type="date" id="wsDateFrom" class="ws-date-input">
+          <label>To:</label>
+          <input type="date" id="wsDateTo" class="ws-date-input">
+        </div>
+      </div>
     </div>
 
-    <select id="techFilter" class="wd-select">
-      <option value="">Technician (All)</option>
-    </select>
+    <div class="ws-results">
+      <div class="ws-table-wrap">
+        <table class="ws-table">
+          <thead>
+            <tr>
+              <th>Task ID</th>
+              <th>Location</th>
+              <th>Date</th>
+              <th>Tech</th>
+              <th>Summary</th>
+              <th>WO</th>
+            </tr>
+          </thead>
+          <tbody id="wsTableBody">
+            <tr>
+              <td colspan="6">
+                <div class="ws-loading">
+                  <div class="ws-spinner"></div>
+                  <span>Loading work orders…</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ws-footer">
+        <span class="ws-meta" id="wsMeta">Loading…</span>
+        <button type="button" class="ws-showmore" id="wsShowMore">Show More</button>
+      </div>
+    </div>
   </div>
+</div>
 
-  <div class="workdash-tablewrap">
-    <table class="workdash-table">
-      <thead>
-        <tr>
-          <th class="wd-col-task">Task ID</th>
-          <th class="wd-col-location">Location Name</th>
-          <th class="wd-col-date">Service Date</th>
-          <th class="wd-col-tech">Technician</th>
-          <th class="wd-col-summary">Summary</th>
-          <th class="wd-col-wo">WO Link</th>
-        </tr>
-      </thead>
-      <tbody id="workBody"></tbody>
-    </table>
-  </div>
+<script>
+(function() {
+  'use strict';
 
-  <p class="workdash-meta" id="workMeta">Loading completed work orders…</p>
-  <button type="button" class="wd-showmore" id="wdShowMore">Show more</button>
-</div><script>
-(function () {
-  var DEFAULT_CSV_URL =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=379834637&single=true&output=csv";
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=379834637&single=true&output=csv";
 
+  // Elements
+  const elements = {
+    body: document.getElementById('wsTableBody'),
+    meta: document.getElementById('wsMeta'),
+    showMore: document.getElementById('wsShowMore'),
+    taskFilter: document.getElementById('wsTaskFilter'),
+    locationFilter: document.getElementById('wsLocationFilter'),
+    searchFilter: document.getElementById('wsSearchFilter'),
+    techFilter: document.getElementById('wsTechFilter'),
+    dateFrom: document.getElementById('wsDateFrom'),
+    dateTo: document.getElementById('wsDateTo'),
+    presets: document.querySelectorAll('.ws-date-preset')
+  };
+
+  // State
+  let allRecords = [];
+  let filteredRecords = [];
+  let visibleCount = 50;
+  const PAGE_SIZE = 50;
+
+  // Utilities
   function escapeHtml(str) {
-    return String(str || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function safeUrl(u) {
-    var s = String(u || "").trim();
-    if (!s) return "";
-    if (/^\s*(javascript|data|vbscript):/i.test(s)) return "";
-    if (/^(https?:)?\/\//i.test(s)) return s;
-    if (/^\/(?!\/)/.test(s)) return s;
-    return "";
-  }
-
-  function debounce(fn, ms) {
-    var t = null;
-    return function () {
-      clearTimeout(t);
-      var args = arguments;
-      t = setTimeout(function () { fn.apply(null, args); }, ms);
-    };
-  }
-
-  function detectMobile() {
-    var ua = navigator.userAgent || "";
-    return /Android|iPhone|iPad|iPod|Mobi/i.test(ua) || (window.innerWidth && window.innerWidth < 900);
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function parseCSV(text) {
-    var rows = [];
-    var row = [];
-    var cur = "";
-    var inQuotes = false;
-
-    for (var i = 0; i < text.length; i++) {
-      var ch = text.charAt(i);
-
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
       if (inQuotes) {
         if (ch === '"') {
-          if (text.charAt(i + 1) === '"') { cur += '"'; i++; }
+          if (text[i + 1] === '"') { field += '"'; i++; }
           else inQuotes = false;
-        } else {
-          cur += ch;
-        }
-        continue;
+        } else field += ch;
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { row.push(field); field = ''; }
+        else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+        else if (ch !== '\r') field += ch;
       }
-
-      if (ch === '"') inQuotes = true;
-      else if (ch === ",") { row.push(cur); cur = ""; }
-      else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
-      else if (ch === "\r") {}
-      else cur += ch;
     }
-
-    row.push(cur);
-    rows.push(row);
-
-    while (rows.length && rows[rows.length - 1].every(function (c) { return String(c || "").trim() === ""; })) {
-      rows.pop();
-    }
+    if (field || row.length) { row.push(field); rows.push(row); }
     return rows;
   }
 
-  function normHeader(s) {
-    return String(s || "").replace(/\uFEFF/g, "").trim().toLowerCase();
-  }
-
-  function buildIndex(headerRow) {
-    var idx = {};
-    for (var i = 0; i < headerRow.length; i++) {
-      idx[normHeader(headerRow[i])] = i;
+  function parseDate(str) {
+    if (!str) return null;
+    const v = String(str).trim();
+    // YYYY-MM-DD
+    let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], 12, 0, 0);
+    // MM/DD/YYYY or MM/DD/YY
+    m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) {
+      let year = +m[3];
+      if (year < 100) year += year >= 70 ? 1900 : 2000;
+      return new Date(year, +m[1] - 1, +m[2], 12, 0, 0);
     }
-    return idx;
+    return null;
   }
 
-  function colAny(row, idx, names) {
-    for (var i = 0; i < names.length; i++) {
-      var key = normHeader(names[i]);
-      var j = idx[key];
-      if (j !== undefined) return (row[j] || "");
-    }
-    return "";
-  }
-
-  function cleanText(str) {
-    var s = String(str || "")
-      .replace(/<div[^>]*>/gi, "\n")
-      .replace(/<\/div>/gi, "")
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/\r/g, "");
-
-    s = s.replace(/<[^>]*>/g, "");
-    s = s.replace(/\n\s*\n+/g, "\n");
-    return s.trim();
+  function formatDate(date) {
+    if (!date) return '';
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
   }
 
   function firstName(full) {
-    var s = String(full || "").trim();
-    if (!s) return "";
-    return s.split(/\s+/)[0] || "";
+    return String(full || '').trim().split(/\s+/)[0] || '';
   }
 
-  function makeLocalDate(y, m, d) {
-    var dt = new Date(y, m - 1, d, 12, 0, 0, 0);
-    return isNaN(dt.getTime()) ? null : dt;
+  function cleanText(str) {
+    return String(str || '')
+      .replace(/<div[^>]*>/gi, '\n')
+      .replace(/<\/div>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\n\s*\n+/g, '\n')
+      .trim();
   }
 
-  function parseAnyDate(s) {
-    if (!s) return null;
-    var v = String(s).trim();
-
-    var m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
-    if (m) return makeLocalDate(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
-
-    m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})(?:\D|$)/);
-    if (!m) return null;
-
-    var year = parseInt(m[3], 10);
-    if (year < 100) year += year >= 70 ? 1900 : 2000;
-
-    return makeLocalDate(year, parseInt(m[1], 10), parseInt(m[2], 10));
+  function debounce(fn, ms) {
+    let t;
+    return function(...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), ms);
+    };
   }
 
-  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0); }
-  function endOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999); }
-
-  function extractTaskIdFromLink(url) {
-    if (!url) return "";
-    var m2 = String(url).match(/[?&](?:id|wo|task)=([0-9]{3,10})/i);
-    if (m2 && m2[1]) return m2[1];
-    var m1 = String(url).match(/\/([0-9]{3,10})(?:[/?#]|$)/);
-    return (m1 && m1[1]) ? m1[1] : "";
+  // Date presets
+  function getDateRange(preset) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (preset) {
+      case 'today':
+        return { from: today, to: today };
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        return { from: weekStart, to: today };
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { from: monthStart, to: today };
+      case 'quarter':
+        const quarterStart = new Date(today);
+        quarterStart.setDate(today.getDate() - 90);
+        return { from: quarterStart, to: today };
+      default:
+        return { from: null, to: null };
+    }
   }
 
-  function loadText(url, cb) {
-    fetch(url, { cache: "no-store" })
-      .then(function (r) { return r.text(); })
-      .then(function (t) { cb(null, t); })
-      .catch(function (e) { cb(e); });
+  function setDatePreset(preset) {
+    elements.presets.forEach(btn => btn.classList.toggle('active', btn.dataset.range === preset));
+    const range = getDateRange(preset);
+    elements.dateFrom.value = range.from ? range.from.toISOString().split('T')[0] : '';
+    elements.dateTo.value = range.to ? range.to.toISOString().split('T')[0] : '';
+    applyFilters();
   }
 
-  function initWorkdash() {
-    var wrapper = document.getElementById("workdash");
-    if (!wrapper) return false;
+  // Filtering
+  function applyFilters() {
+    const task = elements.taskFilter.value.toLowerCase().trim();
+    const location = elements.locationFilter.value.toLowerCase().trim();
+    const search = elements.searchFilter.value.toLowerCase().trim();
+    const tech = elements.techFilter.value;
+    const fromDate = parseDate(elements.dateFrom.value);
+    const toDate = parseDate(elements.dateTo.value);
 
-    if (wrapper.getAttribute("data-wd-init") === "1") return true;
-    wrapper.setAttribute("data-wd-init", "1");
+    filteredRecords = allRecords.filter(r => {
+      if (task && !r.taskLower.includes(task)) return false;
+      if (location && !r.locationLower.includes(location)) return false;
+      if (tech && r.techFull !== tech) return false;
+      if (fromDate && r.date && r.date < fromDate) return false;
+      if (toDate && r.date && r.date > new Date(toDate.getTime() + 86400000)) return false;
+      if (search && !r.searchBlob.includes(search)) return false;
+      return true;
+    });
 
-    var csvUrl = wrapper.getAttribute("data-csv-url") || DEFAULT_CSV_URL;
+    filteredRecords.sort((a, b) => (b.dateTs || 0) - (a.dateTs || 0));
+    visibleCount = PAGE_SIZE;
+    render();
+  }
 
-    var bodyEl = wrapper.querySelector("#workBody");
-    var metaEl = wrapper.querySelector("#workMeta");
-    var showMoreBtn = wrapper.querySelector("#wdShowMore");
-
-    var taskFilter = wrapper.querySelector("#taskFilter");
-    var locationFilter = wrapper.querySelector("#locationFilter");
-    var searchFilter = wrapper.querySelector("#searchFilter");
-    var techFilter = wrapper.querySelector("#techFilter");
-    var dateFromEl = wrapper.querySelector("#dateFrom");
-    var dateToEl = wrapper.querySelector("#dateTo");
-
-    if (!bodyEl || !metaEl) return true;
-
-    var isMobile = detectMobile();
-    var PAGE_SIZE = isMobile ? 25 : 150;
-    var MAX_RENDER = isMobile ? 200 : 2000;
-
-    var records = [];
-    var lastKey = "";
-    var lastFiltered = [];
-    var visibleLimit = PAGE_SIZE;
-
-    function getFilterKey() {
-      return [
-        taskFilter ? taskFilter.value : "",
-        locationFilter ? locationFilter.value : "",
-        searchFilter ? searchFilter.value : "",
-        techFilter ? techFilter.value : "",
-        dateFromEl ? dateFromEl.value : "",
-        dateToEl ? dateToEl.value : ""
-      ].join("||");
+  // Rendering
+  function render() {
+    const toShow = filteredRecords.slice(0, visibleCount);
+    
+    if (toShow.length === 0) {
+      elements.body.innerHTML = `
+        <tr><td colspan="6">
+          <div class="ws-empty">
+            <svg class="ws-empty-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <p>No work orders match your filters</p>
+          </div>
+        </td></tr>
+      `;
+    } else {
+      elements.body.innerHTML = toShow.map(r => `
+        <tr>
+          <td class="ws-col-task" data-label="Task">${escapeHtml(r.task)}</td>
+          <td class="ws-col-location" data-label="Location">${escapeHtml(r.location)}</td>
+          <td class="ws-col-date" data-label="Date">${escapeHtml(r.dateStr)}</td>
+          <td class="ws-col-tech" data-label="Tech">${escapeHtml(r.techFirst)}</td>
+          <td class="ws-col-summary" data-label="Summary">${escapeHtml(r.summary).replace(/\n/g, '<br>')}</td>
+          <td class="ws-col-wo" data-label="WO">${r.wo ? `<a href="${escapeHtml(r.wo)}" target="_blank" rel="noopener" class="ws-wo-btn">Open</a>` : ''}</td>
+        </tr>
+      `).join('');
     }
 
-    function applyFilters() {
-      var tk = taskFilter ? String(taskFilter.value || "").trim().toLowerCase() : "";
-      var locQ = locationFilter ? String(locationFilter.value || "").trim().toLowerCase() : "";
-      var q = searchFilter ? String(searchFilter.value || "").trim().toLowerCase() : "";
-      var techSel = techFilter ? String(techFilter.value || "").trim() : "";
+    elements.meta.textContent = `Showing ${toShow.length} of ${filteredRecords.length} completed work orders`;
 
-      var from = dateFromEl ? parseAnyDate(dateFromEl.value) : null;
-      var to = dateToEl ? parseAnyDate(dateToEl.value) : null;
-      if (from && to && to.getTime() < from.getTime()) { var tmp = from; from = to; to = tmp; }
+    if (visibleCount < filteredRecords.length) {
+      const remaining = Math.min(PAGE_SIZE, filteredRecords.length - visibleCount);
+      elements.showMore.textContent = `Show More (${remaining})`;
+      elements.showMore.style.display = 'inline-flex';
+      elements.showMore.disabled = false;
+    } else {
+      elements.showMore.style.display = 'none';
+    }
+  }
 
-      var fromTs = from ? startOfDay(from).getTime() : null;
-      var toTs = to ? endOfDay(to).getTime() : null;
+  // Load data
+  async function loadData() {
+    try {
+      const res = await fetch(CSV_URL, { cache: 'no-store' });
+      const text = await res.text();
+      const rows = parseCSV(text.trim());
+      
+      if (rows.length < 2) {
+        elements.meta.textContent = 'No work orders found.';
+        return;
+      }
 
-      var out = [];
-      for (var i = 0; i < records.length; i++) {
-        var r = records[i];
+      // Build header index
+      const headers = rows[0].map(h => h.trim().toLowerCase().replace(/\uFEFF/g, ''));
+      const idx = {};
+      headers.forEach((h, i) => idx[h] = i);
 
-        if (tk && r.taskLower.indexOf(tk) === -1) continue;
-        if (locQ && r.locationLower.indexOf(locQ) === -1) continue;
-        if (techSel && r.techFull !== techSel) continue;
-
-        if (fromTs !== null || toTs !== null) {
-          if (!r.dateObj) continue;
-          var ts = r.dateObj.getTime();
-          if (fromTs !== null && ts < fromTs) continue;
-          if (toTs !== null && ts > toTs) continue;
+      const colVal = (row, ...names) => {
+        for (const n of names) {
+          const i = idx[n.toLowerCase()];
+          if (i !== undefined && row[i]) return row[i].trim();
         }
+        return '';
+      };
 
-        if (q && r.searchBlob.indexOf(q) === -1) continue;
-        out.push(r);
-      }
+      // Parse records
+      allRecords = [];
+      const techs = new Set();
 
-      out.sort(function (a, b) { return (b.dateTs || 0) - (a.dateTs || 0); });
-      return out;
-    }
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const wo = colVal(row, 'WO Link', 'WO link', 'Work Order Link', 'WO');
+        const task = colVal(row, 'Task ID', 'Task Id', 'Task') || (wo.match(/\/(\d{3,10})(?:[/?#]|$)/)?.[1] || '');
+        const location = colVal(row, 'Location Name', 'Location');
+        const dateStr = colVal(row, 'Service Date', 'Date');
+        const date = parseDate(dateStr);
+        const techFull = colVal(row, 'Technician', 'Tech');
+        const summary = cleanText(colVal(row, 'Summary', 'Work Summary', 'Notes'));
 
-    function rowHTML(r) {
-      var summarySafe = escapeHtml(r.summary).replace(/\n/g, "<br>");
-      return (
-        "<tr>" +
-          "<td class='wd-col-task'>" + escapeHtml(r.task || "") + "</td>" +
-          "<td class='wd-col-location'>" + escapeHtml(r.location || "") + "</td>" +
-          "<td class='wd-col-date'>" + escapeHtml(r.dateStr || "") + "</td>" +
-          "<td class='wd-col-tech'>" + escapeHtml(r.techFirst || "") + "</td>" +
-          "<td class='wd-summary-cell'>" + summarySafe + "</td>" +
-          "<td class='wd-col-wo'>" +
-            (r.wo ? ("<a class='wd-link' href='" + escapeHtml(r.wo) + "' target='_blank' rel='noopener noreferrer'>Open</a>") : "") +
-          "</td>" +
-        "</tr>"
-      );
-    }
+        if (!task && !location && !dateStr && !summary) continue;
 
-    function renderTableOnly() {
-      var total = lastFiltered.length;
+        if (techFull) techs.add(techFull);
 
-      var show = visibleLimit;
-      if (show > total) show = total;
-      if (show > MAX_RENDER) show = MAX_RENDER;
-
-      var html = "";
-      for (var i = 0; i < show; i++) html += rowHTML(lastFiltered[i]);
-      bodyEl.innerHTML = html;
-
-      metaEl.textContent = "Showing " + show + " of " + total + " completed work orders";
-
-      if (!showMoreBtn) return;
-
-      if (show < total && show < MAX_RENDER) {
-        var next = PAGE_SIZE;
-        if (show + next > total) next = total - show;
-        if (show + next > MAX_RENDER) next = MAX_RENDER - show;
-
-        showMoreBtn.style.display = "inline-flex";
-        showMoreBtn.disabled = false;
-        showMoreBtn.textContent = "Show more (" + next + ")";
-      } else if (total > MAX_RENDER && show >= MAX_RENDER) {
-        showMoreBtn.style.display = "inline-flex";
-        showMoreBtn.disabled = true;
-        showMoreBtn.textContent = "Refine filters to see more";
-      } else {
-        showMoreBtn.style.display = "none";
-      }
-    }
-
-    function render(forceRecalc) {
-      var key = getFilterKey();
-      if (forceRecalc || key !== lastKey) {
-        lastKey = key;
-        lastFiltered = applyFilters();
-        visibleLimit = PAGE_SIZE;
-      }
-      renderTableOnly();
-    }
-
-    if (showMoreBtn) {
-      showMoreBtn.addEventListener("click", function () {
-        visibleLimit = visibleLimit + PAGE_SIZE;
-        if (visibleLimit > MAX_RENDER) visibleLimit = MAX_RENDER;
-        if (visibleLimit > lastFiltered.length) visibleLimit = lastFiltered.length;
-        renderTableOnly();
-      });
-    }
-
-    var scheduleRender = debounce(function () { render(true); }, isMobile ? 220 : 120);
-
-    if (taskFilter) taskFilter.addEventListener("input", scheduleRender);
-    if (locationFilter) locationFilter.addEventListener("input", scheduleRender);
-    if (searchFilter) searchFilter.addEventListener("input", scheduleRender);
-    if (techFilter) techFilter.addEventListener("change", scheduleRender);
-    if (dateFromEl) dateFromEl.addEventListener("change", scheduleRender);
-    if (dateToEl) dateToEl.addEventListener("change", scheduleRender);
-
-    metaEl.textContent = "Loading completed work orders…";
-
-    loadText(csvUrl, function (err, text) {
-      if (err) {
-        console.error(err);
-        metaEl.textContent = "Error loading completed work orders.";
-        return;
-      }
-
-      var rows = parseCSV(String(text || "").trim());
-      if (!rows.length) {
-        metaEl.textContent = "No completed work orders found.";
-        return;
-      }
-
-      var idx = buildIndex(rows[0]);
-      records = [];
-
-      for (var i = 1; i < rows.length; i++) {
-        var r = rows[i];
-
-        var woRaw = String(colAny(r, idx, ["WO Link", "WO link", "Work Order Link", "WO"])).trim();
-        var woSafe = safeUrl(woRaw);
-
-        var taskFromSheet = String(colAny(r, idx, ["Task ID", "Task Id", "Task"])).trim();
-        var taskId = taskFromSheet || extractTaskIdFromLink(woRaw);
-
-        var location = String(colAny(r, idx, ["Location Name", "Location"])).trim();
-
-        var dateStr = String(colAny(r, idx, ["Service Date", "Date"])).trim();
-        var dateObj = parseAnyDate(dateStr);
-        var dateTs = dateObj ? dateObj.getTime() : 0;
-
-        var techFull = String(colAny(r, idx, ["Technician", "Tech"])).trim();
-        var techFirst = firstName(techFull);
-
-        var summary = cleanText(colAny(r, idx, ["Summary", "Work Summary", "Notes"]));
-
-        if (!taskId && !location && !dateStr && !summary && !techFull) continue;
-
-        var searchBlob = (
-          summary + " " +
-          techFull + " " + techFirst + " " +
-          dateStr + " " +
-          taskId + " " +
-          location + " " +
-          woRaw
-        ).toLowerCase();
-
-        records.push({
-          task: taskId,
-          taskLower: String(taskId || "").toLowerCase(),
-          location: location,
-          locationLower: String(location || "").toLowerCase(),
-          dateStr: dateStr,
-          dateObj: dateObj,
-          dateTs: dateTs,
-          techFull: techFull,
-          techFirst: techFirst,
-          summary: summary,
-          wo: woSafe,
-          searchBlob: searchBlob
+        allRecords.push({
+          task,
+          taskLower: task.toLowerCase(),
+          location,
+          locationLower: location.toLowerCase(),
+          dateStr: date ? formatDate(date) : dateStr,
+          date,
+          dateTs: date ? date.getTime() : 0,
+          techFull,
+          techFirst: firstName(techFull),
+          summary,
+          wo: wo && /^https?:\/\//i.test(wo) ? wo : '',
+          searchBlob: `${task} ${location} ${dateStr} ${techFull} ${summary}`.toLowerCase()
         });
       }
 
-      if (techFilter) {
-        while (techFilter.options.length > 1) techFilter.remove(1);
+      // Populate tech filter
+      [...techs].sort().forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        elements.techFilter.appendChild(opt);
+      });
 
-        var seenTech = {};
-        var techs = [];
-        for (var t = 0; t < records.length; t++) {
-          var name = records[t].techFull;
-          if (name && !seenTech[name]) { seenTech[name] = true; techs.push(name); }
-        }
-        techs.sort();
-
-        for (var k = 0; k < techs.length; k++) {
-          var opt = document.createElement("option");
-          opt.value = techs[k];
-          opt.textContent = techs[k];
-          techFilter.appendChild(opt);
-        }
-      }
-
-      render(true);
-    });
-
-    return true;
+      applyFilters();
+    } catch (err) {
+      console.error('Load error:', err);
+      elements.meta.textContent = 'Error loading work orders.';
+    }
   }
 
-  // ---- Boot strategy (safe for head injection + Squarespace soft-nav) ----
-  function boot(){
-    // initWorkdash returns true if it found #workdash (or already init)
-    initWorkdash();
-  }
+  // Event listeners
+  const debouncedFilter = debounce(applyFilters, 150);
+  
+  elements.taskFilter.addEventListener('input', debouncedFilter);
+  elements.locationFilter.addEventListener('input', debouncedFilter);
+  elements.searchFilter.addEventListener('input', debouncedFilter);
+  elements.techFilter.addEventListener('change', applyFilters);
+  elements.dateFrom.addEventListener('change', () => {
+    elements.presets.forEach(btn => btn.classList.remove('active'));
+    applyFilters();
+  });
+  elements.dateTo.addEventListener('change', () => {
+    elements.presets.forEach(btn => btn.classList.remove('active'));
+    applyFilters();
+  });
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
+  elements.presets.forEach(btn => {
+    btn.addEventListener('click', () => setDatePreset(btn.dataset.range));
+  });
 
-  // Squarespace transitions
-  document.addEventListener("turbolinks:load", boot);
-  document.addEventListener("site:afterContentUpdate", boot);
+  elements.showMore.addEventListener('click', () => {
+    visibleCount += PAGE_SIZE;
+    render();
+  });
 
-  // Lightweight observer: only runs until #workdash exists, then disconnects
-  try{
-    var tries = 0;
-    var mo = new MutationObserver(function(){
-      tries++;
-      if (initWorkdash() || tries > 50) { // ~50 mutations max then stop
-        try{ mo.disconnect(); }catch(e){}
-      }
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-  } catch(e){}
+  // Init
+  loadData();
 })();
-</script>  </div>
+</script>
+  </div>
+
   <!-- Mobile Nav + Floating User Badge -->
   <style>
     /* Floating User Badge */
@@ -844,7 +902,7 @@
     .floating-user__logout:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
     .floating-user__logout svg { width: 16px; height: 16px; }
     @keyframes floatFadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    
+
     /* Hamburger Menu Button */
     .nav-toggle {
       position: fixed;
@@ -869,7 +927,7 @@
     .nav-toggle.active svg.menu-icon { display: none; }
     .nav-toggle svg.close-icon { display: none; }
     .nav-toggle.active svg.close-icon { display: block; }
-    
+
     /* Slide-out Nav Panel */
     .nav-panel {
       position: fixed;
@@ -890,7 +948,7 @@
       padding: 80px 20px 20px;
     }
     .nav-panel.open { transform: translateX(0); }
-    
+
     .nav-panel__overlay {
       position: fixed;
       inset: 0;
@@ -901,7 +959,7 @@
       transition: opacity 0.3s;
     }
     .nav-panel__overlay.open { opacity: 1; pointer-events: auto; }
-    
+
     .nav-panel__link {
       display: flex;
       align-items: center;
@@ -917,7 +975,7 @@
     .nav-panel__link:hover { background: rgba(0, 212, 255, 0.1); color: #fff; }
     .nav-panel__link.active { background: rgba(0, 212, 255, 0.15); color: #00d4ff; }
     .nav-panel__link svg { width: 20px; height: 20px; opacity: 0.7; }
-    
+
     .nav-panel__section {
       font-size: 11px;
       text-transform: uppercase;
@@ -926,20 +984,20 @@
       padding: 20px 16px 8px;
       margin-top: 8px;
     }
-    
+
     .nav-panel__divider {
       height: 1px;
       background: rgba(255,255,255,0.1);
       margin: 12px 0;
     }
-    
+
     @media (max-width: 480px) {
       .floating-user__name { display: none; }
       .floating-user__role { display: none; }
       .floating-user { padding: 6px 6px 6px 10px; gap: 8px; }
     }
   </style>
-  
+
   <!-- Hamburger Button -->
   <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
     <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -949,10 +1007,10 @@
       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   </button>
-  
+
   <!-- Nav Overlay -->
   <div class="nav-panel__overlay" id="navOverlay" onclick="toggleNav()"></div>
-  
+
   <!-- Nav Panel -->
   <nav class="nav-panel" id="navPanel">
     <a href="/" class="nav-panel__link" id="navDashboard">
@@ -961,9 +1019,9 @@
       </svg>
       Dashboard
     </a>
-    
+
     <div class="nav-panel__section">Tools</div>
-    
+
     <a href="/tech/command/" class="nav-panel__link" id="navCommand">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -971,7 +1029,7 @@
       </svg>
       Command Center
     </a>
-    
+
     <a href="/tech/parts/" class="nav-panel__link">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -979,30 +1037,30 @@
       </svg>
       Parts Finder
     </a>
-    
+
     <a href="/tech/manuals/" class="nav-panel__link">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
       Tech Manuals
     </a>
-    
+
     <a href="/tech/doors/" class="nav-panel__link">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" />
       </svg>
       Door Browser
     </a>
-    
-    <a href="/tech/summary/" class="nav-panel__link" id="navSummary">
+
+    <a href="/tech/summary/" class="nav-panel__link active" id="navSummary">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
       </svg>
       Work Summary
     </a>
-    
+
     <div class="nav-panel__divider"></div>
-    
+
     <a href="https://app.limblecmms.com" target="_blank" rel="noopener" class="nav-panel__link">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1010,7 +1068,7 @@
       Open Limble
     </a>
   </nav>
-  
+
   <!-- Floating User Badge -->
   <div class="floating-user" id="floatingUser" style="display:none;">
     <div class="floating-user__info">
@@ -1023,24 +1081,24 @@
       </svg>
     </button>
   </div>
-  
+
   <script>
     function toggleNav() {
       document.getElementById('navToggle').classList.toggle('active');
       document.getElementById('navPanel').classList.toggle('open');
       document.getElementById('navOverlay').classList.toggle('open');
     }
-    
+
     // Highlight current page in nav
     document.addEventListener('DOMContentLoaded', function() {
       const path = window.location.pathname;
       document.querySelectorAll('.nav-panel__link').forEach(link => {
-        if (link.getAttribute('href') === path || 
+        if (link.getAttribute('href') === path ||
             (path.startsWith(link.getAttribute('href')) && link.getAttribute('href') !== '/')) {
           link.classList.add('active');
         }
       });
-      
+
       // Hide admin-only links for non-admins after auth loads
       setTimeout(async () => {
         if (window.AASAuth) {
@@ -1056,7 +1114,7 @@
       }, 500);
     });
   </script>
-  
+
   <script src="/auth.js"></script>
 </body>
 </html>
