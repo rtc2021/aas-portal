@@ -1,7 +1,6 @@
 /**
- * AAS Portal - Auth0 Authentication Module
- * Role-based access control with floating user badge
- * /service/ is PUBLIC - no auth required
+ * AAS Portal - Auth0 Authentication Module v2
+ * Role-based access control with customer routing
  */
 
 const AUTH_CONFIG = {
@@ -14,6 +13,13 @@ const AUTH_CONFIG = {
 // PUBLIC pages don't require auth
 const PUBLIC_PAGES = ['/service/', '/service'];
 
+// Default landing pages by role
+const ROLE_DEFAULT_PAGES = {
+  'Admin': '/tech/parts/',
+  'Tech': '/tech/parts/',
+  'Customer': '/customer/command/'
+};
+
 const PAGE_ACCESS = {
   '/': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/tech/command/': { roles: ['Admin'], redirect: '/tech/parts/' },
@@ -24,148 +30,107 @@ const PAGE_ACCESS = {
   '/tech/manuals': { roles: ['Admin', 'Tech'] },
   '/tech/doors/': { roles: ['Admin', 'Tech'] },
   '/tech/doors': { roles: ['Admin', 'Tech'] },
-  '/tech/summary/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/summary': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/tech/summary/': { roles: ['Admin', 'Tech'] },
+  '/tech/summary': { roles: ['Admin', 'Tech'] },
   '/door/': { roles: ['Admin', 'Tech', 'Customer'] },
   '/door': { roles: ['Admin', 'Tech', 'Customer'] },
-  '/customer/command/': { roles: ['Admin', 'Customer'] },
-  '/customer/command': { roles: ['Admin', 'Customer'] },
+  '/service/': { roles: ['*'] },
+  '/service': { roles: ['*'] },
   '/customer/': { roles: ['Admin', 'Customer'] },
   '/customer': { roles: ['Admin', 'Customer'] },
+  '/customer/command/': { roles: ['Admin', 'Customer'] },
+  '/customer/command': { roles: ['Admin', 'Customer'] },
 };
 
-let auth0Client = null;
+const CDN_URLS = [
+  'https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js',
+  'https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2.1.3/dist/auth0-spa-js.production.js',
+  'https://unpkg.com/@auth0/auth0-spa-js@2.1.3/dist/auth0-spa-js.production.js'
+];
 
-function getCreateAuth0Client() {
-  if (typeof createAuth0Client === 'function') return createAuth0Client;
-  if (typeof window.createAuth0Client === 'function') return window.createAuth0Client;
-  if (window.auth0 && typeof window.auth0.createAuth0Client === 'function') return window.auth0.createAuth0Client;
-  if (typeof Auth0Client === 'function') return async (config) => new Auth0Client(config);
-  if (window.Auth0Client) return async (config) => new window.Auth0Client(config);
-  if (window.auth0 && window.auth0.Auth0Client) return async (config) => new window.auth0.Auth0Client(config);
-  return null;
+let auth0Client = null;
+let sdkLoaded = false;
+
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = () => resolve(url);
+    script.onerror = () => reject(url);
+    document.head.appendChild(script);
+  });
+}
+
+async function loadAuth0SDK() {
+  if (sdkLoaded) return true;
+  for (const url of CDN_URLS) {
+    try {
+      await loadScript(url);
+      await new Promise(r => setTimeout(r, 300));
+      if (typeof createAuth0Client === 'function') {
+        sdkLoaded = true;
+        return true;
+      } else if (typeof window.auth0 !== 'undefined' && typeof window.auth0.createAuth0Client === 'function') {
+        window.createAuth0Client = window.auth0.createAuth0Client;
+        sdkLoaded = true;
+        return true;
+      }
+    } catch (e) {
+      console.warn('[Auth] CDN failed:', url);
+    }
+  }
+  return false;
 }
 
 async function initAuth() {
   if (auth0Client) return auth0Client;
-  
-  const createClient = getCreateAuth0Client();
-  if (!createClient) {
-    console.error('[Auth] SDK not found');
+  const loaded = await loadAuth0SDK();
+  if (!loaded) {
+    console.error('[Auth] Failed to load Auth0 SDK');
     return null;
   }
-  
   try {
-    auth0Client = await createClient({
+    auth0Client = await createAuth0Client({
       domain: AUTH_CONFIG.domain,
       clientId: AUTH_CONFIG.clientId,
       authorizationParams: {
-        redirect_uri: window.location.origin + window.location.pathname,
+        redirect_uri: window.location.origin,
         audience: AUTH_CONFIG.audience
       },
       cacheLocation: 'localstorage',
       useRefreshTokens: true
     });
+    if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+      await auth0Client.handleRedirectCallback();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     return auth0Client;
-  } catch (e) {
-    console.error('[Auth] Init failed:', e);
+  } catch (error) {
+    console.error('[Auth] Init error:', error);
     return null;
-  }
-}
-
-function isPublicPage() {
-  const path = window.location.pathname;
-  return PUBLIC_PAGES.some(p => path === p || path.startsWith(p));
-}
-
-function checkPageAccess(roles) {
-  const path = window.location.pathname;
-  const access = PAGE_ACCESS[path] || PAGE_ACCESS[path.replace(/\/$/, '')] || { roles: ['Admin', 'Tech', 'Customer'] };
-  const allowed = access.roles.some(r => roles.includes(r));
-  return { allowed, redirect: allowed ? null : (access.redirect || '/tech/parts/') };
-}
-
-function getDefaultPage(roles) {
-  if (roles.includes('Admin')) return '/';
-  if (roles.includes('Customer')) return '/customer/command/';
-  if (roles.includes('Tech')) return '/tech/parts/';
-  return '/tech/parts/';
-}
-
-function updateAuthOverlay(state, message) {
-  const overlay = document.getElementById('authOverlay');
-  const spinner = overlay?.querySelector('.auth-spinner');
-  const loadingText = document.getElementById('authLoadingText');
-  const title = overlay?.querySelector('.auth-title');
-  const subtitle = overlay?.querySelector('.auth-subtitle');
-  const btn = document.getElementById('authLoginBtn');
-  const content = document.getElementById('pageContent');
-  
-  if (!overlay) return;
-  
-  switch(state) {
-    case 'loading':
-      overlay.classList.remove('hidden');
-      if (spinner) spinner.style.display = 'block';
-      if (loadingText) { loadingText.style.display = 'block'; loadingText.textContent = message || 'Loading...'; }
-      if (title) title.style.display = 'none';
-      if (subtitle) subtitle.style.display = 'none';
-      if (btn) btn.style.display = 'none';
-      if (content) content.style.display = 'none';
-      break;
-    case 'login':
-      overlay.classList.remove('hidden');
-      if (spinner) spinner.style.display = 'none';
-      if (loadingText) loadingText.style.display = 'none';
-      if (title) title.style.display = 'block';
-      if (subtitle) subtitle.style.display = 'block';
-      if (btn) { btn.style.display = 'inline-block'; btn.onclick = () => login(); }
-      if (content) content.style.display = 'none';
-      break;
-    case 'denied':
-      overlay.classList.remove('hidden');
-      if (spinner) spinner.style.display = 'none';
-      if (loadingText) { loadingText.style.display = 'block'; loadingText.textContent = message || 'Access Denied'; }
-      if (title) title.style.display = 'none';
-      if (subtitle) subtitle.style.display = 'none';
-      if (btn) btn.style.display = 'none';
-      if (content) content.style.display = 'none';
-      break;
-    case 'authenticated':
-      overlay.classList.add('hidden');
-      if (content) content.style.display = 'block';
-      break;
-  }
-}
-
-function updateFloatingUser(user, roles) {
-  const badge = document.getElementById('floatingUser');
-  const nameEl = document.getElementById('floatingUserName');
-  const roleEl = document.getElementById('floatingUserRole');
-  
-  if (badge && user) {
-    if (nameEl) nameEl.textContent = user.name || user.email || 'User';
-    if (roleEl) roleEl.textContent = roles[0] || 'User';
-    badge.style.display = 'flex';
-  } else if (badge) {
-    badge.style.display = 'none';
   }
 }
 
 async function login() {
   const client = await initAuth();
-  if (client) {
-    await client.loginWithRedirect({
-      authorizationParams: { redirect_uri: window.location.origin + window.location.pathname + window.location.search }
-    });
-  }
+  if (client) await client.loginWithRedirect();
 }
 
 async function logout() {
   const client = await initAuth();
-  if (client) {
-    await client.logout({ logoutParams: { returnTo: window.location.origin } });
-  }
+  if (client) client.logout({ logoutParams: { returnTo: window.location.origin } });
+}
+
+async function isAuthenticated() {
+  const client = await initAuth();
+  return client ? await client.isAuthenticated() : false;
+}
+
+async function getUser() {
+  const client = await initAuth();
+  if (!client) return null;
+  if (!(await client.isAuthenticated())) return null;
+  return await client.getUser();
 }
 
 async function getUserRoles() {
@@ -173,80 +138,173 @@ async function getUserRoles() {
   if (!client) return [];
   try {
     const claims = await client.getIdTokenClaims();
-    return claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
-  } catch { return []; }
+    return claims?.[`${AUTH_CONFIG.namespace}/roles`] || [];
+  } catch (e) {
+    return [];
+  }
 }
 
-async function handleAuth() {
-  // Skip auth for public pages
-  if (isPublicPage()) {
-    console.log('[Auth] Public page - no auth required');
+async function getToken() {
+  const client = await initAuth();
+  if (!client) return null;
+  try {
+    return await client.getTokenSilently();
+  } catch (e) {
+    return null;
+  }
+}
+
+function hasAccess(roles, requiredRoles) {
+  if (requiredRoles.includes('*')) return true;
+  return requiredRoles.some(r => roles.includes(r));
+}
+
+function getDefaultPageForRoles(roles) {
+  // Check roles in priority order
+  if (roles.includes('Admin')) return ROLE_DEFAULT_PAGES['Admin'];
+  if (roles.includes('Tech')) return ROLE_DEFAULT_PAGES['Tech'];
+  if (roles.includes('Customer')) {
+    // Preserve customer param if present, otherwise use stored preference
+    const params = new URLSearchParams(window.location.search);
+    const customerParam = params.get('customer');
+    const storedCustomer = localStorage.getItem('aas-customer');
+    const customer = customerParam || storedCustomer;
+    if (customer) {
+      localStorage.setItem('aas-customer', customer);
+      return `/customer/command/?customer=${customer}`;
+    }
+    return ROLE_DEFAULT_PAGES['Customer'];
+  }
+  return '/';
+}
+
+async function checkPageAccess() {
+  const path = window.location.pathname;
+  
+  // Public pages - no auth needed
+  if (PUBLIC_PAGES.some(p => path.startsWith(p))) {
+    console.log('[Auth] Public page, no auth required');
+    showPageContent();
     return;
   }
-
-  updateAuthOverlay('loading', 'Initializing...');
   
   const client = await initAuth();
   if (!client) {
-    updateAuthOverlay('login');
+    console.error('[Auth] Client not initialized');
     return;
   }
   
-  // Handle callback
-  const params = new URLSearchParams(window.location.search);
-  if (params.has('code') && params.has('state')) {
-    updateAuthOverlay('loading', 'Completing sign in...');
-    try {
-      await client.handleRedirectCallback();
-      const cleanUrl = window.location.pathname + (params.has('id') ? '?id=' + params.get('id') : '');
-      window.history.replaceState({}, '', cleanUrl);
-    } catch (e) {
-      console.error('[Auth] Callback error:', e);
-    }
-  }
+  const authenticated = await client.isAuthenticated();
   
-  // Check authentication
-  const isAuth = await client.isAuthenticated();
-  if (!isAuth) {
-    updateAuthOverlay('login');
+  if (!authenticated) {
+    // Not logged in - show login
+    console.log('[Auth] Not authenticated, showing login');
+    showLoginButton();
     return;
   }
   
   // Get user and roles
   const user = await client.getUser();
-  const claims = await client.getIdTokenClaims();
-  const roles = claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
-  
+  const roles = await getUserRoles();
   console.log('[Auth] User:', user?.email, 'Roles:', roles);
   
-  // Check page access
-  const { allowed, redirect } = checkPageAccess(roles);
-  if (!allowed) {
-    updateAuthOverlay('denied', 'Redirecting...');
-    setTimeout(() => { window.location.href = redirect; }, 500);
-    return;
+  // Check page access rules
+  const pageRule = PAGE_ACCESS[path] || PAGE_ACCESS[path.replace(/\/$/, '')] || PAGE_ACCESS[path + '/'];
+  
+  if (pageRule) {
+    if (!hasAccess(roles, pageRule.roles)) {
+      // No access to this page - redirect to appropriate default
+      const defaultPage = getDefaultPageForRoles(roles);
+      console.log('[Auth] No access to', path, '- redirecting to', defaultPage);
+      window.location.href = defaultPage;
+      return;
+    }
   }
   
-  // Success - show page
-  updateFloatingUser(user, roles);
-  updateAuthOverlay('authenticated');
+  // Has access - show content
+  console.log('[Auth] Access granted to', path);
+  showPageContent();
+  updateUserBadge(user, roles);
   
   // Call page-specific init if defined
   if (typeof window.onPageReady === 'function') {
-    try {
-      window.onPageReady(user, roles);
-    } catch (e) {
-      console.error('[Auth] onPageReady error:', e);
-    }
+    window.onPageReady(user, roles);
   }
 }
 
-// Export for global use
-window.AASAuth = { login, logout, getUserRoles, initAuth };
-
-// Run on load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', handleAuth);
-} else {
-  handleAuth();
+function showPageContent() {
+  // Hide auth overlay
+  const authOverlay = document.getElementById('authOverlay');
+  if (authOverlay) authOverlay.classList.add('hidden');
+  
+  // Show page content
+  const pageContent = document.getElementById('pageContent');
+  if (pageContent) pageContent.style.display = 'block';
+  
+  // Alternative class-based approach
+  document.querySelectorAll('.page-content').forEach(el => {
+    el.style.display = 'block';
+  });
 }
+
+function showLoginButton() {
+  const authOverlay = document.getElementById('authOverlay');
+  if (authOverlay) {
+    authOverlay.classList.remove('hidden');
+    // Show login elements
+    const loginBtn = authOverlay.querySelector('.auth-btn, #loginBtn');
+    if (loginBtn) {
+      loginBtn.style.display = 'inline-flex';
+      loginBtn.onclick = login;
+    }
+    const title = authOverlay.querySelector('.auth-title');
+    if (title) title.style.display = 'block';
+    const subtitle = authOverlay.querySelector('.auth-subtitle');
+    if (subtitle) subtitle.style.display = 'block';
+  }
+}
+
+function updateUserBadge(user, roles) {
+  const badge = document.getElementById('floatingUser');
+  if (badge) {
+    badge.style.display = 'flex';
+    const nameEl = document.getElementById('floatingUserName');
+    const roleEl = document.getElementById('floatingUserRole');
+    if (nameEl) nameEl.textContent = user?.name || user?.email || 'User';
+    if (roleEl) roleEl.textContent = roles[0] || 'User';
+  }
+
+  // Show/hide elements based on data-role attribute
+  document.querySelectorAll('[data-role]').forEach(el => {
+    const requiredRoles = el.dataset.role.split(',');
+    const hasAccess = requiredRoles.some(r => roles.includes(r)) || requiredRoles.includes('*');
+    el.style.display = hasAccess ? '' : 'none';
+  });
+
+  // Show copilot button for Tech/Admin
+  const copilotBtn = document.getElementById('copilotBtn');
+  const copilotTrigger = document.getElementById('copilotV3Trigger');
+  const canUseCopilot = roles.includes('Admin') || roles.includes('Tech');
+  
+  if (copilotBtn) {
+    copilotBtn.style.display = canUseCopilot ? '' : 'none';
+  }
+  if (copilotTrigger) {
+    copilotTrigger.style.display = canUseCopilot ? '' : 'none';
+  }
+}
+
+// Export for global access
+window.AASAuth = {
+  login,
+  logout,
+  isAuthenticated,
+  getUser,
+  getUserRoles,
+  getToken,
+  hasAccess,
+  checkPageAccess
+};
+
+// Auto-init on page load
+document.addEventListener('DOMContentLoaded', checkPageAccess);

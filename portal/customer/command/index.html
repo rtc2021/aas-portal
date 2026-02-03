@@ -8,35 +8,74 @@
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg-primary: #050508;
-      --bg-glass: rgba(15, 15, 25, 0.85);
-      --bg-card: rgba(25, 25, 40, 0.7);
-      --border-subtle: rgba(255, 255, 255, 0.06);
-      --border-glow: rgba(0, 212, 255, 0.4);
-      --text-primary: #f5f5fa;
-      --text-secondary: #a0a0b0;
-      --text-muted: #606070;
-      --accent-cyan: #00d4ff;
-      --accent-green: #22c55e;
-      --accent-amber: #f59e0b;
-      --accent-red: #ef4444;
-      --glow-cyan: 0 0 40px rgba(0, 212, 255, 0.25);
+    /* =========================
+       CUSTOMER COMMAND CENTER v4
+       Light/Dark Theme Support
+       ========================= */
+
+    /* Page content - controlled by auth.js */
+    .page-content { display: none; }
+
+    #customerCommand {
+      /* Dark theme (default) */
+      --ccc-bg: #050508;
+      --ccc-surface: rgba(15, 15, 25, 0.85);
+      --ccc-card: rgba(25, 25, 40, 0.7);
+      --ccc-border: rgba(255, 255, 255, 0.08);
+      --ccc-border-hover: rgba(0, 212, 255, 0.4);
+      --ccc-text: #f5f5fa;
+      --ccc-text-secondary: #a0a0b0;
+      --ccc-text-muted: #606070;
+      --ccc-accent: #00d4ff;
+      --ccc-accent-bg: rgba(0, 212, 255, 0.12);
+      --ccc-green: #22c55e;
+      --ccc-green-bg: rgba(34, 197, 94, 0.15);
+      --ccc-amber: #f59e0b;
+      --ccc-amber-bg: rgba(245, 158, 11, 0.15);
+      --ccc-red: #ef4444;
+      --ccc-red-bg: rgba(239, 68, 68, 0.15);
+      --ccc-input-bg: rgba(25, 25, 40, 0.7);
+      --ccc-table-header: rgba(10, 10, 20, 0.98);
+      --ccc-table-hover: rgba(0, 212, 255, 0.03);
+      --ccc-glow: 0 0 40px rgba(0, 212, 255, 0.25);
+    }
+
+    /* Light theme */
+    body.light-theme #customerCommand {
+      --ccc-bg: #f4f6f8;
+      --ccc-surface: rgba(255, 255, 255, 1);
+      --ccc-card: #ffffff;
+      --ccc-border: rgba(0, 0, 0, 0.1);
+      --ccc-border-hover: rgba(0, 119, 170, 0.4);
+      --ccc-text: #1a1a2e;
+      --ccc-text-secondary: rgba(26, 26, 46, 0.75);
+      --ccc-text-muted: rgba(26, 26, 46, 0.55);
+      --ccc-accent: #0077aa;
+      --ccc-accent-bg: rgba(0, 119, 170, 0.1);
+      --ccc-green: #16a34a;
+      --ccc-green-bg: rgba(22, 163, 74, 0.12);
+      --ccc-amber: #d97706;
+      --ccc-amber-bg: rgba(217, 119, 6, 0.12);
+      --ccc-red: #dc2626;
+      --ccc-red-bg: rgba(220, 38, 38, 0.12);
+      --ccc-input-bg: #ffffff;
+      --ccc-table-header: rgba(255, 255, 255, 1);
+      --ccc-table-hover: rgba(0, 0, 0, 0.02);
+      --ccc-glow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--ccc-bg, #050508);
+      color: var(--ccc-text, #f5f5fa);
       min-height: 100vh;
       overflow-x: hidden;
     }
 
+    /* Background effects (dark mode only) */
     .bg-effects {
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
     }
@@ -48,124 +87,477 @@
         radial-gradient(ellipse at 70% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
       animation: bgPulse 15s ease-in-out infinite;
     }
+    body.light-theme .bg-effects { display: none; }
     @keyframes bgPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
 
-    .auth-overlay { position: fixed; inset: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    /* Auth overlay */
+    .auth-overlay { position: fixed; inset: 0; background: var(--ccc-bg); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
-    .auth-card { text-align: center; padding: 48px; background: var(--bg-glass); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 24px; max-width: 420px; }
-    .auth-card img { height: 48px; margin-bottom: 24px; filter: drop-shadow(0 0 20px rgba(0,212,255,0.5)); }
-    .auth-title { font-size: 24px; font-weight: 700; margin: 0 0 8px; display: none; }
-    .auth-subtitle { color: var(--text-secondary); margin: 0 0 28px; font-size: 15px; display: none; }
-    .auth-btn { display: none; background: linear-gradient(135deg, var(--accent-cyan), #0099cc); color: #0a0a0f; border: none; padding: 16px 40px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
-    .auth-spinner { width: 48px; height: 48px; border: 3px solid var(--border-subtle); border-top-color: var(--accent-cyan); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    .auth-card { text-align: center; padding: 48px; background: var(--ccc-surface); backdrop-filter: blur(20px); border: 1px solid var(--ccc-border); border-radius: 24px; max-width: 420px; }
+    .auth-card img { height: 48px; margin-bottom: 24px; }
+    .auth-title { font-size: 24px; font-weight: 700; margin: 0 0 8px; display: none; color: var(--ccc-text); }
+    .auth-subtitle { color: var(--ccc-text-secondary); margin: 0 0 28px; font-size: 15px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, var(--ccc-accent), #0099cc); color: #fff; border: none; padding: 16px 40px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 48px; height: 48px; border: 3px solid var(--ccc-border); border-top-color: var(--ccc-accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .page-content { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 20px; max-width: 1400px; margin: 0 auto; }
+    /* Page content */
+    #customerCommand {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      background: var(--ccc-bg);
+    }
 
-    .cc-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
-    .cc-title {
-      font-family: 'JetBrains Mono', monospace;
+    /* Header */
+    .ccc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .ccc-theme-toggle {
+      background: var(--ccc-card);
+      border: 1px solid var(--ccc-border);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      color: var(--ccc-text-secondary);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ccc-theme-toggle:hover {
+      border-color: var(--ccc-accent);
+      color: var(--ccc-accent);
+    }
+
+    .ccc-title {
       font-size: clamp(1.8rem, 4vw, 2.5rem);
       font-weight: 700;
-      background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      background: linear-gradient(135deg, var(--ccc-text) 0%, var(--ccc-accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-    .cc-subtitle { color: var(--text-muted); margin-top: 6px; font-size: 0.9rem; }
-    .cc-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-    .cc-btn {
-      display: inline-flex; align-items: center; gap: 8px;
+    .ccc-subtitle {
+      color: var(--ccc-text-muted);
+      margin-top: 6px;
+      font-size: 0.9rem;
+    }
+
+    .ccc-customer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--ccc-accent-bg);
+      border: 1px solid var(--ccc-accent);
+      border-radius: 20px;
+      color: var(--ccc-accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .ccc-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Buttons */
+    .ccc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       padding: 10px 16px;
-      background: var(--bg-glass); backdrop-filter: blur(20px);
-      border: 1px solid var(--border-subtle); border-radius: 10px;
-      color: var(--text-primary); font-size: 0.85rem; font-weight: 600;
-      text-decoration: none; cursor: pointer; transition: all 0.2s;
+      background: var(--ccc-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--ccc-border);
+      border-radius: 10px;
+      color: var(--ccc-text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    .cc-btn:hover { border-color: var(--border-glow); box-shadow: var(--glow-cyan); transform: translateY(-1px); }
-    .cc-btn--primary { background: linear-gradient(135deg, var(--accent-cyan), #0099cc); color: #050508; border: none; }
-    .cc-btn--green { background: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.3); color: var(--accent-green); }
-    .cc-btn svg { width: 16px; height: 16px; }
-
-    .cc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-    .cc-stat { background: var(--bg-glass); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 20px; transition: all 0.3s; }
-    .cc-stat:hover { border-color: var(--border-glow); box-shadow: var(--glow-cyan); }
-    .cc-stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
-    .cc-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; color: var(--accent-cyan); margin: 8px 0; }
-    .cc-stat-hint { font-size: 0.75rem; color: var(--text-muted); }
-    .cc-stat-value.warn { color: var(--accent-amber); }
-    .cc-stat-value.fail { color: var(--accent-red); }
-    .cc-stat-value.good { color: var(--accent-green); }
-
-    .cc-filters {
-      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 24px; padding: 16px;
-      background: var(--bg-glass); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 16px;
+    .ccc-btn:hover {
+      border-color: var(--ccc-border-hover);
+      box-shadow: var(--ccc-glow);
+      transform: translateY(-1px);
     }
-    .cc-input, .cc-select {
-      height: 42px; padding: 10px 14px;
-      background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px;
-      color: var(--text-primary); font-size: 0.9rem;
+    .ccc-btn--primary {
+      background: linear-gradient(135deg, var(--ccc-accent), #0099cc);
+      color: #fff;
+      border: none;
     }
-    .cc-input:focus, .cc-select:focus { outline: none; border-color: var(--accent-cyan); }
-    .cc-input::placeholder { color: var(--text-muted); }
-    .cc-input.search { flex: 1; min-width: 200px; }
-    .cc-label { font-size: 0.75rem; color: var(--text-muted); margin-right: 4px; }
-    .cc-dates { display: flex; align-items: center; gap: 8px; }
-
-    .cc-card {
-      background: var(--bg-glass); backdrop-filter: blur(20px);
-      border: 1px solid var(--border-subtle); border-radius: 20px;
-      padding: 24px; margin-bottom: 20px; transition: all 0.3s;
+    .ccc-btn--green {
+      background: var(--ccc-green-bg);
+      border-color: var(--ccc-green);
+      color: var(--ccc-green);
     }
-    .cc-card:hover { border-color: var(--border-glow); }
-    .cc-card-head { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    .cc-card-title { font-size: 1.1rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px; }
-    .cc-card-title svg { width: 20px; height: 20px; color: var(--accent-cyan); }
-    .cc-card-meta { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+    .ccc-btn svg { width: 16px; height: 16px; }
 
-    .cc-tablewrap { overflow-x: auto; border-radius: 12px; max-height: 400px; }
-    .cc-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .cc-table thead th {
-      position: sticky; top: 0; background: rgba(10, 10, 20, 0.98);
-      color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
-      font-size: 0.7rem; font-weight: 600; padding: 14px 12px; text-align: left;
-      border-bottom: 1px solid var(--border-subtle);
+    /* Stats Grid - defined in responsive section below */
+
+    .ccc-stat {
+      background: var(--ccc-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--ccc-border);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s;
     }
-    .cc-table td { padding: 12px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; color: var(--text-secondary); }
-    .cc-table tbody tr:hover td { background: rgba(0, 212, 255, 0.03); }
-    .cc-table a { color: var(--accent-cyan); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
-    .cc-table a:hover { text-decoration: underline; }
-
-    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-    .status-badge.pass { background: rgba(34, 197, 94, 0.15); color: var(--accent-green); }
-    .status-badge.fail { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
-    .status-badge.open { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
-    .status-badge.complete { background: rgba(0, 212, 255, 0.15); color: var(--accent-cyan); }
-
-    .cc-meta { margin-top: 16px; color: var(--text-muted); font-size: 0.8rem; }
-
-    .floating-user {
-      position: fixed; bottom: 20px; right: 20px;
-      display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-      background: var(--bg-glass); backdrop-filter: blur(20px);
-      border: 1px solid var(--border-subtle); border-radius: 50px; z-index: 100;
+    .ccc-stat:hover {
+      border-color: var(--ccc-border-hover);
+      box-shadow: var(--ccc-glow);
     }
-    .floating-user-info { text-align: right; }
-    .floating-user-name { font-size: 0.85rem; font-weight: 600; }
-    .floating-user-role { font-size: 0.7rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em; }
-    .floating-user button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; border-radius: 50%; transition: all 0.2s; }
-    .floating-user button:hover { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); }
-    .floating-user svg { width: 18px; height: 18px; }
+
+    .ccc-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--ccc-text-muted);
+    }
+
+    .ccc-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ccc-accent);
+      margin: 8px 0;
+    }
+    .ccc-stat-value.good { color: var(--ccc-green); }
+    .ccc-stat-value.warn { color: var(--ccc-amber); }
+    .ccc-stat-value.fail { color: var(--ccc-red); }
+
+    .ccc-stat-hint {
+      font-size: 0.75rem;
+      color: var(--ccc-text-muted);
+    }
+
+    /* Filters */
+    .ccc-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--ccc-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--ccc-border);
+      border-radius: 16px;
+    }
+
+    .ccc-input, .ccc-select {
+      height: 42px;
+      padding: 10px 14px;
+      background: var(--ccc-input-bg);
+      border: 1px solid var(--ccc-border);
+      border-radius: 10px;
+      color: var(--ccc-text);
+      font-size: 0.9rem;
+    }
+    .ccc-input:focus, .ccc-select:focus {
+      outline: none;
+      border-color: var(--ccc-accent);
+    }
+    .ccc-input::placeholder { color: var(--ccc-text-muted); }
+    .ccc-input.search { flex: 1; min-width: 200px; }
+
+    .ccc-label {
+      font-size: 0.75rem;
+      color: var(--ccc-text-muted);
+      margin-right: 4px;
+    }
+
+    .ccc-dates {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Cards */
+    .ccc-card {
+      background: var(--ccc-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--ccc-border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: all 0.3s;
+    }
+    .ccc-card:hover {
+      border-color: var(--ccc-border-hover);
+    }
+
+    .ccc-card-head {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--ccc-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .ccc-card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ccc-text);
+    }
+    .ccc-card-title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--ccc-accent);
+    }
+
+    .ccc-card-meta {
+      color: var(--ccc-text-muted);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    /* Table */
+    .ccc-tablewrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      max-height: 400px;
+    }
+
+    .ccc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .ccc-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--ccc-table-header);
+      backdrop-filter: none;
+      color: var(--ccc-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--ccc-border);
+    }
+
+    .ccc-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--ccc-border);
+      vertical-align: top;
+      color: var(--ccc-text-secondary);
+    }
+
+    .ccc-table tbody tr:hover td {
+      background: var(--ccc-table-hover);
+    }
+
+    .ccc-table a {
+      color: var(--ccc-accent);
+      text-decoration: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+    .ccc-table a:hover { text-decoration: underline; }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-badge.pass { background: var(--ccc-green-bg); color: var(--ccc-green); }
+    .status-badge.fail { background: var(--ccc-red-bg); color: var(--ccc-red); }
+    .status-badge.open { background: var(--ccc-amber-bg); color: var(--ccc-amber); }
+    .status-badge.complete { background: var(--ccc-accent-bg); color: var(--ccc-accent); }
+
+    .ccc-meta {
+      margin-top: 16px;
+      color: var(--ccc-text-muted);
+      font-size: 0.8rem;
+    }
 
     .download-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
+    .error-msg {
+      color: var(--ccc-amber);
+      font-size: 0.85rem;
+      padding: 12px;
+      background: var(--ccc-amber-bg);
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    /* Floating user badge */
+    .floating-user {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--ccc-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--ccc-border);
+      border-radius: 50px;
+      z-index: 100;
+    }
+    .floating-user-info { text-align: right; }
+    .floating-user-name { font-size: 0.85rem; font-weight: 600; color: var(--ccc-text); }
+    .floating-user-role { font-size: 0.7rem; color: var(--ccc-accent); text-transform: uppercase; letter-spacing: 0.05em; }
+    .floating-user button {
+      background: none;
+      border: none;
+      color: var(--ccc-text-muted);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .floating-user button:hover { background: var(--ccc-red-bg); color: var(--ccc-red); }
+    .floating-user svg { width: 18px; height: 18px; }
+
+    /* Quick Actions */
+    .ccc-quick-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    /* Stats grid - 5 columns */
+    .ccc-stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .ccc-stats { grid-template-columns: repeat(3, 1fr); }
+    }
     @media (max-width: 900px) {
-      .cc-stats { grid-template-columns: repeat(2, 1fr); }
-      .cc-filters { flex-direction: column; align-items: stretch; }
-      .cc-header { flex-direction: column; }
+      .ccc-stats { grid-template-columns: repeat(2, 1fr); }
+      .ccc-filters { flex-direction: column; align-items: stretch; }
+      .ccc-header { flex-direction: column; }
     }
     @media (max-width: 600px) {
-      .cc-stats { grid-template-columns: 1fr; }
-      .page-content { padding: 12px; }
+      .ccc-stats { grid-template-columns: 1fr; }
+      #customerCommand { padding: 12px; padding-top: 70px; }
+      .floating-user { top: 12px; right: 12px; padding: 8px 12px; }
+      .floating-user-name, .floating-user-role { display: none; }
+      .ccc-quick-actions { flex-direction: column; }
+      .ccc-quick-actions .ccc-btn { justify-content: center; }
+    }
+
+    /* =========================================
+       MOBILE CARD VIEW - Tables → Cards
+       ========================================= */
+    @media (max-width: 720px) {
+      /* Remove table scroll constraint */
+      .ccc-tablewrap {
+        max-height: none !important;
+        overflow: visible !important;
+      }
+
+      /* Hide table headers */
+      .ccc-table thead {
+        display: none !important;
+      }
+
+      /* Make table elements block */
+      .ccc-table,
+      .ccc-table tbody,
+      .ccc-table tr,
+      .ccc-table td {
+        display: block !important;
+        width: 100% !important;
+      }
+
+      /* Each row becomes a card */
+      .ccc-table tbody tr {
+        margin: 12px 0 !important;
+        padding: 16px !important;
+        border-radius: 16px !important;
+        border: 1px solid var(--ccc-border) !important;
+        background: var(--ccc-card) !important;
+      }
+
+      /* Cell layout */
+      .ccc-table tbody td {
+        border: 0 !important;
+        padding: 8px 0 !important;
+        border-bottom: 1px solid var(--ccc-border) !important;
+      }
+      .ccc-table tbody td:last-child {
+        border-bottom: 0 !important;
+      }
+
+      /* Add labels before each cell value */
+      .ccc-table tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ccc-text-muted);
+        font-weight: 600;
+      }
+
+      /* Door Inspections table labels */
+      #doorsBody td:nth-child(1)::before { content: "Door ID"; }
+      #doorsBody td:nth-child(2)::before { content: "Status"; }
+      #doorsBody td:nth-child(3)::before { content: "Last Inspection"; }
+      #doorsBody td:nth-child(4)::before { content: "AAADM"; }
+      #doorsBody td:nth-child(5)::before { content: "Location"; }
+      #doorsBody td:nth-child(6)::before { content: "Notes"; }
+
+      /* Service Activity table labels */
+      #tasksBody td:nth-child(1)::before { content: "Date"; }
+      #tasksBody td:nth-child(2)::before { content: "Task"; }
+      #tasksBody td:nth-child(3)::before { content: "Technician"; }
+      #tasksBody td:nth-child(4)::before { content: "Status"; }
+      #tasksBody td:nth-child(5)::before { content: "Work Performed"; }
+
+      /* Card header controls */
+      .ccc-card-head {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+      }
+      .download-group {
+        flex-wrap: wrap;
+      }
+      .download-group .ccc-select,
+      .download-group .ccc-btn {
+        flex: 1;
+        justify-content: center;
+        min-width: 80px;
+      }
     }
   </style>
 </head>
@@ -176,7 +568,7 @@
     <div class="auth-card">
       <img src="https://images.squarespace-cdn.com/content/53292562e4b06710691770b4/c75debc4-7194-4008-875d-856c6fa3b205/dis+lis+logo.webp?content-type=image%2Fwebp" alt="AAS">
       <div class="auth-spinner"></div>
-      <p id="authLoadingText" style="color: var(--text-muted);">Loading...</p>
+      <p id="authLoadingText" style="color: var(--ccc-text-muted);">Loading...</p>
       <h1 class="auth-title">Sign In Required</h1>
       <p class="auth-subtitle">Please sign in to access the command center</p>
       <button id="authLoginBtn" class="auth-btn">Sign In</button>
@@ -184,79 +576,115 @@
   </div>
 
   <div id="pageContent" class="page-content">
-    <header class="cc-header">
+    <div id="customerCommand">
+      <header class="ccc-header">
       <div>
-        <h1 class="cc-title">Customer Command Center</h1>
-        <p id="ccSubtitle" class="cc-subtitle">Loading...</p>
+        <h1 class="ccc-title">Customer Command Center</h1>
+        <p id="cccSubtitle" class="ccc-subtitle">Loading...</p>
+        <div id="cccCustomerBadge" class="ccc-customer-badge" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <span id="cccCustomerName">Customer</span>
+        </div>
       </div>
-      <div class="cc-actions">
-        <a id="requestServiceLink" href="#" target="_blank" rel="noopener" class="cc-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-          Request Service
-        </a>
-      </div>
+      <button id="themeToggle" class="ccc-theme-toggle" title="Toggle light/dark mode">
+        <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:none;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      </button>
     </header>
 
-    <section class="cc-stats">
-      <div class="cc-stat">
-        <div class="cc-stat-label">Total Doors</div>
-        <div id="statDoors" class="cc-stat-value">—</div>
-        <div class="cc-stat-hint">Doors in registry</div>
+    <section class="ccc-stats">
+      <div class="ccc-stat">
+        <div class="ccc-stat-label">Total Doors</div>
+        <div id="statDoors" class="ccc-stat-value">—</div>
+        <div class="ccc-stat-hint">Doors in registry</div>
       </div>
-      <div class="cc-stat">
-        <div class="cc-stat-label">Passing</div>
-        <div id="statPass" class="cc-stat-value good">—</div>
-        <div class="cc-stat-hint">Compliant doors</div>
+      <div class="ccc-stat">
+        <div class="ccc-stat-label">Compliance</div>
+        <div id="statCompliance" class="ccc-stat-value good">—</div>
+        <div class="ccc-stat-hint">NFPA 80 / JC EC.02.03.05</div>
       </div>
-      <div class="cc-stat">
-        <div class="cc-stat-label">Failing</div>
-        <div id="statFail" class="cc-stat-value fail">—</div>
-        <div class="cc-stat-hint">Needs attention</div>
+      <div class="ccc-stat">
+        <div class="ccc-stat-label">Passing</div>
+        <div id="statPass" class="ccc-stat-value good">—</div>
+        <div class="ccc-stat-hint">Compliant doors</div>
       </div>
-      <div class="cc-stat">
-        <div class="cc-stat-label">Service Tasks</div>
-        <div id="statTasks" class="cc-stat-value">—</div>
-        <div class="cc-stat-hint">In date range</div>
+      <div class="ccc-stat">
+        <div class="ccc-stat-label">Failing</div>
+        <div id="statFail" class="ccc-stat-value fail">—</div>
+        <div class="ccc-stat-hint">Needs attention</div>
+      </div>
+      <div class="ccc-stat">
+        <div class="ccc-stat-label">Service Tasks</div>
+        <div id="statTasks" class="ccc-stat-value">—</div>
+        <div class="ccc-stat-hint">In date range</div>
       </div>
     </section>
 
-    <section class="cc-filters">
-      <input id="qInput" class="cc-input search" type="text" placeholder="Search doors or tasks..." />
-      <div class="cc-dates">
-        <span class="cc-label">From</span>
-        <input id="fromInput" class="cc-input" type="month" />
-        <span class="cc-label">To</span>
-        <input id="toInput" class="cc-input" type="month" />
-      </div>
-      <select id="statusInput" class="cc-select">
-        <option value="">All Statuses</option>
-        <option value="PASS">PASS</option>
-        <option value="FAIL">FAIL</option>
-      </select>
+    <!-- Quick Actions -->
+    <section class="ccc-quick-actions">
+      <a id="requestServiceLink" href="#" target="_blank" rel="noopener" class="ccc-btn ccc-btn--primary">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        Request Service
+      </a>
+      <a href="sms:+15048105285?body=AAS%20Service%20Request%20-%20Manning%20Children%27s:%20" class="ccc-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        Text AAS
+      </a>
     </section>
 
-    <section class="cc-card">
-      <div class="cc-card-head">
+    <section class="ccc-filters">
+      <input id="qInput" class="ccc-input search" type="text" placeholder="Search doors or tasks..." />
+      <div class="ccc-dates">
+        <span class="ccc-label">From</span>
+        <input id="fromInput" class="ccc-input" type="date" />
+        <span class="ccc-label">To</span>
+        <input id="toInput" class="ccc-input" type="date" />
+      </div>
+    </section>
+
+    <section class="ccc-card">
+      <div class="ccc-card-head">
         <div>
-          <h2 class="cc-card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+          <h2 class="ccc-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
             Door Inspections
           </h2>
-          <p class="cc-card-meta">Click a door ID to view details</p>
+          <p class="ccc-card-meta">Click a door ID to view details</p>
         </div>
         <div class="download-group">
-          <button id="downloadDoorsCSV" class="cc-btn cc-btn--green">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          <select id="doorStatusFilter" class="ccc-select">
+            <option value="">All</option>
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+          </select>
+          <button id="downloadDoorsCSV" class="ccc-btn ccc-btn--green">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             CSV
           </button>
-          <button id="downloadDoorsPDF" class="cc-btn cc-btn--primary">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+          <button id="downloadDoorsPDF" class="ccc-btn ccc-btn--primary">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
             PDF Report
           </button>
         </div>
       </div>
-      <div class="cc-tablewrap">
-        <table class="cc-table">
+      <div class="ccc-tablewrap">
+        <table class="ccc-table">
           <thead>
             <tr>
               <th>Door ID</th>
@@ -270,30 +698,40 @@
           <tbody id="doorsBody"></tbody>
         </table>
       </div>
-      <div id="doorsMeta" class="cc-meta">Loading...</div>
+      <div id="doorsMeta" class="ccc-meta">Loading...</div>
     </section>
 
-    <section class="cc-card">
-      <div class="cc-card-head">
+    <section class="ccc-card">
+      <div class="ccc-card-head">
         <div>
-          <h2 class="cc-card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+          <h2 class="ccc-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
             Service Activity
           </h2>
-          <p class="cc-card-meta">Work orders and service history</p>
+          <p class="ccc-card-meta">Work orders and service history</p>
         </div>
         <div class="download-group">
-          <button id="downloadTasksCSV" class="cc-btn cc-btn--green">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          <select id="taskStatusFilter" class="ccc-select">
+            <option value="">All</option>
+            <option value="COMPLETE">COMPLETE</option>
+            <option value="OPEN">OPEN / IN PROGRESS</option>
+          </select>
+          <button id="downloadTasksCSV" class="ccc-btn ccc-btn--green">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             CSV
           </button>
         </div>
       </div>
-      <div class="cc-tablewrap">
-        <table class="cc-table">
+      <div class="ccc-tablewrap">
+        <table class="ccc-table">
           <thead>
             <tr>
-              <th>Service Date</th>
+              <th>Date</th>
+              <th>Task</th>
               <th>Technician</th>
               <th>Status</th>
               <th>Work Performed</th>
@@ -302,8 +740,9 @@
           <tbody id="tasksBody"></tbody>
         </table>
       </div>
-      <div id="tasksMeta" class="cc-meta">Loading...</div>
+      <div id="tasksMeta" class="ccc-meta">Loading...</div>
     </section>
+  </div>
   </div>
 
   <div id="floatingUser" class="floating-user" style="display: none;">
@@ -319,18 +758,34 @@
   </div>
 
   <script>
+    // ═══════════════════════════════════════════════════════════════
+    // CUSTOMER COMMAND CENTER v4
+    // Theme support + Multi-customer routing
+    // ═══════════════════════════════════════════════════════════════
+
     const CUSTOMER_SOURCES = {
       manning: {
         label: "Manning Family Children's Hospital",
+        shortName: "Manning Children's",
         tasksCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=1054197999&single=true&output=csv",
         inspectionsCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=2106704799&single=true&output=csv",
-        requestServiceUrl: "https://app.limblecmms.com/loc-problem/wtwsbc13448/50187"
+        requestServiceUrl: "https://app.limblecmms.com/loc-problem/wtwsbc13448/50187",
+        doorPrefix: "MH-"
+      },
+      ochsner_westbank: {
+        label: "Ochsner Medical Center - Westbank",
+        shortName: "Ochsner Westbank",
+        tasksCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=1853712655&single=true&output=csv",
+        inspectionsCsv: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=2106704799&single=true&output=csv",
+        requestServiceUrl: "https://app.limblecmms.com/loc-problem/wtwsbc13448/16",
+        doorPrefix: "WB-"
       }
     };
 
     function $(id) { return document.getElementById(id); }
     function clean(v) { return (v == null ? "" : String(v)).trim(); }
     function escapeHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    function stripHtml(s) { return String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
 
     function parseCSV(text) {
       const rows = []; let row = [], cell = "", inQ = false;
@@ -352,11 +807,15 @@
     }
 
     async function loadCSV(url) {
+      if (!url) return { rows: [], hdr: [], col: () => "" };
       const resp = await fetch(url, { cache: "no-store" });
       if (!resp.ok) throw new Error(`CSV fetch failed: ${resp.status}`);
-      const rows = parseCSV(await resp.text());
+      const text = await resp.text();
+      console.log("[CCC] Fetched", url.slice(-40), "length:", text.length);
+      const rows = parseCSV(text);
       if (!rows.length) throw new Error("Empty CSV");
       const hdr = rows[0].map(h => clean(h));
+      console.log("[CCC] Headers:", hdr.slice(0, 8));
       const ix = Object.fromEntries(hdr.map((h, i) => [h.toLowerCase(), i]));
       const col = (r, name) => {
         const i = ix[name.toLowerCase()];
@@ -365,39 +824,36 @@
       return { rows: rows.slice(1), hdr, col };
     }
 
-    // Parse MM/YYYY or MM/DD/YYYY
     function parseDate(s) {
       const str = String(s || "").trim();
-      // MM/YYYY format
+      // MM/YYYY format (inspections)
       let m = str.match(/^(\d{1,2})\/(\d{4})$/);
-      if (m) return { month: +m[1], year: +m[2], sortKey: +m[2] * 100 + +m[1] };
-      // MM/DD/YYYY format
+      if (m) {
+        return { month: +m[1], year: +m[2], day: 1, sortKey: +m[2] * 10000 + +m[1] * 100, display: str };
+      }
+      // MM/DD/YYYY format (tasks)
       m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
       if (m) {
         let year = +m[3]; if (year < 100) year += 2000;
-        return { month: +m[1], year, sortKey: year * 10000 + +m[1] * 100 + +m[2] };
+        return { month: +m[1], year, day: +m[2], sortKey: year * 10000 + +m[1] * 100 + +m[2], display: str };
       }
       return null;
     }
 
-    function parseMonthInput(s) {
+    function parseDateInput(s) {
       if (!s) return null;
-      const m = s.match(/^(\d{4})-(\d{2})$/);
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!m) return null;
-      return { month: +m[2], year: +m[1], sortKey: +m[1] * 100 + +m[2] };
-    }
-
-    function formatMonthYear(d) {
-      if (!d) return "";
-      return `${d.month}/${d.year}`;
+      return { year: +m[1], month: +m[2], day: +m[3], sortKey: +m[1] * 10000 + +m[2] * 100 + +m[3] };
     }
 
     function baseStatus(s) {
       const up = String(s || "").trim().toUpperCase();
       if (up.includes("PASS")) return "PASS";
       if (up.includes("FAIL")) return "FAIL";
-      if (up.includes("OPEN")) return "OPEN";
       if (up.includes("COMPLETE")) return "COMPLETE";
+      if (up.includes("OPEN")) return "OPEN";
+      if (up.includes("UPDATED")) return "UPDATED";
       return up;
     }
 
@@ -424,7 +880,6 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape' });
       
-      // Header
       doc.setFontSize(18);
       doc.setTextColor(0, 100, 150);
       doc.text(title, 14, 20);
@@ -433,19 +888,14 @@
       doc.setTextColor(100);
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
       
-      // Summary box
       doc.setFillColor(240, 248, 255);
-      doc.rect(14, 32, 268, 20, 'F');
+      doc.rect(14, 32, 268, 18, 'F');
       doc.setFontSize(10);
       doc.setTextColor(50);
-      let y = 38;
-      summary.forEach((line, i) => {
-        doc.text(line, 18, y + (i * 5));
-      });
+      summary.forEach((line, i) => doc.text(line, 18, 38 + (i * 5)));
       
-      // Table
       doc.autoTable({
-        startY: 56,
+        startY: 54,
         head: [headers],
         body: data,
         theme: 'striped',
@@ -454,7 +904,6 @@
         alternateRowStyles: { fillColor: [248, 250, 252] }
       });
       
-      // Footer
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -466,32 +915,130 @@
       doc.save(filename);
     }
 
-    // Main app state
-    let tasks = [], doors = [], customerLabel = "";
-    let fromFilter = null, toFilter = null;
+    function generateCompliancePDF(title, customer, summary, headers, data, compliancePct, filename) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(0, 80, 120);
+      doc.text(title, 14, 18);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(60);
+      doc.text(customer, 14, 28);
+      
+      // Compliance badge
+      const badgeColor = compliancePct >= 90 ? [34, 197, 94] : compliancePct >= 70 ? [245, 158, 11] : [239, 68, 68];
+      doc.setFillColor(...badgeColor);
+      doc.roundedRect(220, 12, 60, 20, 3, 3, 'F');
+      doc.setFontSize(16);
+      doc.setTextColor(255);
+      doc.text(`${compliancePct}% Compliant`, 225, 25);
+      
+      // Summary box
+      doc.setFillColor(245, 247, 250);
+      doc.rect(14, 34, 268, 50, 'F');
+      doc.setDrawColor(200);
+      doc.rect(14, 34, 268, 50, 'S');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(50);
+      let yPos = 42;
+      summary.forEach((line, i) => {
+        if (line.startsWith('REGULATORY') || line.startsWith('•')) {
+          doc.setFont(undefined, line.startsWith('REGULATORY') ? 'bold' : 'normal');
+        }
+        doc.text(line, 18, yPos);
+        yPos += 5;
+      });
+      
+      // Reset font
+      doc.setFont(undefined, 'normal');
+      
+      // Data table
+      doc.autoTable({
+        startY: 90,
+        head: [headers],
+        body: data,
+        theme: 'striped',
+        headStyles: { fillColor: [0, 100, 140], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 30 },  // Door ID
+          1: { cellWidth: 20 },  // Status
+          2: { cellWidth: 25 },  // Last Insp
+          3: { cellWidth: 20 },  // AAADM
+          4: { cellWidth: 50 },  // Location
+          5: { cellWidth: 'auto' }  // Notes
+        }
+      });
+      
+      // Footer on all pages
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(120);
+        doc.text(`Automatic Access Solutions • Fire Door Inspection Report • Page ${i} of ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 220, doc.internal.pageSize.height - 10);
+      }
+      
+      doc.save(filename);
+    }
+
+    // App state
+    let tasks = [], doors = [], customerLabel = "", customerKey = "";
 
     async function loadData(src) {
       $("doorsMeta").textContent = "Loading doors...";
       $("tasksMeta").textContent = "Loading tasks...";
       
-      const [taskCSV, doorCSV] = await Promise.all([
-        loadCSV(src.tasksCsv).catch(() => ({ rows: [], col: () => "" })),
-        loadCSV(src.inspectionsCsv)
-      ]);
+      let taskCSV = { rows: [], col: () => "" };
+      let doorCSV;
+      
+      try {
+        if (src.inspectionsCsv) {
+          doorCSV = await loadCSV(src.inspectionsCsv);
+        } else {
+          doorCSV = { rows: [], col: () => "" };
+          $("doorsMeta").textContent = "Door inspection data not configured";
+        }
+      } catch (e) {
+        console.error("[CCC] Door CSV error:", e);
+        $("doorsMeta").textContent = "Error loading door data";
+        return;
+      }
 
-      // Tasks
+      try {
+        if (src.tasksCsv) {
+          taskCSV = await loadCSV(src.tasksCsv);
+        }
+      } catch (e) {
+        console.error("[CCC] Task CSV error:", e);
+        $("tasksMeta").innerHTML = '<span class="error-msg">Tasks sheet may not be published. Go to Google Sheets → File → Share → Publish to web</span>';
+      }
+
+      // Parse tasks
       tasks = taskCSV.rows.map(r => {
         const dateStr = taskCSV.col(r, "Service Date");
+        const taskName = taskCSV.col(r, "Task Name") || taskCSV.col(r, "Location Name");
         return {
+          taskId: taskCSV.col(r, "Task ID"),
           dateStr,
           dateObj: parseDate(dateStr),
           tech: taskCSV.col(r, "Technician"),
           status: baseStatus(taskCSV.col(r, "Status & type")),
-          summary: taskCSV.col(r, "Summary").replace(/<[^>]*>/g, "").trim()
+          summary: stripHtml(taskCSV.col(r, "Summary")),
+          taskName,
+          woLink: taskCSV.col(r, "WO Link")
         };
-      }).filter(t => t.dateStr || t.summary);
+      }).filter(t => t.taskId || t.dateStr || t.summary);
+      
+      console.log("[CCC] Loaded", tasks.length, "tasks");
 
-      // Doors - using exact column names from your sheet
+      // Parse doors
       doors = doorCSV.rows.map(r => ({
         doorId: doorCSV.col(r, "Door ID"),
         aaadm: doorCSV.col(r, "AAADM"),
@@ -505,15 +1052,21 @@
         location: doorCSV.col(r, "Location")
       })).filter(d => d.doorId);
 
-      console.log(`Loaded ${doors.length} doors, ${tasks.length} tasks`);
+      // Filter by door prefix if specified
+      if (src.doorPrefix) {
+        doors = doors.filter(d => d.doorId.startsWith(src.doorPrefix));
+      }
+
+      console.log("[CCC] Loaded", doors.length, "doors");
     }
 
     function getFilters() {
       const q = ($("qInput").value || "").toLowerCase().trim();
-      const st = ($("statusInput").value || "").toUpperCase();
-      const from = parseMonthInput($("fromInput").value);
-      const to = parseMonthInput($("toInput").value);
-      return { q, st, from, to };
+      const doorStatus = ($("doorStatusFilter").value || "").toUpperCase();
+      const taskStatus = ($("taskStatusFilter").value || "").toUpperCase();
+      const from = parseDateInput($("fromInput").value);
+      const to = parseDateInput($("toInput").value);
+      return { q, doorStatus, taskStatus, from, to };
     }
 
     function inDateRange(dateObj, from, to) {
@@ -525,11 +1078,11 @@
     }
 
     function getFilteredData() {
-      const { q, st, from, to } = getFilters();
+      const { q, doorStatus, taskStatus, from, to } = getFilters();
       
+      // Doors: filter by door status dropdown (PASS/FAIL)
       const filteredDoors = doors.filter(d => {
-        if (st && d.status !== st) return false;
-        if (!inDateRange(d.dateObj, from, to)) return false;
+        if (doorStatus && d.status !== doorStatus) return false;
         if (q) {
           const blob = `${d.doorId} ${d.location} ${d.notes} ${d.tech}`.toLowerCase();
           if (!blob.includes(q)) return false;
@@ -537,10 +1090,16 @@
         return true;
       }).sort((a, b) => (b.dateObj?.sortKey || 0) - (a.dateObj?.sortKey || 0));
 
+      // Tasks: filter by task status dropdown (COMPLETE/OPEN)
       const filteredTasks = tasks.filter(t => {
+        if (taskStatus) {
+          if (taskStatus === 'COMPLETE' && t.status !== 'COMPLETE') return false;
+          // OPEN includes: OPEN, IN PROGRESS, UPDATED, and anything not COMPLETE
+          if (taskStatus === 'OPEN' && t.status === 'COMPLETE') return false;
+        }
         if (!inDateRange(t.dateObj, from, to)) return false;
         if (q) {
-          const blob = `${t.summary} ${t.tech}`.toLowerCase();
+          const blob = `${t.summary} ${t.tech} ${t.taskName}`.toLowerCase();
           if (!blob.includes(q)) return false;
         }
         return true;
@@ -551,82 +1110,120 @@
 
     function render() {
       const { filteredDoors, filteredTasks } = getFilteredData();
-      const { from, to } = getFilters();
 
-      // Stats
       const passCount = filteredDoors.filter(d => d.status === "PASS").length;
       const failCount = filteredDoors.filter(d => d.status === "FAIL").length;
+      const totalWithStatus = passCount + failCount;
+      const compliancePct = totalWithStatus > 0 ? Math.round((passCount / totalWithStatus) * 100) : 0;
       
       $("statDoors").textContent = filteredDoors.length;
+      $("statCompliance").textContent = compliancePct + "%";
+      $("statCompliance").className = "ccc-stat-value" + (compliancePct >= 90 ? " good" : compliancePct >= 70 ? " warn" : " fail");
       $("statPass").textContent = passCount;
       $("statFail").textContent = failCount;
-      $("statFail").className = "cc-stat-value" + (failCount > 0 ? " fail" : " good");
+      $("statFail").className = "ccc-stat-value" + (failCount > 0 ? " fail" : " good");
       $("statTasks").textContent = filteredTasks.length;
 
       // Doors table
       const doorsBody = $("doorsBody");
       doorsBody.innerHTML = "";
-      filteredDoors.forEach(d => {
-        const notes = d.retested ? `${d.notes} [${d.retested}]` : d.notes;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><a href="/door/?id=${encodeURIComponent(d.doorId)}">${escapeHtml(d.doorId)}</a></td>
-          <td><span class="status-badge ${statusClass(d.status)}">${escapeHtml(d.status)}</span></td>
-          <td>${escapeHtml(d.lastInspection)}</td>
-          <td>${escapeHtml(d.aaadm)}</td>
-          <td>${escapeHtml(d.location)}</td>
-          <td>${escapeHtml(notes)}</td>
-        `;
-        doorsBody.appendChild(tr);
-      });
+      if (filteredDoors.length === 0) {
+        doorsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ccc-text-muted);padding:40px;">No doors match current filters</td></tr>';
+      } else {
+        filteredDoors.forEach(d => {
+          const notes = d.retested ? `${d.notes} [${d.retested}]` : d.notes;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><a href="/door/?id=${encodeURIComponent(d.doorId)}">${escapeHtml(d.doorId)}</a></td>
+            <td><span class="status-badge ${statusClass(d.status)}">${escapeHtml(d.status)}</span></td>
+            <td>${escapeHtml(d.lastInspection)}</td>
+            <td>${escapeHtml(d.aaadm)}</td>
+            <td>${escapeHtml(d.location)}</td>
+            <td>${escapeHtml(notes)}</td>
+          `;
+          doorsBody.appendChild(tr);
+        });
+      }
       $("doorsMeta").textContent = `${filteredDoors.length} doors • ${passCount} passing, ${failCount} failing`;
 
       // Tasks table
       const tasksBody = $("tasksBody");
       tasksBody.innerHTML = "";
-      filteredTasks.forEach(t => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${escapeHtml(t.dateStr)}</td>
-          <td>${escapeHtml(t.tech)}</td>
-          <td><span class="status-badge ${statusClass(t.status)}">${escapeHtml(t.status)}</span></td>
-          <td>${escapeHtml(t.summary)}</td>
-        `;
-        tasksBody.appendChild(tr);
-      });
-      $("tasksMeta").textContent = `${filteredTasks.length} service records`;
+      if (filteredTasks.length === 0 && tasks.length === 0) {
+        tasksBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ccc-text-muted);padding:40px;">No tasks loaded</td></tr>';
+      } else if (filteredTasks.length === 0) {
+        tasksBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ccc-text-muted);padding:40px;">No tasks match current filters</td></tr>';
+      } else {
+        filteredTasks.forEach(t => {
+          const tr = document.createElement("tr");
+          const taskLink = t.woLink ? `<a href="${escapeHtml(t.woLink)}" target="_blank">${escapeHtml(t.taskName || t.taskId)}</a>` : escapeHtml(t.taskName || t.taskId);
+          tr.innerHTML = `
+            <td>${escapeHtml(t.dateStr)}</td>
+            <td>${taskLink}</td>
+            <td>${escapeHtml(t.tech)}</td>
+            <td><span class="status-badge ${statusClass(t.status)}">${escapeHtml(t.status)}</span></td>
+            <td>${escapeHtml(t.summary)}</td>
+          `;
+          tasksBody.appendChild(tr);
+        });
+      }
+      $("tasksMeta").textContent = tasks.length > 0 ? `${filteredTasks.length} service records` : "Tasks not configured";
     }
 
     function getDateRangeStr() {
       const from = $("fromInput").value;
       const to = $("toInput").value;
-      if (from && to) return `${from.replace('-', '')}-to-${to.replace('-', '')}`;
-      if (from) return `from-${from.replace('-', '')}`;
-      if (to) return `to-${to.replace('-', '')}`;
+      if (from && to) return `${from}-to-${to}`;
+      if (from) return `from-${from}`;
+      if (to) return `to-${to}`;
       return new Date().toISOString().slice(0, 10);
     }
 
     function setupDownloads() {
-      // Doors CSV
+      const safeKey = customerKey.replace(/[^a-z0-9]/gi, '-');
+      
       $("downloadDoorsCSV").onclick = () => {
         const { filteredDoors } = getFilteredData();
-        const rows = [["Door ID", "Status", "Last Inspection", "AAADM", "Location", "Technician", "Notes", "Retested"]];
+        const passCount = filteredDoors.filter(d => d.status === "PASS").length;
+        const failCount = filteredDoors.filter(d => d.status === "FAIL").length;
+        const totalWithStatus = passCount + failCount;
+        const compliancePct = totalWithStatus > 0 ? Math.round((passCount / totalWithStatus) * 100) : 0;
+        
+        const rows = [
+          ["Fire Door Inspection Report"],
+          ["Customer:", customerLabel],
+          ["Report Date:", new Date().toLocaleDateString()],
+          ["Total Doors:", filteredDoors.length, "Passing:", passCount, "Failing:", failCount, "Compliance:", compliancePct + "%"],
+          [""],
+          ["REGULATORY STANDARDS:"],
+          ["NFPA 80: Standard for Fire Doors and Other Opening Protectives - Requires annual inspection"],
+          ["Joint Commission EC.02.03.05 EP-25: Fire door assemblies must be inspected annually per NFPA 80"],
+          [""],
+          ["Door ID", "Status", "Last Inspection", "AAADM", "Location", "Technician", "Notes", "Retested"]
+        ];
         filteredDoors.forEach(d => {
           rows.push([d.doorId, d.status, d.lastInspection, d.aaadm, d.location, d.tech, d.notes, d.retested]);
         });
-        downloadCSV(`manning-door-inspections-${getDateRangeStr()}.csv`, rows);
+        downloadCSV(`${safeKey}-door-inspections-${getDateRangeStr()}.csv`, rows);
       };
 
-      // Doors PDF
       $("downloadDoorsPDF").onclick = () => {
         const { filteredDoors } = getFilteredData();
         const passCount = filteredDoors.filter(d => d.status === "PASS").length;
         const failCount = filteredDoors.filter(d => d.status === "FAIL").length;
+        const totalWithStatus = passCount + failCount;
+        const compliancePct = totalWithStatus > 0 ? Math.round((passCount / totalWithStatus) * 100) : 0;
         
         const summary = [
           `Customer: ${customerLabel}`,
-          `Total Doors: ${filteredDoors.length}  |  Passing: ${passCount}  |  Failing: ${failCount}`,
-          `Date Range: ${$("fromInput").value || 'All'} to ${$("toInput").value || 'All'}`
+          `Total Doors: ${filteredDoors.length}  |  Passing: ${passCount}  |  Failing: ${failCount}  |  Compliance: ${compliancePct}%`,
+          `Report Date: ${new Date().toLocaleDateString()}`,
+          ``,
+          `REGULATORY STANDARDS:`,
+          `• NFPA 80: Standard for Fire Doors and Other Opening Protectives`,
+          `  Requires annual inspection of all fire door assemblies.`,
+          `• Joint Commission EC.02.03.05 EP-25:`,
+          `  Fire door assemblies must be inspected and tested annually per NFPA 80.`
         ];
         
         const headers = ["Door ID", "Status", "Last Insp", "AAADM", "Location", "Notes"];
@@ -635,41 +1232,65 @@
           d.location, d.retested ? `${d.notes} [${d.retested}]` : d.notes
         ]);
         
-        generatePDF(
-          "Door Inspection Report - Manning Family Children's Hospital",
+        generateCompliancePDF(
+          "Fire Door Inspection Report",
+          customerLabel,
           summary, headers, data,
-          `manning-door-inspection-report-${getDateRangeStr()}.pdf`
+          compliancePct,
+          `${safeKey}-door-inspection-report-${getDateRangeStr()}.pdf`
         );
       };
 
-      // Tasks CSV
       $("downloadTasksCSV").onclick = () => {
         const { filteredTasks } = getFilteredData();
-        const rows = [["Service Date", "Technician", "Status", "Work Performed"]];
+        const rows = [["Task ID", "Service Date", "Task Name", "Technician", "Status", "Work Performed", "WO Link"]];
         filteredTasks.forEach(t => {
-          rows.push([t.dateStr, t.tech, t.status, t.summary]);
+          rows.push([t.taskId, t.dateStr, t.taskName, t.tech, t.status, t.summary, t.woLink]);
         });
-        downloadCSV(`manning-service-tasks-${getDateRangeStr()}.csv`, rows);
+        downloadCSV(`${safeKey}-service-tasks-${getDateRangeStr()}.csv`, rows);
       };
     }
 
+    function getCustomerKey() {
+      // Check URL param first: ?customer=manning
+      const params = new URLSearchParams(window.location.search);
+      const param = params.get('customer');
+      if (param && CUSTOMER_SOURCES[param]) return param;
+      
+      // Default to manning for now
+      // Phase 2: Get from Auth0 claim
+      return 'manning';
+    }
+
     async function initPage(user, roles) {
-      const customerKey = "manning";
+      customerKey = getCustomerKey();
       const src = CUSTOMER_SOURCES[customerKey];
+      
+      if (!src) {
+        $("doorsMeta").textContent = "Customer not found";
+        $("tasksMeta").textContent = "Customer not found";
+        return;
+      }
+      
       customerLabel = src.label;
 
-      $("ccSubtitle").textContent = `${user.name || user.email} • ${src.label}`;
+      // Update UI
+      $("cccSubtitle").textContent = `${user.name || user.email}`;
+      $("cccCustomerName").textContent = src.shortName || src.label;
+      $("cccCustomerBadge").style.display = "inline-flex";
       $("requestServiceLink").href = src.requestServiceUrl;
+      document.title = `${src.shortName || src.label} • Customer Command Center`;
 
-      // Default date range: last 3 months
+      // Default date range: last 90 days
       const now = new Date();
-      const fromDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-      $("fromInput").value = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}`;
-      $("toInput").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const fromDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      $("fromInput").value = fromDate.toISOString().slice(0, 10);
+      $("toInput").value = now.toISOString().slice(0, 10);
 
       // Bind filters
       $("qInput").addEventListener("input", render);
-      $("statusInput").addEventListener("change", render);
+      $("doorStatusFilter").addEventListener("change", render);
+      $("taskStatusFilter").addEventListener("change", render);
       $("fromInput").addEventListener("change", render);
       $("toInput").addEventListener("change", render);
 
@@ -679,11 +1300,44 @@
         await loadData(src);
         render();
       } catch (e) {
-        console.error("[CC] Load error:", e);
+        console.error("[CCC] Load error:", e);
         $("doorsMeta").textContent = "Error loading data.";
         $("tasksMeta").textContent = "Error loading data.";
       }
     }
+
+    // Theme management
+    function initTheme() {
+      const saved = localStorage.getItem('aas-theme');
+      if (saved === 'light') {
+        document.body.classList.add('light-theme');
+        updateThemeIcon('light');
+      } else {
+        document.body.classList.remove('light-theme');
+        updateThemeIcon('dark');
+      }
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-theme');
+      localStorage.setItem('aas-theme', isLight ? 'light' : 'dark');
+      updateThemeIcon(isLight ? 'light' : 'dark');
+    }
+
+    function updateThemeIcon(theme) {
+      const sun = document.getElementById('iconSun');
+      const moon = document.getElementById('iconMoon');
+      if (sun && moon) {
+        sun.style.display = theme === 'dark' ? 'block' : 'none';
+        moon.style.display = theme === 'light' ? 'block' : 'none';
+      }
+    }
+
+    // Initialize theme on load
+    initTheme();
+    
+    // Bind theme toggle
+    document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 
     window.onPageReady = initPage;
   </script>
