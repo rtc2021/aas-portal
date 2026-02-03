@@ -122,23 +122,6 @@
       margin-bottom: 24px;
     }
 
-    .ccc-theme-toggle {
-      background: var(--ccc-card);
-      border: 1px solid var(--ccc-border);
-      border-radius: 10px;
-      padding: 10px;
-      cursor: pointer;
-      color: var(--ccc-text-secondary);
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .ccc-theme-toggle:hover {
-      border-color: var(--ccc-accent);
-      color: var(--ccc-accent);
-    }
-
     .ccc-title {
       font-size: clamp(1.8rem, 4vw, 2.5rem);
       font-weight: 700;
@@ -588,14 +571,6 @@
           <span id="cccCustomerName">Customer</span>
         </div>
       </div>
-      <button id="themeToggle" class="ccc-theme-toggle" title="Toggle light/dark mode">
-        <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-        <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:none;">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-      </button>
     </header>
 
     <section class="ccc-stats">
@@ -634,7 +609,7 @@
         </svg>
         Request Service
       </a>
-      <a href="sms:+15048105285?body=AAS%20Service%20Request%20-%20Manning%20Children%27s:%20" class="ccc-btn">
+      <a id="textAasLink" href="sms:+15048105285?body=AAS%20Service%20Request:%20" class="ccc-btn">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
@@ -759,8 +734,8 @@
 
   <script>
     // ═══════════════════════════════════════════════════════════════
-    // CUSTOMER COMMAND CENTER v4
-    // Theme support + Multi-customer routing
+    // CUSTOMER COMMAND CENTER v5 - Multi-customer with Ochsner Westbank
+    // Theme support + localStorage customer preference
     // ═══════════════════════════════════════════════════════════════
 
     const CUSTOMER_SOURCES = {
@@ -1252,13 +1227,22 @@
     }
 
     function getCustomerKey() {
-      // Check URL param first: ?customer=manning
+      // Check URL param first: ?customer=manning or ?customer=ochsner_westbank
       const params = new URLSearchParams(window.location.search);
       const param = params.get('customer');
-      if (param && CUSTOMER_SOURCES[param]) return param;
+      if (param && CUSTOMER_SOURCES[param]) {
+        // Save to localStorage for future visits
+        localStorage.setItem('aas_customer_preference', param);
+        return param;
+      }
       
-      // Default to manning for now
-      // Phase 2: Get from Auth0 claim
+      // Check localStorage for saved preference
+      const saved = localStorage.getItem('aas_customer_preference');
+      if (saved && CUSTOMER_SOURCES[saved]) {
+        return saved;
+      }
+      
+      // Default to manning
       return 'manning';
     }
 
@@ -1306,41 +1290,8 @@
       }
     }
 
-    // Theme management
-    function initTheme() {
-      const saved = localStorage.getItem('aas-theme');
-      if (saved === 'light') {
-        document.body.classList.add('light-theme');
-        updateThemeIcon('light');
-      } else {
-        document.body.classList.remove('light-theme');
-        updateThemeIcon('dark');
-      }
-    }
-
-    function toggleTheme() {
-      const isLight = document.body.classList.toggle('light-theme');
-      localStorage.setItem('aas-theme', isLight ? 'light' : 'dark');
-      updateThemeIcon(isLight ? 'light' : 'dark');
-    }
-
-    function updateThemeIcon(theme) {
-      const sun = document.getElementById('iconSun');
-      const moon = document.getElementById('iconMoon');
-      if (sun && moon) {
-        sun.style.display = theme === 'dark' ? 'block' : 'none';
-        moon.style.display = theme === 'light' ? 'block' : 'none';
-      }
-    }
-
-    // Initialize theme on load
-    initTheme();
-    
-    // Bind theme toggle
-    document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
-
     window.onPageReady = initPage;
   </script>
   <script src="/auth.js"></script>
-</body>
+<script src="/theme.js" defer></script><script src="/copilot.js" defer></script></body>
 </html>
