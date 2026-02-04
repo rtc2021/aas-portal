@@ -412,11 +412,14 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               description: payload.description || "",
               manufacturer: payload.manufacturer || "",
               // Display format: MFG# (AAS#) - Description
-              display: payload.mfg_part 
+              display: payload.mfg_part
                 ? `${payload.mfg_part} (${payload.aas_number}) - ${payload.description}`
                 : `(${payload.aas_number}) - ${payload.description}`,
-              image_url: payload.image_id 
-                ? `https://drive.google.com/thumbnail?id=${payload.image_id}&sz=w400` 
+              thumbnail_url: payload.image_id
+                ? `https://drive.google.com/thumbnail?id=${payload.image_id}&sz=w400`
+                : null,
+              full_url: payload.image_id
+                ? `https://drive.google.com/file/d/${payload.image_id}/view`
                 : null,
               score: hit.score.toFixed(3),
               match: `${matchCount}/${queryWords.length}`
@@ -1186,7 +1189,14 @@ Parts search returns tiered results:
 2. If only closeMatches: Show them, ask "Did you mean X or Y?"
 3. If only partialMatches: Ask for clarification before listing
 4. Always include AAS# so tech can find in Limble
-5. If part has image_url, include it on its own line so it displays as an image
+
+**Image display rules (when parts have thumbnail_url):**
+1. Display as markdown image on its own line:
+   ![Part Description](thumbnail_url)
+2. Add clickable link to full-size below:
+   [View full image](full_url)
+3. Show max 3 images per response to keep it compact
+4. Images help techs visually confirm correct part before ordering
 
 ## PINOUT / TABLE EXTRACTION MODE (MANDATORY)
 **Trigger when user asks:** pinout, CNx/Jx/TBx, "terminal block", "1–12", "functions", wiring terminals.
