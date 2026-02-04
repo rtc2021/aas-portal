@@ -922,14 +922,18 @@
       const div = document.createElement('div');
       div.textContent = text;
       let html = div.innerHTML.replace(/\n/g, '<br>');
-      
+
+      // Convert markdown images ![alt](url) to inline images FIRST (before link conversion)
+      html = html.replace(/!\[([^\]]*)\]\((https:\/\/drive\.google\.com\/thumbnail\?id=[^)]+)\)/g,
+        '<br><img src="$2" alt="$1" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+
       // Convert markdown links [text](url) to clickable HTML links
       html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color: #00d4ff; text-decoration: underline;">$1</a>');
-      
-      // Convert Google Drive thumbnail URLs to inline images
-      html = html.replace(/(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+&sz=w\d+)/g, 
-        '<br><img src="$1" alt="Part image" style="max-width: 200px; max-height: 150px; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
-      
+
+      // Fallback: Convert any remaining raw Google Drive thumbnail URLs to inline images
+      html = html.replace(/(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+&sz=w\d+)/g,
+        '<br><img src="$1" alt="Part image" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+
       return html;
     }
   }
