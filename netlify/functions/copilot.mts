@@ -320,8 +320,24 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const queryWords = cleanedQuery.split(/\s+/).filter(w => w.length > 0);
         const detectedMfr = mfrHint || queryWords.find(w => knownManufacturers.some(m => w.includes(m))) || null;
 
+        // Expand query with common abbreviations for better vector matching
+        const queryExpansions: Record<string, string> = {
+          'gearbox': 'gearbox gbxmtr gbx',
+          'motor': 'motor mtr gbxmtr',
+          'control': 'control controller cntrl',
+          'controller': 'controller control cntrl',
+          'rebuilt': 'rebuilt rblt',
+          'assembly': 'assembly assy',
+          'sensor': 'sensor snsr',
+          'carrier': 'carrier carr',
+          'roller': 'roller rlr',
+          'bottom': 'bottom btm',
+          'guide': 'guide gd gde'
+        };
+        const expandedQuery = queryWords.map(w => queryExpansions[w] || w).join(' ');
+
         try {
-          // Step 1: Get query embedding
+          // Step 1: Get query embedding (with expanded terms for better matching)
           const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
             method: "POST",
             headers: {
@@ -330,7 +346,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
             },
             body: JSON.stringify({
               model: "text-embedding-3-small",
-              input: cleanedQuery
+              input: expandedQuery // Use expanded query for embedding
             })
           });
 
@@ -344,9 +360,9 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           // Step 2: Search Qdrant WITHOUT hard manufacturer filter (boost instead)
           const searchBody: any = {
             vector: queryVector,
-            limit: 50, // Get more results for better re-ranking
+            limit: 100, // Get more results to catch abbreviated terms
             with_payload: true,
-            score_threshold: 0.20 // Lower threshold, rely on keyword boosting
+            score_threshold: 0.15 // Lower threshold, rely on keyword boosting
           };
 
           const qdrantResponse = await fetch(
