@@ -301,20 +301,25 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       case "search_parts": {
         let rawQuery = (input.query as string).toLowerCase().trim();
-        const mfr = input.manufacturer as string | undefined;
-        
+        const mfrHint = input.manufacturer as string | undefined;
+
         // Remove filler words
         const fillerWords = ['for', 'a', 'an', 'the', 'i', 'need', 'parts', 'part', 'find', 'get', 'order', 'quote'];
         const cleanedQuery = rawQuery.split(/\s+/).filter(w => !fillerWords.includes(w)).join(' ').trim();
-        
+
         if (!cleanedQuery) {
           return JSON.stringify({ error: "Please provide a search term" });
         }
-        
+
         if (!OPENAI_API_KEY) {
           return JSON.stringify({ error: "OpenAI API key not configured for parts search" });
         }
-        
+
+        // Auto-detect manufacturer from query (don't use as filter, use for boosting)
+        const knownManufacturers = ['horton', 'stanley', 'besam', 'nabco', 'record', 'tormax', 'gyro', 'bea', 'optex', 'assa', 'abloy', 'digi', 'sdk', 'hunter', 'dorma', 'geze'];
+        const queryWords = cleanedQuery.split(/\s+/).filter(w => w.length > 0);
+        const detectedMfr = mfrHint || queryWords.find(w => knownManufacturers.some(m => w.includes(m))) || null;
+
         try {
           // Step 1: Get query embedding
           const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
@@ -328,34 +333,22 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               input: cleanedQuery
             })
           });
-          
+
           if (!embeddingResponse.ok) {
             return JSON.stringify({ error: "Failed to generate query embedding" });
           }
-          
+
           const embeddingData = await embeddingResponse.json();
           const queryVector = embeddingData.data[0].embedding;
-          
-          // Step 2: Build Qdrant filter if manufacturer specified
-          const filter: any = mfr ? {
-            must: [{
-              key: "manufacturer",
-              match: { value: mfr.toLowerCase() }
-            }]
-          } : undefined;
-          
-          // Step 3: Search Qdrant parts_v1 collection
+
+          // Step 2: Search Qdrant WITHOUT hard manufacturer filter (boost instead)
           const searchBody: any = {
             vector: queryVector,
-            limit: 30,
+            limit: 50, // Get more results for better re-ranking
             with_payload: true,
-            score_threshold: 0.25
+            score_threshold: 0.20 // Lower threshold, rely on keyword boosting
           };
-          
-          if (filter) {
-            searchBody.filter = filter;
-          }
-          
+
           const qdrantResponse = await fetch(
             `${QDRANT_URL}/collections/parts_v1/points/search`,
             {
@@ -364,18 +357,17 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               body: JSON.stringify(searchBody)
             }
           );
-          
+
           if (!qdrantResponse.ok) {
-            // Fallback to CSV search if Qdrant unavailable
-            return JSON.stringify({ 
-              error: "Parts vector search unavailable", 
+            return JSON.stringify({
+              error: "Parts vector search unavailable",
               suggestion: "Try searching with exact part number"
             });
           }
-          
+
           const searchResults = await qdrantResponse.json();
           const hits = searchResults.result || [];
-          
+
           if (hits.length === 0) {
             return JSON.stringify({
               query: cleanedQuery,
@@ -384,34 +376,46 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               parts: []
             });
           }
-          
-          // Step 4: Categorize results into tiers
-          const queryWords = cleanedQuery.split(/\s+/).filter(w => w.length > 0);
-          
-          const tieredResults: {
-            exact: any[];
-            close: any[];
-            partial: any[];
-          } = { exact: [], close: [], partial: [] };
-          
+
+          // Step 3: Score and rank results with keyword + manufacturer boosting
+          const scoredResults: any[] = [];
+
           for (const hit of hits) {
             const payload = hit.payload || {};
-            const searchText = `${payload.mfg_part || ''} ${payload.description || ''} ${payload.manufacturer || ''}`.toLowerCase();
-            
-            // Count how many query words match
-            let matchCount = 0;
+            const mfgPart = (payload.mfg_part || '').toLowerCase();
+            const description = (payload.description || '').toLowerCase();
+            const manufacturer = (payload.manufacturer || '').toLowerCase();
+            const searchText = `${mfgPart} ${description} ${manufacturer}`;
+
+            // Count keyword matches
+            let keywordMatches = 0;
             for (const word of queryWords) {
               if (searchText.includes(word)) {
-                matchCount++;
+                keywordMatches++;
               }
             }
-            
-            const result = {
+            const keywordRatio = queryWords.length > 0 ? keywordMatches / queryWords.length : 0;
+
+            // Manufacturer boost: +0.3 if manufacturer matches
+            let mfrBoost = 0;
+            if (detectedMfr && manufacturer.includes(detectedMfr)) {
+              mfrBoost = 0.3;
+            }
+
+            // Part number exact match boost: +0.5
+            let partNumBoost = 0;
+            if (queryWords.some(w => mfgPart === w || mfgPart.includes(w))) {
+              partNumBoost = 0.5;
+            }
+
+            // Combined score: vector + keyword ratio + boosts
+            const combinedScore = hit.score + (keywordRatio * 0.4) + mfrBoost + partNumBoost;
+
+            scoredResults.push({
               mfg_part: payload.mfg_part || null,
               aas_number: payload.aas_number || "",
               description: payload.description || "",
               manufacturer: payload.manufacturer || "",
-              // Display format: MFG# (AAS#) - Description
               display: payload.mfg_part
                 ? `${payload.mfg_part} (${payload.aas_number}) - ${payload.description}`
                 : `(${payload.aas_number}) - ${payload.description}`,
@@ -421,40 +425,50 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               full_url: payload.image_id
                 ? `https://drive.google.com/file/d/${payload.image_id}/view`
                 : null,
-              score: hit.score.toFixed(3),
-              match: `${matchCount}/${queryWords.length}`
-            };
-            
-            // Tier based on match ratio
-            const matchRatio = matchCount / queryWords.length;
-            if (matchRatio === 1) {
+              vectorScore: hit.score.toFixed(3),
+              combinedScore: combinedScore.toFixed(3),
+              keywordMatch: `${keywordMatches}/${queryWords.length}`,
+              mfrMatch: detectedMfr && manufacturer.includes(detectedMfr)
+            });
+          }
+
+          // Sort by combined score descending
+          scoredResults.sort((a, b) => parseFloat(b.combinedScore) - parseFloat(a.combinedScore));
+
+          // Step 4: Categorize into tiers based on keyword match ratio
+          const tieredResults: { exact: any[]; close: any[]; partial: any[] } = { exact: [], close: [], partial: [] };
+
+          for (const result of scoredResults) {
+            const [matches, total] = result.keywordMatch.split('/').map(Number);
+            const ratio = total > 0 ? matches / total : 0;
+
+            if (ratio === 1) {
               tieredResults.exact.push(result);
-            } else if (matchRatio >= 0.5) {
+            } else if (ratio >= 0.5) {
               tieredResults.close.push(result);
-            } else if (hit.score > 0.4) {
+            } else if (parseFloat(result.combinedScore) > 0.35) {
               tieredResults.partial.push(result);
             }
           }
-          
-          // Build response with tier info
+
           return JSON.stringify({
             query: cleanedQuery,
             queryWords: queryWords,
-            manufacturerFilter: mfr || null,
+            detectedManufacturer: detectedMfr,
             tiers: {
               exact: tieredResults.exact.length,
               close: tieredResults.close.length,
               partial: tieredResults.partial.length
             },
-            exactMatches: tieredResults.exact,
-            closeMatches: tieredResults.close,
-            partialMatches: tieredResults.partial.slice(0, 10), // Limit partial
+            exactMatches: tieredResults.exact.slice(0, 10),
+            closeMatches: tieredResults.close.slice(0, 10),
+            partialMatches: tieredResults.partial.slice(0, 5),
             count: tieredResults.exact.length + tieredResults.close.length + tieredResults.partial.length
           });
-          
+
         } catch (error) {
-          return JSON.stringify({ 
-            error: "Failed to search parts", 
+          return JSON.stringify({
+            error: "Failed to search parts",
             details: error instanceof Error ? error.message : "Unknown error"
           });
         }
