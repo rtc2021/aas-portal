@@ -378,6 +378,45 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           }
 
           // Step 3: Score and rank results with keyword + manufacturer boosting
+          // Abbreviation mappings for parts terminology
+          const abbreviations: Record<string, string[]> = {
+            'gearbox': ['gbx', 'gbxmtr', 'gearbox'],
+            'motor': ['mtr', 'mtor', 'gbxmtr', 'motor'],
+            'control': ['cntrl', 'ctrl', 'control', 'controller'],
+            'controller': ['cntrl', 'ctrl', 'control', 'controller'],
+            'rebuilt': ['rblt', 'rebuilt', 'rebu'],
+            'assembly': ['assy', 'asy', 'assembly'],
+            'sensor': ['snsr', 'sens', 'sensor'],
+            'switch': ['sw', 'swch', 'switch'],
+            'bottom': ['btm', 'bot', 'bottom'],
+            'carrier': ['carr', 'car', 'carrier'],
+            'roller': ['rlr', 'roll', 'roller'],
+            'belt': ['blt', 'belt'],
+            'pulley': ['pully', 'puly', 'pulley'],
+            'track': ['trk', 'track'],
+            'guide': ['gd', 'gde', 'guide'],
+            'door': ['dr', 'door'],
+            'slide': ['sld', 'slider', 'slide'],
+            'swing': ['swg', 'swing'],
+            'operator': ['op', 'oper', 'operator'],
+            'electric': ['elec', 'elect', 'electric'],
+            'magnetic': ['mag', 'magnet', 'magnetic'],
+            'bracket': ['brkt', 'bkt', 'bracket'],
+            'header': ['hdr', 'header'],
+            'panel': ['pnl', 'panel'],
+            'cover': ['cvr', 'cover'],
+            'spring': ['sprg', 'spr', 'spring'],
+            'hinge': ['hng', 'hinge'],
+            'arm': ['arm'],
+            'wheel': ['whl', 'wheel'],
+            'bearing': ['brg', 'bearing'],
+            'counter': ['cntr', 'ctr', 'counter'],
+            'reverse': ['rev', 'reverse'],
+            'new': ['new', 'n/s'],
+            'left': ['lh', 'left', 'l/h'],
+            'right': ['rh', 'right', 'r/h']
+          };
+
           const scoredResults: any[] = [];
 
           for (const hit of hits) {
@@ -387,11 +426,18 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
             const manufacturer = (payload.manufacturer || '').toLowerCase();
             const searchText = `${mfgPart} ${description} ${manufacturer}`;
 
-            // Count keyword matches
+            // Count keyword matches (with abbreviation expansion)
             let keywordMatches = 0;
             for (const word of queryWords) {
+              // Direct match
               if (searchText.includes(word)) {
                 keywordMatches++;
+              } else {
+                // Check abbreviation variants
+                const variants = abbreviations[word] || [];
+                if (variants.some(v => searchText.includes(v))) {
+                  keywordMatches++;
+                }
               }
             }
             const keywordRatio = queryWords.length > 0 ? keywordMatches / queryWords.length : 0;
