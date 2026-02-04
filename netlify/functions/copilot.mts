@@ -919,144 +919,89 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const manufacturer = input.manufacturer as string | undefined;
         const doorType = input.door_type as string | undefined;
         const limit = Math.min((input.limit as number) || 5, 10);
-        
-        if (!OPENAI_API_KEY) {
-          return JSON.stringify({ error: "OpenAI API key not configured" });
-        }
-        
+
         try {
-          // Step 1: Get query embedding from OpenAI
-          const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+          // Call Door Guru V3 API
+          const response = await fetch(`${DROPLET_URL}/search`, {
             method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENAI_API_KEY}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              model: "text-embedding-3-small",
-              input: query
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, top_k: limit })
           });
-          
-          if (!embeddingResponse.ok) {
-            const errText = await embeddingResponse.text();
-            return JSON.stringify({ error: "Failed to generate query embedding", details: errText });
+
+          if (!response.ok) {
+            return JSON.stringify({
+              error: "Door Guru V3 search unavailable",
+              status: response.status
+            });
           }
-          
-          const embeddingData = await embeddingResponse.json();
-          const queryVector = embeddingData.data[0].embedding;
-          
-          // Step 2: Build Qdrant filter
-          const mustFilters: any[] = [];
-          
+
+          const data = await response.json();
+          const manualResults = data.manual_results || [];
+          const playbookResults = data.playbook_results || [];
+
+          // Apply client-side filters if specified
+          let filteredManuals = manualResults;
           if (manufacturer) {
-            mustFilters.push({
-              key: "manufacturer",
-              match: { value: manufacturer.toLowerCase() }
-            });
+            filteredManuals = filteredManuals.filter((r: any) =>
+              (r.manufacturer || "").toLowerCase().includes(manufacturer.toLowerCase())
+            );
           }
-          
           if (doorType) {
-            mustFilters.push({
-              key: "door_types",
-              match: { any: [doorType.toLowerCase()] }
+            filteredManuals = filteredManuals.filter((r: any) => {
+              const doorTypes = r.door_types || [];
+              return doorTypes.some((dt: string) => dt.toLowerCase().includes(doorType.toLowerCase()));
             });
           }
-          
-          // Step 3: Query BOTH Qdrant collections in parallel, merge results
-          const searchBody: any = {
-            vector: queryVector,
-            limit: limit + 3, // Get extra to have room after deduping
-            with_payload: true,
-            score_threshold: 0.25
-          };
-          
-          if (mustFilters.length > 0) {
-            searchBody.filter = { must: mustFilters };
-          }
-          
-          // Search both v2 (canonical) and v1 (archive) in parallel
-          const [v2Response, v1Response] = await Promise.all([
-            fetch(`${QDRANT_URL}/collections/manual_chunks_v2/points/search`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(searchBody)
-            }),
-            fetch(`${QDRANT_URL}/collections/manual_chunks_v1/points/search`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(searchBody)
-            })
-          ]);
-          
-          const v2Results = v2Response.ok ? (await v2Response.json()).result || [] : [];
-          const v1Results = v1Response.ok ? (await v1Response.json()).result || [] : [];
-          
-          // Merge results: v2 first (has drive_links), then v1, dedupe by doc_key+chunk_index
-          const seen = new Set<string>();
-          const merged: any[] = [];
-          
-          // Add v2 results first (priority - has drive_links)
-          for (const hit of v2Results) {
-            const key = `${hit.payload?.doc_key}:${hit.payload?.chunk_index}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              merged.push({ ...hit, source_collection: "v2_canonical" });
-            }
-          }
-          
-          // Add v1 results (archive backup)
-          for (const hit of v1Results) {
-            const key = `${hit.payload?.doc_key}:${hit.payload?.chunk_index}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              merged.push({ ...hit, source_collection: "v1_archive" });
-            }
-          }
-          
-          // Sort by score descending, take top N
-          merged.sort((a, b) => b.score - a.score);
-          const results = merged.slice(0, limit);
-          
-          if (results.length === 0) {
+
+          if (filteredManuals.length === 0 && playbookResults.length === 0) {
             return JSON.stringify({
               query: query,
               filters: { manufacturer, door_type: doorType },
               count: 0,
               message: "No matching documentation found. Try broadening your search or removing filters.",
-              results: []
+              manual_results: [],
+              playbook_results: []
             });
           }
-          
-          // Format results (include drive_link for v2 chunks)
-          const formattedResults = results.map((hit: any, index: number) => {
-            const payload = hit.payload || {};
-            return {
-              rank: index + 1,
-              score: hit.score.toFixed(3),
-              manufacturer: payload.manufacturer || "unknown",
-              model: payload.model || null,
-              manual_type: payload.manual_type || null,
-              source: payload.doc_key || "unknown",
-              drive_link: payload.drive_link || null,
-              controllers: payload.controllers || [],
-              door_types: payload.door_types || [],
-              text: payload.text || "",
-              collection: hit.source_collection
-            };
-          });
-          
+
+          // Format manual results
+          const formattedManuals = filteredManuals.slice(0, limit).map((hit: any, index: number) => ({
+            rank: index + 1,
+            score: hit.score ? hit.score.toFixed(3) : null,
+            manufacturer: hit.manufacturer || "unknown",
+            model: hit.model || null,
+            manual_type: hit.manual_type || null,
+            source: hit.doc_key || hit.source || "unknown",
+            drive_link: hit.drive_link || null,
+            controllers: hit.controllers || [],
+            door_types: hit.door_types || [],
+            text: hit.text || ""
+          }));
+
+          // Format playbook results (AAS tribal knowledge / field tips)
+          const formattedPlaybooks = playbookResults.slice(0, 3).map((hit: any, index: number) => ({
+            rank: index + 1,
+            score: hit.score ? hit.score.toFixed(3) : null,
+            category: hit.category || null,
+            trigger: hit.trigger || null,
+            action: hit.action || null,
+            why: hit.why || null,
+            manufacturer: hit.manufacturer || null,
+            equipment: hit.equipment || null
+          }));
+
           return JSON.stringify({
             query: query,
             filters: { manufacturer, door_type: doorType },
-            count: formattedResults.length,
-            sources: { v2: v2Results.length, v1: v1Results.length },
-            results: formattedResults
+            count: formattedManuals.length,
+            manual_results: formattedManuals,
+            playbook_results: formattedPlaybooks,
+            playbook_count: formattedPlaybooks.length
           });
-          
+
         } catch (error) {
-          return JSON.stringify({ 
-            error: "Failed to search manuals RAG", 
+          return JSON.stringify({
+            error: "Failed to search Door Guru V3",
             details: error instanceof Error ? error.message : "Unknown error"
           });
         }
