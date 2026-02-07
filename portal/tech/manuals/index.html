@@ -88,12 +88,13 @@
         <div class="mh-label">Door Type</div>
         <div id="mhChips" class="mh-chips" role="tablist" aria-label="Door type filters">
           <button class="mh-chip active" data-chip="" type="button">All</button>
-          <button class="mh-chip" data-chip="sensors" type="button">Sensors</button>
           <button class="mh-chip" data-chip="sliding" type="button">Sliding</button>
           <button class="mh-chip" data-chip="swing" type="button">Swing</button>
-          <button class="mh-chip" data-chip="icu" type="button">ICU</button>
+          <button class="mh-chip" data-chip="sensors" type="button">Sensors</button>
           <button class="mh-chip" data-chip="revolving" type="button">Revolving</button>
-          <button class="mh-chip" data-chip="operator" type="button">Operators</button>
+          <button class="mh-chip" data-chip="panic" type="button">Panic Hardware</button>
+          <button class="mh-chip" data-chip="lock" type="button">Locks</button>
+          <button class="mh-chip" data-chip="hardware" type="button">Hardware</button>
         </div>
       </div>
 
@@ -717,7 +718,7 @@
   const CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTU61rKQUtfzsyATsgMQIKIhFZP0p5u7xeHoxVUt32hY3gHWiNarTnPH9guNhRkci2ZWucvJTPUxCVY/pub?gid=613590590&single=true&output=csv";
   const ROOT_ID  = "manualHub";
   const FAV_KEY  = "aas_manual_favorites_v2";
-  const CACHE_KEY = "aas_manual_cache_v3";
+  const CACHE_KEY = "aas_manual_cache_v4";
   const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
   const MAX_FAVS = 80;
 
@@ -1167,6 +1168,9 @@
 
       const compiled = compileQuery(q);
 
+      // Priority manufacturers - commonly used appear first
+      const priorityMfgs = ['Horton', 'Stanley', 'Besam', 'Nabco', 'Record', 'Dorma', 'BEA', 'Optex'];
+
       let rows = data.filter(r => {
         if (maker && r.Manufacturer !== maker) return false;
         if (type && r.ManualType_Final !== type) return false;
@@ -1176,7 +1180,24 @@
 
       rows = rows
         .map(r => ({ r, s: scoreRow(r, maker, type, activeChip, compiled) }))
-        .sort((a,b) => b.s - a.s || a.r.FileName.localeCompare(b.r.FileName))
+        .sort((a,b) => {
+          // Primary: score descending
+          if (b.s !== a.s) return b.s - a.s;
+
+          // Secondary: manufacturer priority (if no search query active)
+          if (!q.trim()) {
+            const aMfgIdx = priorityMfgs.findIndex(m => (a.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
+            const bMfgIdx = priorityMfgs.findIndex(m => (b.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
+            const aPriority = aMfgIdx === -1 ? 999 : aMfgIdx;
+            const bPriority = bMfgIdx === -1 ? 999 : bMfgIdx;
+            if (aPriority !== bPriority) return aPriority - bPriority;
+          }
+
+          // Tertiary: alphabetical by manufacturer, then filename
+          const mfgCmp = (a.r.Manufacturer || '').localeCompare(b.r.Manufacturer || '');
+          if (mfgCmp !== 0) return mfgCmp;
+          return a.r.FileName.localeCompare(b.r.FileName);
+        })
         .map(x => x.r);
 
       return rows;
