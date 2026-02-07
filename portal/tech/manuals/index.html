@@ -109,20 +109,38 @@
             <button class="mh-qbtn" data-quick="service" type="button">Service</button>
             <button class="mh-qbtn" data-quick="parts" type="button">Parts</button>
             <button class="mh-qbtn" data-quick="errorcodes" type="button">Error Codes</button>
-            <button class="mh-qbtn" data-quick="operators" type="button">Operators</button>
           </div>
         </div>
 
         <div class="mh-qgroup">
-          <div class="mh-qtitle">Common Systems</div>
+          <div class="mh-qtitle">Horton</div>
           <div class="mh-qbtns">
-            <button class="mh-qbtn" data-q='stanley mc521 "pro swing"|proswing|pro-swing|pro_swing' data-chip="swing" type="button">Stanley MC521 ProSwing</button>
-            <button class="mh-qbtn" data-q='stanley mc521 "pro slide"|proslide|pro-slide|pro_slide' data-chip="sliding" type="button">Stanley MC521 ProSlide</button>
-            <button class="mh-qbtn" data-q="horton 4190" data-chip="sliding" type="button">Horton 4190</button>
-            <button class="mh-qbtn" data-q='Stanley "model j"|modelj|model-j|model_j' type="button">Stanley Model J</button>
-            <button class="mh-qbtn" data-q='besam|assa unislide|"uni slide"|uni-slide|uni_slide' data-chip="sliding" type="button">Besam UniSlide</button>
-            <button class="mh-qbtn" data-q='dorma|dormakaba "esa 2"|esa2|esa-2|esa_2' data-chip="sliding" type="button">Dorma ESA 2</button>
-            <button class="mh-qbtn" data-q="nabco|nabco opus" type="button">Nabco Opus</button>
+            <button class="mh-qbtn" data-q="horton 2150" data-chip="sliding" type="button">2150 Series</button>
+            <button class="mh-qbtn" data-q="horton 4190|4190" data-chip="swing" type="button">4190 Swing</button>
+            <button class="mh-qbtn" data-q="horton 4000|4000 series" data-chip="sliding" type="button">4000 Series</button>
+            <button class="mh-qbtn" data-q="horton 7100|7100" data-chip="sliding" type="button">7100 Slider</button>
+          </div>
+        </div>
+
+        <div class="mh-qgroup">
+          <div class="mh-qtitle">Stanley</div>
+          <div class="mh-qbtns">
+            <button class="mh-qbtn" data-q="stanley mc521" type="button">MC521</button>
+            <button class="mh-qbtn" data-q="stanley dura|duraglide|dura-glide" data-chip="sliding" type="button">Dura-Glide</button>
+            <button class="mh-qbtn" data-q="stanley iq|teleiq|tele-iq" type="button">Tele-IQ</button>
+            <button class="mh-qbtn" data-q="stanley magic|magic-access|magicaccess" type="button">Magic Access</button>
+          </div>
+        </div>
+
+        <div class="mh-qgroup">
+          <div class="mh-qtitle">Other Brands</div>
+          <div class="mh-qbtns">
+            <button class="mh-qbtn" data-q="besam unislide|uni-slide" data-chip="sliding" type="button">Besam UniSlide</button>
+            <button class="mh-qbtn" data-q="besam sw200|sw-200" data-chip="swing" type="button">Besam SW200</button>
+            <button class="mh-qbtn" data-q="nabco opus|gyro" type="button">Nabco Opus/Gyro</button>
+            <button class="mh-qbtn" data-q="dorma esa|esa-2|esa 2" data-chip="sliding" type="button">Dorma ESA</button>
+            <button class="mh-qbtn" data-q="dorma ed400|ed700|ed-400|ed-700" data-chip="swing" type="button">Dorma ED Series</button>
+            <button class="mh-qbtn" data-q="record s5100|s8100|5100|8100" data-chip="sliding" type="button">Record 5100/8100</button>
           </div>
         </div>
       </div>
@@ -718,7 +736,7 @@
   const CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTU61rKQUtfzsyATsgMQIKIhFZP0p5u7xeHoxVUt32hY3gHWiNarTnPH9guNhRkci2ZWucvJTPUxCVY/pub?gid=613590590&single=true&output=csv";
   const ROOT_ID  = "manualHub";
   const FAV_KEY  = "aas_manual_favorites_v2";
-  const CACHE_KEY = "aas_manual_cache_v4";
+  const CACHE_KEY = "aas_manual_cache_v5";
   const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
   const MAX_FAVS = 80;
 
@@ -1168,8 +1186,21 @@
 
       const compiled = compileQuery(q);
 
-      // Priority manufacturers - commonly used appear first
-      const priorityMfgs = ['Horton', 'Stanley', 'Besam', 'Nabco', 'Record', 'Dorma', 'BEA', 'Optex'];
+      // Priority models - most common systems techs work on
+      const priorityModels = [
+        'Horton 2150', 'Horton 4190', 'Horton 4000', 'Horton 7100',
+        'Stanley MC521', 'Stanley Dura', 'Stanley IQ', 'Stanley Magic',
+        'Dorma ESA', 'Dorma ED400', 'Dorma ED700',
+        'Nabco Opus', 'Nabco 1175', 'Nabco NB4000', 'Nabco Gyro',
+        'Besam SW200', 'Besam SW100', 'Besam Unislide', 'Besam SL500',
+        'Record S5100', 'Record S8100', 'Record DFA'
+      ];
+
+      // Priority manufacturers
+      const priorityMfgs = ['Horton', 'Stanley', 'Besam', 'Nabco', 'Record', 'Dorma'];
+
+      // Deprioritize service notes/bulletins - push to bottom
+      const deprioritizeTypes = ['Service Bulletin', 'Tech Note', 'TSB', 'Notes', 'Bulletin', 'Advisory'];
 
       let rows = data.filter(r => {
         if (maker && r.Manufacturer !== maker) return false;
@@ -1181,11 +1212,29 @@
       rows = rows
         .map(r => ({ r, s: scoreRow(r, maker, type, activeChip, compiled) }))
         .sort((a,b) => {
-          // Primary: score descending
+          // Primary: score descending (when searching)
           if (b.s !== a.s) return b.s - a.s;
 
-          // Secondary: manufacturer priority (if no search query active)
+          // When browsing (no search query), apply priority sorting
           if (!q.trim()) {
+            // Check if it's a service note/bulletin - push to bottom
+            const aModel = (a.r.Model_Final || '') + ' ' + (a.r.ManualType_Final || '');
+            const bModel = (b.r.Model_Final || '') + ' ' + (b.r.ManualType_Final || '');
+            const aIsNote = deprioritizeTypes.some(t => aModel.toLowerCase().includes(t.toLowerCase()));
+            const bIsNote = deprioritizeTypes.some(t => bModel.toLowerCase().includes(t.toLowerCase()));
+            if (aIsNote && !bIsNote) return 1;
+            if (!aIsNote && bIsNote) return -1;
+
+            // Check priority models (partial match)
+            const aFullModel = `${a.r.Manufacturer || ''} ${a.r.Model_Final || ''}`.toLowerCase();
+            const bFullModel = `${b.r.Manufacturer || ''} ${b.r.Model_Final || ''}`.toLowerCase();
+            const aModelIdx = priorityModels.findIndex(m => aFullModel.includes(m.toLowerCase()));
+            const bModelIdx = priorityModels.findIndex(m => bFullModel.includes(m.toLowerCase()));
+            if (aModelIdx !== -1 && bModelIdx === -1) return -1;
+            if (aModelIdx === -1 && bModelIdx !== -1) return 1;
+            if (aModelIdx !== -1 && bModelIdx !== -1 && aModelIdx !== bModelIdx) return aModelIdx - bModelIdx;
+
+            // Check priority manufacturers
             const aMfgIdx = priorityMfgs.findIndex(m => (a.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
             const bMfgIdx = priorityMfgs.findIndex(m => (b.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
             const aPriority = aMfgIdx === -1 ? 999 : aMfgIdx;
@@ -1193,9 +1242,9 @@
             if (aPriority !== bPriority) return aPriority - bPriority;
           }
 
-          // Tertiary: alphabetical by manufacturer, then filename
-          const mfgCmp = (a.r.Manufacturer || '').localeCompare(b.r.Manufacturer || '');
-          if (mfgCmp !== 0) return mfgCmp;
+          // Alphabetical by model, then filename
+          const modelCmp = (a.r.Model_Final || '').localeCompare(b.r.Model_Final || '');
+          if (modelCmp !== 0) return modelCmp;
           return a.r.FileName.localeCompare(b.r.FileName);
         })
         .map(x => x.r);
