@@ -1751,7 +1751,7 @@ export default async function handler(req: Request, context: Context): Promise<R
         response = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1024,
-          system: customerPrompt,
+          system: CUSTOMER_SYSTEM_PROMPT,
           tools: CUSTOMER_TOOLS,
           messages,
         });
