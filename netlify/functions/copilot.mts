@@ -1106,7 +1106,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const healthcareOnly = input.healthcare_only as boolean | undefined;
         const limit = Math.min((input.limit as number) || 5, 10);
 
-try {
+        try {
           const response = await fetch(`${DROPLET_URL}/search-nfpa80`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
