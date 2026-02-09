@@ -156,6 +156,20 @@ const TOOLS: Anthropic.Tool[] = [
       },
       required: ["query"]
     }
+  },
+  {
+    name: "search_nfpa80",
+    description: "Search NFPA 80 (2019) Fire Doors and Other Opening Protectives standard for compliance questions: inspection requirements, annual testing, self-closing/latching, clearance gaps, labeling, fire damper inspection, door propping rules, Joint Commission compliance.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Compliance question or topic" },
+        chapter: { type: "number", description: "Filter by chapter: 4=General, 5=ITM, 6=Swinging, 11=Rolling Steel, 19=Dampers, 21=Curtains" },
+        healthcare_only: { type: "boolean", description: "Filter to healthcare-relevant clauses only" },
+        limit: { type: "number", description: "Number of results (default 5, max 10)" }
+      },
+      required: ["query"]
+    }
   }
 ];
 
@@ -1086,6 +1100,35 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         }
       }
 
+      case "search_nfpa80": {
+        const query = input.query as string;
+        const chapter = input.chapter as number | undefined;
+        const healthcareOnly = input.healthcare_only as boolean | undefined;
+        const limit = Math.min((input.limit as number) || 5, 10);
+
+        try {
+          const response = await fetch(`${DROPLET_URL}/search-nfpa80`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, chapter, healthcare_only: healthcareOnly, limit })
+          });
+
+          if (!response.ok) {
+            return JSON.stringify({
+              error: "NFPA 80 search unavailable",
+              status: response.status
+            });
+          }
+
+          return await response.text();
+        } catch (error) {
+          return JSON.stringify({
+            error: "Failed to search NFPA 80",
+            details: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
       case "search_assets": {
         const query = (input.query as string).toLowerCase().trim();
         const customerFilter = input.customer as string | undefined;
@@ -1236,6 +1279,8 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - **Technical HOW-TO / wiring / programming / error codes / pinouts** → search_manuals_rag FIRST
 - **Decision support / gotchas / upsell** → search_field_knowledge
 - **Manual PDF links** → search_manuals
+- **NFPA 80 / fire door compliance / Joint Commission / inspection requirements** → search_nfpa80
+- **"What does code say" / "NFPA" / "annual inspection" / "self-closing test"** → search_nfpa80
 
 ## PARTS SEARCH TRIGGERS (USE search_parts FOR THESE)
 Always use search_parts when user mentions:
@@ -1330,8 +1375,10 @@ This tool returns TWO result types:
 7. **get_service_history** - Service records for a door
 8. **get_door_info** - Door details by ID
 9. **search_doors** - Find doors by customer/location
+10. **search_nfpa80** - NFPA 80 (2019) fire door compliance. 404 clauses covering inspections, testing, clearances, labeling, fire dampers. For any code/compliance question.
 
 ## SOURCE HIERARCHY
+- **NFPA 80 standard** = authority for compliance/inspection requirements
 - **Manufacturer manuals** = authority for wiring/specs/pinouts
 - **Field knowledge** = practical experience and best practices
 
