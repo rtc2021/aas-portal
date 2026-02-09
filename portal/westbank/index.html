@@ -106,7 +106,7 @@
     /* Jump Nav - Mobile sticky nav */
     .jump-nav {
       position: sticky;
-      top: 0;
+      top: 70px;
       z-index: 50;
       background: var(--cp-surface);
       backdrop-filter: blur(20px);
@@ -121,6 +121,23 @@
       scrollbar-width: none;
     }
     .jump-nav::-webkit-scrollbar { display: none; }
+
+    @media (max-width: 768px) {
+      .jump-nav {
+        position: relative;
+        top: auto;
+        z-index: 10;
+        padding: 10px;
+        margin-top: 10px;
+      }
+      #floatingUser {
+        top: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        z-index: 100;
+      }
+    }
 
     .jump-btn {
       flex-shrink: 0;
@@ -842,6 +859,56 @@
       border-color: var(--cp-accent);
       color: var(--cp-accent);
     }
+
+    /* Help Button */
+    .help-btn {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--cp-card);
+      border: 1px solid var(--cp-border);
+      color: var(--cp-text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      transition: all 0.2s;
+      z-index: 100;
+    }
+    .help-btn:hover {
+      background: var(--cp-accent-bg);
+      border-color: var(--cp-accent);
+      color: var(--cp-accent);
+    }
+
+    .help-modal {
+      max-width: 600px;
+    }
+    .help-content h4 {
+      color: var(--cp-accent);
+      margin: 20px 0 10px 0;
+      font-size: 1rem;
+    }
+    .help-content h4:first-child {
+      margin-top: 0;
+    }
+    .help-content p, .help-content li {
+      color: var(--cp-text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .help-content ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .help-content a {
+      color: var(--cp-accent);
+    }
   </style>
 </head>
 <body>
@@ -1160,6 +1227,60 @@
     </div>
   </div>
 
+  <!-- Help Button -->
+  <button class="help-btn" onclick="openHelpModal()" title="How to use this portal">?</button>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal-content help-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Portal Help</h3>
+        <button class="modal-close" onclick="closeHelpModal()">✕</button>
+      </div>
+      <div class="help-content">
+        <h4>📊 Dashboard Overview</h4>
+        <p>The dashboard shows your door compliance status and recent service activity. Use the date filters to view specific time periods.</p>
+
+        <h4>🚪 Door Registry</h4>
+        <p>View all automatic doors at your facility. Click any door ID to see detailed inspection history.</p>
+        <ul>
+          <li><strong>PASS</strong> - Door meets all NFPA 80 requirements</li>
+          <li><strong>FAIL</strong> - Door needs service to meet compliance</li>
+        </ul>
+
+        <h4>📋 Service Tasks</h4>
+        <p>Track all open and completed service work on your doors:</p>
+        <ul>
+          <li><strong>Open</strong> - Work scheduled but not started</li>
+          <li><strong>In Progress</strong> - Technician actively working</li>
+          <li><strong>Return for Parts</strong> - Waiting on parts to complete</li>
+          <li><strong>Complete</strong> - Work finished</li>
+        </ul>
+        <p>Action buttons:</p>
+        <ul>
+          <li><strong>💬 Message</strong> - Send a note to AAS about this task</li>
+          <li><strong>📄 Submit PO</strong> - Provide your PO number for billing</li>
+        </ul>
+
+        <h4>🤖 AI Assistant</h4>
+        <p>Click the blue chat button (bottom right) to ask questions about:</p>
+        <ul>
+          <li>Why specific doors failed inspection</li>
+          <li>NFPA 80 compliance requirements</li>
+          <li>What service your doors may need</li>
+          <li>General door maintenance questions</li>
+        </ul>
+
+        <h4>📞 Contact AAS</h4>
+        <p>
+          Phone: <a href="tel:+15043364422">(504) 336-4422</a><br>
+          Text: <a href="sms:+15048105285">(504) 810-5285</a><br>
+          Email: <a href="mailto:service@automaticaccesssolution.com">service@automaticaccesssolution.com</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- Copilot AI -->
   <button class="copilot-fab" onclick="toggleCopilot()" title="Ask Copilot">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1175,7 +1296,10 @@
         </svg>
         AAS Copilot
       </div>
-      <button class="copilot-close" onclick="toggleCopilot()">✕</button>
+      <div style="display:flex;gap:8px;">
+        <button class="copilot-close" onclick="resetCopilot()" title="Reset conversation">↺</button>
+        <button class="copilot-close" onclick="toggleCopilot()" title="Close">✕</button>
+      </div>
     </div>
 
     <div class="copilot-messages" id="copilotMessages">
@@ -1188,11 +1312,7 @@
       </div>
     </div>
 
-    <div class="copilot-suggestions" id="copilotSuggestions">
-      <button class="copilot-suggestion" onclick="askCopilot('What is NFPA 80?')">What is NFPA 80?</button>
-      <button class="copilot-suggestion" onclick="askCopilot('Why did some of my doors fail inspection?')">Why doors fail?</button>
-      <button class="copilot-suggestion" onclick="askCopilot('What does my compliance percentage mean?')">Compliance %?</button>
-    </div>
+    <div class="copilot-suggestions" id="copilotSuggestions"></div>
 
     <div class="copilot-input-area">
       <input type="text" class="copilot-input" id="copilotInput" placeholder="Ask about your doors or compliance..." onkeypress="if(event.key==='Enter')sendCopilotMessage()">
@@ -1508,6 +1628,16 @@
         console.warn('[Portal] Task notes not available:', e);
         taskNotes = [];
       }
+
+      // Debug: Log task breakdown
+      console.log('[Portal] Task breakdown:', {
+        total: tasks.length,
+        open: tasks.filter(t => t.isOpen).length,
+        openStatus: tasks.filter(t => baseStatus(t.status) === 'OPEN').length,
+        inProgress: tasks.filter(t => baseStatus(t.status) === 'IN_PROGRESS').length,
+        returnForParts: tasks.filter(t => baseStatus(t.status) === 'RETURN_FOR_PARTS').length,
+        complete: tasks.filter(t => baseStatus(t.status) === 'COMPLETE').length
+      });
     }
 
     function getFilters() {
@@ -1637,8 +1767,8 @@
             <td><span class="badge ${statusClass(t.status)}">${escapeHtml(t.status)}</span></td>
             <td>${escapeHtml(t.summary)}</td>
             <td class="actions-cell">
-              <button class="btn small" onclick="openMessageModal('${escapeHtml(t.taskId)}')">💬</button>
-              ${isComplete ? `<button class="btn small green" onclick="openPoModal('${escapeHtml(t.taskId)}')">📄</button>` : ''}
+              <button class="btn small" onclick="openMessageModal('${escapeHtml(t.taskId)}')" title="Send message to AAS about this task">💬</button>
+              ${isComplete ? `<button class="btn small green" onclick="openPoModal('${escapeHtml(t.taskId)}')" title="Submit your PO or Work Order number">📄</button>` : ''}
             </td>
           `;
           tasksBody.appendChild(tr);
@@ -1693,6 +1823,9 @@
         const openTasksJumpBtn = document.querySelector('.jump-btn[data-section="openTasks"]');
         if (openTasksJumpBtn) openTasksJumpBtn.textContent = `⏳ ${filteredOpenTasks.length} Open`;
       }
+
+      // Update copilot suggestions with real data
+      updateCopilotSuggestions();
     }
 
     function getDateRangeStr() {
@@ -1796,6 +1929,16 @@
         $('doorsMeta').textContent = 'Error loading data';
         $('tasksMeta').textContent = 'Error loading data';
       }
+    }
+
+    // ===== HELP MODAL FUNCTIONS =====
+
+    function openHelpModal() {
+      $('helpModal').classList.add('active');
+    }
+
+    function closeHelpModal() {
+      $('helpModal').classList.remove('active');
     }
 
     // ===== MESSAGING FUNCTIONS =====
@@ -1944,12 +2087,14 @@
       if (e.key === 'Escape') {
         closeMessageModal();
         closePoModal();
+        closeHelpModal();
       }
     });
 
     document.addEventListener('click', (e) => {
       if (e.target.id === 'messageModal') closeMessageModal();
       if (e.target.id === 'poModal') closePoModal();
+      if (e.target.id === 'helpModal') closeHelpModal();
     });
 
     // ===== COPILOT FUNCTIONS =====
@@ -1959,6 +2104,69 @@
       if ($('copilotPanel').classList.contains('active')) {
         $('copilotInput').focus();
       }
+    }
+
+    function resetCopilot() {
+      const messages = $('copilotMessages');
+      messages.innerHTML = `
+        <div class="copilot-msg assistant">
+          Hi! I can help you understand:<br>
+          • Your door inspection results<br>
+          • NFPA 80 compliance requirements<br>
+          • What service your doors may need<br><br>
+          What would you like to know?
+        </div>
+      `;
+      $('copilotSuggestions').style.display = 'flex';
+      $('copilotInput').value = '';
+      updateCopilotSuggestions();
+    }
+
+    function updateCopilotSuggestions() {
+      const failCount = doors.filter(d => baseStatus(d.status) === 'FAIL').length;
+      const openCount = tasks.filter(t => t.isOpen && baseStatus(t.status) === 'OPEN').length;
+      const inProgressCount = tasks.filter(t => baseStatus(t.status) === 'IN_PROGRESS').length;
+      const returnCount = tasks.filter(t => baseStatus(t.status) === 'RETURN_FOR_PARTS').length;
+
+      let suggestions = [];
+
+      if (failCount > 0) {
+        suggestions.push({
+          text: `${failCount} doors failed`,
+          query: `Why did ${failCount} of my doors fail inspection? What are the common issues?`
+        });
+      }
+      if (openCount > 0) {
+        suggestions.push({
+          text: `${openCount} open tasks`,
+          query: `I have ${openCount} open service tasks. What work is scheduled for my doors?`
+        });
+      }
+      if (inProgressCount > 0) {
+        suggestions.push({
+          text: `${inProgressCount} in progress`,
+          query: `I have ${inProgressCount} tasks in progress. What's being worked on?`
+        });
+      }
+      if (returnCount > 0) {
+        suggestions.push({
+          text: `${returnCount} need parts`,
+          query: `I have ${returnCount} tasks waiting for parts. What parts are needed and when will they arrive?`
+        });
+      }
+
+      if (suggestions.length < 4) {
+        suggestions.push({ text: 'What is NFPA 80?', query: 'What is NFPA 80 and why does it matter for my facility?' });
+      }
+      if (suggestions.length < 4) {
+        suggestions.push({ text: 'Compliance tips', query: 'What can we do to improve our door compliance percentage?' });
+      }
+
+      suggestions = suggestions.slice(0, 4);
+
+      $('copilotSuggestions').innerHTML = suggestions.map(s =>
+        `<button class="copilot-suggestion" onclick="askCopilot('${s.query.replace(/'/g, "\\'")}')">${s.text}</button>`
+      ).join('');
     }
 
     function addCopilotMessage(content, role) {
