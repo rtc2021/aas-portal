@@ -1708,9 +1708,21 @@ export default async function handler(req: Request, context: Context): Promise<R
       }
 
       // Verify customer has access to this portal
+      // Customer aliases: westbank <-> ochsner_westbank, mannings <-> manning
+      const customerAliases: Record<string, string[]> = {
+        'westbank': ['westbank', 'ochsner_westbank'],
+        'ochsner_westbank': ['westbank', 'ochsner_westbank'],
+        'mannings': ['mannings', 'manning'],
+        'manning': ['mannings', 'manning']
+      };
+
       const requestedCustomer = body.customerContext?.customer || body.customer;
-      if (authResult.customerId && requestedCustomer && authResult.customerId !== requestedCustomer) {
-        console.log(`[Copilot] Access denied: token customer_id=${authResult.customerId}, requested=${requestedCustomer}`);
+      const tokenCustomerId = authResult.customerId;
+      const allowedIds = customerAliases[tokenCustomerId || ''] || [tokenCustomerId];
+      const hasAccess = !tokenCustomerId || !requestedCustomer || allowedIds.includes(requestedCustomer);
+
+      if (!hasAccess) {
+        console.log(`[Copilot] Access denied: token customer_id=${tokenCustomerId}, requested=${requestedCustomer}`);
         return new Response(
           JSON.stringify({ error: 'Access denied to this customer portal' }),
           { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }

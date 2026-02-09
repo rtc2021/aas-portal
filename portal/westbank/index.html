@@ -2008,7 +2008,7 @@
           headers['Authorization'] = `Bearer ${authToken}`;
         }
 
-        const response = await fetch('/.netlify/functions/copilot', {
+        const response = await fetch('/api/copilot', {
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
