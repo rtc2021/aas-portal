@@ -21,6 +21,18 @@ function getLimbleAuth(): string {
   return "Basic " + btoa(`${LIMBLE_CLIENT_ID}:${LIMBLE_CLIENT_SECRET}`);
 }
 
+// Decode base64url (JWT uses base64url, not standard base64)
+function base64UrlDecode(str: string): string {
+  // Replace base64url chars with base64 chars
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  // Add padding if needed
+  const padding = base64.length % 4;
+  if (padding) {
+    base64 += '='.repeat(4 - padding);
+  }
+  return atob(base64);
+}
+
 // Extract role and user info from Auth0 JWT
 function extractUserFromToken(authHeader: string | null): {
   email?: string;
@@ -37,7 +49,7 @@ function extractUserFromToken(authHeader: string | null): {
     const parts = token.split('.');
     if (parts.length !== 3) return { roles: [] };
 
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
     const namespace = 'https://aas-portal.com';
 
     return {
@@ -85,7 +97,7 @@ function verifyCustomerToken(authHeader: string | null): { valid: boolean; email
       return { valid: false, error: 'Invalid token format' };
     }
 
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
     const namespace = 'https://aas-portal.com';
 
     if (payload.exp && payload.exp < Date.now() / 1000) {
