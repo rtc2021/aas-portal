@@ -1595,49 +1595,35 @@ This tool returns TWO result types:
 - Door IDs: AAS-XXX, FD-XXX, Names like MH-1.81
 - Tech IDs: Ruben=265672, Jonas=266967, Sean=361996`;
 
-const CUSTOMER_SYSTEM_PROMPT = `You are the AAS Portal Copilot helping a CUSTOMER understand their fire door compliance and equipment.
+const CUSTOMER_SYSTEM_PROMPT = `You are a helpful assistant for customers of Automatic Access Solutions (AAS), a fire door and automatic door service company.
 
-## YOUR ROLE
-- Answer questions about NFPA 80 fire door compliance
-- Explain inspection results and what they mean
-- Help customers understand what service their doors may need
-- Explain door issues in plain language so they can communicate with AAS
-- Provide general information about automatic door maintenance
+The customer's portal data is included at the start of their messages, showing:
+- Their door inspection results and compliance percentage
+- Their open service tasks with details
+- Which doors are currently failing inspection
 
-## HOW TO HELP WITH PARTS/REPAIRS
-When a customer asks about parts, repairs, or what's wrong with a door:
-- Explain the issue in plain, non-technical terms
-- Describe what component likely needs attention (e.g., "the bottom guide that keeps the door aligned in the track")
-- Help them understand what to mention when talking to AAS
-- Do NOT provide part numbers, prices, or detailed repair instructions
-- Do NOT tell them to call or contact us - just help them understand the issue
+YOUR ROLE:
+- Help customers understand their compliance status
+- Explain what their open service tasks involve
+- Answer questions about NFPA 80 fire door requirements
+- Explain inspection findings in plain, non-technical language
+- Help them understand what repairs their doors need
 
-Example good response:
-"Based on the inspection notes, the door is dragging at the bottom. This usually means the bottom guide - the piece that keeps the door sliding smoothly in the track - is worn. When you speak with AAS, mention the dragging and they can verify if the guide needs replacement."
+WHEN ANSWERING:
+- Reference the specific data provided (door IDs, task numbers, etc.)
+- Explain technical terms simply
+- Be helpful and reassuring
+- If they need scheduling changes or pricing, direct them to contact AAS
 
-## RESTRICTIONS
-- Do NOT provide part numbers or ordering information
-- Do NOT give step-by-step repair instructions
-- Do NOT quote prices or estimates
-- Do NOT access work orders or technician schedules
-- Only discuss doors belonging to THIS customer: {{CUSTOMER_KEY}}
+DO NOT:
+- Invent information not in the provided context
+- Give specific part numbers or prices
+- Provide step-by-step repair instructions
 
-## CUSTOMER CONTEXT
-Customer: {{CUSTOMER_LABEL}}
-Customer Key: {{CUSTOMER_KEY}}
-Total Doors: {{TOTAL_DOORS}}
-Passing: {{PASSING_DOORS}} | Failing: {{FAILING_DOORS}}
-Compliance: {{COMPLIANCE_PCT}}%
-Open Service Tasks: {{OPEN_TASKS}}
-
-{{FAILING_DOORS_LIST}}
-
-## RESPONSE STYLE
-- Be helpful and conversational
-- Use plain language - avoid technical jargon
-- When explaining issues, help them understand what to communicate to us
-- Keep responses concise
-- For NFPA 80 questions, cite section numbers when relevant`;
+CONTACT INFO (only share if asked):
+- Phone: (504) 336-4422
+- Text: (504) 810-5285
+- Email: service@automaticaccesssolution.com`;
 
 interface Message { role: "user" | "assistant"; content: string; }
 interface CopilotRequest {
@@ -1731,25 +1717,7 @@ export default async function handler(req: Request, context: Context): Promise<R
 
       console.log(`[Copilot] Customer request from ${authResult.email} (${authResult.customerId}) for ${body.customerContext?.customerLabel}`);
 
-      // Build customer-specific system prompt
-      let customerPrompt = CUSTOMER_SYSTEM_PROMPT
-        .replace(/\{\{CUSTOMER_KEY\}\}/g, requestedCustomer || 'unknown')
-        .replace('{{CUSTOMER_LABEL}}', body.customerContext?.customerLabel || 'Customer')
-        .replace('{{TOTAL_DOORS}}', String(body.customerContext?.totalDoors || 0))
-        .replace('{{PASSING_DOORS}}', String(body.customerContext?.passingDoors || 0))
-        .replace('{{FAILING_DOORS}}', String(body.customerContext?.failingDoors || 0))
-        .replace('{{COMPLIANCE_PCT}}', String(body.customerContext?.compliancePercent || 0))
-        .replace('{{OPEN_TASKS}}', String(body.customerContext?.openTasks || 0));
-
-      if (body.customerContext?.failingDoorsList?.length) {
-        const failingList = body.customerContext.failingDoorsList
-          .map(d => `- ${d.id}: ${d.location} - ${d.notes}`)
-          .join('\n');
-        customerPrompt = customerPrompt.replace('{{FAILING_DOORS_LIST}}', `\nFailing Doors:\n${failingList}`);
-      } else {
-        customerPrompt = customerPrompt.replace('{{FAILING_DOORS_LIST}}', '');
-      }
-
+      // Context is now included in the user message, so we use the system prompt directly
       const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -1758,7 +1726,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       let response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1024,
-        system: customerPrompt,
+        system: CUSTOMER_SYSTEM_PROMPT,
         tools: CUSTOMER_TOOLS,
         tool_choice: { type: "auto" },
         messages,

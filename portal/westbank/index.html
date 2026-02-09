@@ -128,7 +128,7 @@
         top: auto;
         z-index: 10;
         padding: 10px;
-        margin-top: 10px;
+        margin-top: 60px;
       }
       #floatingUser {
         top: 10px;
@@ -2236,7 +2236,45 @@
         const { filteredDoors } = getFilteredData();
         const passCount = filteredDoors.filter(d => d.status === 'PASS').length;
         const failCount = filteredDoors.filter(d => d.status === 'FAIL').length;
-        const openTaskCount = tasks.filter(t => t.isOpen).length;
+        const compliancePct = filteredDoors.length > 0 ? Math.round((passCount / filteredDoors.length) * 100) : 0;
+
+        // Build rich context for copilot
+        const openTasksList = tasks.filter(t => t.isOpen);
+        const failingDoors = filteredDoors.filter(d => d.status === 'FAIL');
+
+        // Format task details
+        const openTaskDetails = openTasksList.length > 0
+          ? openTasksList.map(t =>
+              `  - Task ${t.taskId}: ${t.taskName || 'Service'} at ${t.doorName || 'Unknown door'} - Status: ${t.status}${t.summary ? ' - Notes: ' + t.summary : ''}`
+            ).join('\n')
+          : '  None';
+
+        // Format failing door details
+        const failingDoorDetails = failingDoors.length > 0
+          ? failingDoors.slice(0, 10).map(d =>
+              `  - ${d.doorId}: ${d.location || 'Location not specified'} - Issue: ${d.notes || 'See inspection report'}`
+            ).join('\n')
+          : '  None';
+
+        // Build context string
+        const contextPrefix = `
+CUSTOMER PORTAL DATA:
+- Facility: ${CUSTOMER_LABEL}
+- Total doors monitored: ${filteredDoors.length}
+- Doors passing inspection: ${passCount}
+- Doors failing inspection: ${failCount}
+- Current compliance rate: ${compliancePct}%
+
+OPEN SERVICE TASKS (${openTasksList.length} total):
+${openTaskDetails}
+
+DOORS CURRENTLY FAILING (${failCount} total):
+${failingDoorDetails}
+
+---
+CUSTOMER QUESTION: `;
+
+        const messageWithContext = contextPrefix + message;
 
         const headers = { 'Content-Type': 'application/json' };
         if (authToken) {
@@ -2247,7 +2285,7 @@
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
-            messages: [{ role: 'user', content: message }],
+            messages: [{ role: 'user', content: messageWithContext }],
             mode: 'customer_portal',
             customer: CUSTOMER_KEY,
             customerContext: {
@@ -2257,13 +2295,8 @@
               totalDoors: filteredDoors.length,
               passingDoors: passCount,
               failingDoors: failCount,
-              compliancePercent: filteredDoors.length > 0 ? Math.round((passCount / (passCount + failCount)) * 100) : 0,
-              openTasks: openTaskCount,
-              failingDoorsList: filteredDoors.filter(d => d.status === 'FAIL').slice(0, 5).map(d => ({
-                id: d.doorId,
-                location: d.location,
-                notes: d.notes
-              }))
+              compliancePercent: compliancePct,
+              openTasks: openTasksList.length
             }
           })
         });
