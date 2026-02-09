@@ -21,6 +21,89 @@ function getLimbleAuth(): string {
   return "Basic " + btoa(`${LIMBLE_CLIENT_ID}:${LIMBLE_CLIENT_SECRET}`);
 }
 
+// Extract role and user info from Auth0 JWT
+function extractUserFromToken(authHeader: string | null): {
+  email?: string;
+  roles: string[];
+  customerId?: string;
+  technicianId?: string;
+} {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { roles: [] };
+  }
+
+  try {
+    const token = authHeader.substring(7);
+    const parts = token.split('.');
+    if (parts.length !== 3) return { roles: [] };
+
+    const payload = JSON.parse(atob(parts[1]));
+    const namespace = 'https://aas-portal.com';
+
+    return {
+      email: payload.email,
+      roles: payload[`${namespace}/roles`] || [],
+      customerId: payload[`${namespace}/customer_id`],
+      technicianId: getTechnicianId(payload.email)
+    };
+  } catch (e) {
+    console.error('[Copilot] Token parse error:', e);
+    return { roles: [] };
+  }
+}
+
+// Map tech emails to Limble user IDs
+function getTechnicianId(email?: string): string | undefined {
+  if (!email) return undefined;
+
+  const techMap: Record<string, string> = {
+    // Admin/Office
+    'ruben@automaticaccesssolution.com': '265672',       // Ruben Urbina
+    'support@automaticaccesssolution.com': '265670',     // Carrie Mclemore
+    'partsteam@automaticaccesssolution.com': '360229',   // Alexander Salas
+    // Technicians
+    'service@automaticaccesssolution.com': '265673',     // Steve Oxford
+    'jonas@automaticaccesssolution.com': '266967',       // Jonas Sanchez
+    'sdd101603@yahoo.com': '361996',                     // Sean Damico
+    'djjspadoni504@gmail.com': '359401',                 // Dominick Spadoni
+    'uruben730@gmail.com': '384799',                     // Ruben Jr
+  };
+
+  return techMap[email.toLowerCase()];
+}
+
+// Verify Auth0 JWT token for customer portal
+function verifyCustomerToken(authHeader: string | null): { valid: boolean; email?: string; customerId?: string; roles?: string[]; error?: string } {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { valid: false, error: 'Missing authorization header' };
+  }
+
+  try {
+    const token = authHeader.substring(7);
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return { valid: false, error: 'Invalid token format' };
+    }
+
+    const payload = JSON.parse(atob(parts[1]));
+    const namespace = 'https://aas-portal.com';
+
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      return { valid: false, error: 'Token expired' };
+    }
+
+    return {
+      valid: true,
+      email: payload.email,
+      customerId: payload[`${namespace}/customer_id`],
+      roles: payload[`${namespace}/roles`] || []
+    };
+  } catch (e) {
+    console.error('[Copilot] Token verification error:', e);
+    return { valid: false, error: 'Token verification failed' };
+  }
+}
+
 const TOOLS: Anthropic.Tool[] = [
   {
     name: "search_field_knowledge",
@@ -167,6 +250,65 @@ const TOOLS: Anthropic.Tool[] = [
         chapter: { type: "number", description: "Filter by chapter: 4=General, 5=ITM, 6=Swinging, 11=Rolling Steel, 19=Dampers, 21=Curtains" },
         healthcare_only: { type: "boolean", description: "Filter to healthcare-relevant clauses only" },
         limit: { type: "number", description: "Number of results (default 5, max 10)" }
+      },
+      required: ["query"]
+    }
+  }
+];
+
+// Tech tools - same as TOOLS but without get_technicians
+const TECH_TOOLS: Anthropic.Tool[] = TOOLS.filter(tool =>
+  tool.name !== 'get_technicians'
+);
+
+// Customer tools - NFPA 80, door info, manuals (for AI reference only)
+const CUSTOMER_TOOLS: Anthropic.Tool[] = [
+  {
+    name: "search_nfpa80",
+    description: "Search NFPA 80 (2019) Fire Doors standard for compliance questions: inspection requirements, annual testing, self-closing/latching, clearance gaps, labeling, door propping rules.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Compliance question or topic" },
+        healthcare_only: { type: "boolean", description: "Filter to healthcare-relevant clauses" },
+        limit: { type: "number", description: "Number of results (default 5)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_manuals_rag",
+    description: "Search technical manuals to understand door issues. Use this to inform your explanation to the customer, but do NOT share detailed repair steps or part numbers.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "What you're looking for - describe the issue or topic" },
+        manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax" },
+        door_type: { type: "string", description: "Filter by door type: slide, swing, folding, icu, fire, revolving" },
+        limit: { type: "number", description: "Number of results (default 5, max 10)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "get_door_info",
+    description: "Get details about a specific door including manufacturer, model, location. Use door ID format like WB-1.1 or MH-1.81",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        door_id: { type: "string", description: "Door ID (e.g., WB-1.1, MH-1.81)" }
+      },
+      required: ["door_id"]
+    }
+  },
+  {
+    name: "search_doors",
+    description: "Search for doors by location or manufacturer. Results filtered to customer's facility only.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search term (location, area, etc.)" },
+        manufacturer: { type: "string", description: "Filter by manufacturer (horton, stanley, nabco, besam)" }
       },
       required: ["query"]
     }
@@ -1441,12 +1583,68 @@ This tool returns TWO result types:
 - Door IDs: AAS-XXX, FD-XXX, Names like MH-1.81
 - Tech IDs: Ruben=265672, Jonas=266967, Sean=361996`;
 
+const CUSTOMER_SYSTEM_PROMPT = `You are the AAS Portal Copilot helping a CUSTOMER understand their fire door compliance and equipment.
+
+## YOUR ROLE
+- Answer questions about NFPA 80 fire door compliance
+- Explain inspection results and what they mean
+- Help customers understand what service their doors may need
+- Explain door issues in plain language so they can communicate with AAS
+- Provide general information about automatic door maintenance
+
+## HOW TO HELP WITH PARTS/REPAIRS
+When a customer asks about parts, repairs, or what's wrong with a door:
+- Explain the issue in plain, non-technical terms
+- Describe what component likely needs attention (e.g., "the bottom guide that keeps the door aligned in the track")
+- Help them understand what to mention when talking to AAS
+- Do NOT provide part numbers, prices, or detailed repair instructions
+- Do NOT tell them to call or contact us - just help them understand the issue
+
+Example good response:
+"Based on the inspection notes, the door is dragging at the bottom. This usually means the bottom guide - the piece that keeps the door sliding smoothly in the track - is worn. When you speak with AAS, mention the dragging and they can verify if the guide needs replacement."
+
+## RESTRICTIONS
+- Do NOT provide part numbers or ordering information
+- Do NOT give step-by-step repair instructions
+- Do NOT quote prices or estimates
+- Do NOT access work orders or technician schedules
+- Only discuss doors belonging to THIS customer: {{CUSTOMER_KEY}}
+
+## CUSTOMER CONTEXT
+Customer: {{CUSTOMER_LABEL}}
+Customer Key: {{CUSTOMER_KEY}}
+Total Doors: {{TOTAL_DOORS}}
+Passing: {{PASSING_DOORS}} | Failing: {{FAILING_DOORS}}
+Compliance: {{COMPLIANCE_PCT}}%
+Open Service Tasks: {{OPEN_TASKS}}
+
+{{FAILING_DOORS_LIST}}
+
+## RESPONSE STYLE
+- Be helpful and conversational
+- Use plain language - avoid technical jargon
+- When explaining issues, help them understand what to communicate to us
+- Keep responses concise
+- For NFPA 80 questions, cite section numbers when relevant`;
+
 interface Message { role: "user" | "assistant"; content: string; }
 interface CopilotRequest {
   messages: Message[];
   doorId?: string;
   doorContext?: { manufacturer?: string; model?: string; location?: string; customer?: string; };
   technicianId?: string;
+  mode?: 'technician' | 'customer_portal';
+  customer?: string;
+  customerContext?: {
+    customer?: string;
+    customerLabel?: string;
+    totalDoors?: number;
+    passingDoors?: number;
+    failingDoors?: number;
+    compliancePercent?: number;
+    openTasks?: number;
+    failingDoorsList?: Array<{ id: string; location: string; notes: string; }>;
+  };
 }
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
@@ -1456,7 +1654,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }
@@ -1477,6 +1675,112 @@ export default async function handler(req: Request, context: Context): Promise<R
       });
     }
 
+    // Extract user info from token
+    const authHeader = req.headers.get('Authorization');
+    const userInfo = extractUserFromToken(authHeader);
+    const isAdmin = userInfo.roles.includes('Admin');
+    const isTech = userInfo.roles.includes('Tech');
+    const isCustomer = userInfo.roles.includes('Customer');
+
+    console.log(`[Copilot] Request from ${userInfo.email}, roles: ${userInfo.roles.join(', ')}`);
+
+    // ========== CUSTOMER PORTAL MODE ==========
+    if (body.mode === 'customer_portal') {
+      const authResult = verifyCustomerToken(authHeader);
+
+      if (!authResult.valid) {
+        return new Response(
+          JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+          { status: 401, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        );
+      }
+
+      // Verify customer has access to this portal
+      const requestedCustomer = body.customerContext?.customer || body.customer;
+      if (authResult.customerId && requestedCustomer && authResult.customerId !== requestedCustomer) {
+        console.log(`[Copilot] Access denied: token customer_id=${authResult.customerId}, requested=${requestedCustomer}`);
+        return new Response(
+          JSON.stringify({ error: 'Access denied to this customer portal' }),
+          { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        );
+      }
+
+      console.log(`[Copilot] Customer request from ${authResult.email} (${authResult.customerId}) for ${body.customerContext?.customerLabel}`);
+
+      // Build customer-specific system prompt
+      let customerPrompt = CUSTOMER_SYSTEM_PROMPT
+        .replace(/\{\{CUSTOMER_KEY\}\}/g, requestedCustomer || 'unknown')
+        .replace('{{CUSTOMER_LABEL}}', body.customerContext?.customerLabel || 'Customer')
+        .replace('{{TOTAL_DOORS}}', String(body.customerContext?.totalDoors || 0))
+        .replace('{{PASSING_DOORS}}', String(body.customerContext?.passingDoors || 0))
+        .replace('{{FAILING_DOORS}}', String(body.customerContext?.failingDoors || 0))
+        .replace('{{COMPLIANCE_PCT}}', String(body.customerContext?.compliancePercent || 0))
+        .replace('{{OPEN_TASKS}}', String(body.customerContext?.openTasks || 0));
+
+      if (body.customerContext?.failingDoorsList?.length) {
+        const failingList = body.customerContext.failingDoorsList
+          .map(d => `- ${d.id}: ${d.location} - ${d.notes}`)
+          .join('\n');
+        customerPrompt = customerPrompt.replace('{{FAILING_DOORS_LIST}}', `\nFailing Doors:\n${failingList}`);
+      } else {
+        customerPrompt = customerPrompt.replace('{{FAILING_DOORS_LIST}}', '');
+      }
+
+      const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      let response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: customerPrompt,
+        tools: CUSTOMER_TOOLS,
+        tool_choice: { type: "auto" },
+        messages,
+      });
+
+      let iterations = 0;
+      while (response.stop_reason === "tool_use" && iterations < 3) {
+        iterations++;
+        const toolUseBlocks = response.content.filter(
+          (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+        );
+
+        const toolResults: Anthropic.ToolResultBlockParam[] = [];
+        for (const toolUse of toolUseBlocks) {
+          const result = await executeTool(toolUse.name, toolUse.input as Record<string, unknown>);
+          toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result });
+        }
+
+        messages.push({ role: "assistant", content: response.content });
+        messages.push({ role: "user", content: toolResults });
+
+        response = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: customerPrompt,
+          tools: CUSTOMER_TOOLS,
+          messages,
+        });
+      }
+
+      const textBlocks = response.content.filter(
+        (block): block is Anthropic.TextBlock => block.type === "text"
+      );
+      const responseText = textBlocks.map((b) => b.text).join("\n");
+
+      return new Response(
+        JSON.stringify({ response: responseText }),
+        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      );
+    }
+    // ========== END CUSTOMER PORTAL MODE ==========
+
+    // ========== TECHNICIAN/ADMIN MODE ==========
+    // Determine which tools to use based on role
+    const availableTools = isAdmin ? TOOLS : TECH_TOOLS;
+
     let systemPrompt = SYSTEM_PROMPT_BASE.replace('{{CURRENT_DATE}}', getCurrentDate());
     if (body.doorId || body.doorContext) {
       systemPrompt += "\n\n## CURRENT CONTEXT";
@@ -1485,6 +1789,19 @@ export default async function handler(req: Request, context: Context): Promise<R
       if (body.doorContext?.model) systemPrompt += `\nModel: ${body.doorContext.model}`;
       if (body.doorContext?.location) systemPrompt += `\nLocation: ${body.doorContext.location}`;
       if (body.doorContext?.customer) systemPrompt += `\nCustomer: ${body.doorContext.customer}`;
+    }
+
+    // Add tech-specific restrictions
+    if (isTech && !isAdmin) {
+      systemPrompt += `\n\n## USER CONTEXT
+You are assisting technician: ${userInfo.email}
+Technician ID: ${userInfo.technicianId || 'unknown'}
+
+IMPORTANT RESTRICTIONS:
+- When using get_work_orders, ALWAYS filter to this technician's tasks only (user_id: ${userInfo.technicianId})
+- Do NOT reveal other technicians' schedules or assignments
+- Do NOT discuss pricing, billing, or quotes
+- Focus on technical support: manuals, parts lookup, troubleshooting`;
     }
 
     const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
@@ -1496,7 +1813,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
       system: systemPrompt,
-      tools: TOOLS,
+      tools: availableTools,
       tool_choice: { type: "auto" },
       messages,
     });
@@ -1534,7 +1851,7 @@ export default async function handler(req: Request, context: Context): Promise<R
           model: "claude-sonnet-4-20250514",
           max_tokens: 2048,
           system: systemPrompt,
-          tools: TOOLS,
+          tools: availableTools,
           messages,
         });
       } catch (apiError) {
