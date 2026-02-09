@@ -1106,7 +1106,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const healthcareOnly = input.healthcare_only as boolean | undefined;
         const limit = Math.min((input.limit as number) || 5, 10);
 
-        try {
+try {
           const response = await fetch(`${DROPLET_URL}/search-nfpa80`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1351,6 +1351,28 @@ If search_manuals_rag returns no results:
 1. Try once more with rewritten query using synonyms
 2. Then call search_manuals to return best manual link(s)
 3. Then say "No matching content found" and ask for controller label or exact term
+
+## NFPA 80 COMPLIANCE SEARCH (search_nfpa80)
+**Trigger when user asks about:**
+- Fire door inspection requirements, frequency, annual testing
+- Self-closing, self-latching, clearance/gap specifications
+- Door propping/wedging rules, fire door labeling
+- Fire damper inspection (Chapter 19)
+- Joint Commission compliance, deficiency citations
+- "What does NFPA 80 say about...", "code requirement for..."
+- AHJ (Authority Having Jurisdiction), record keeping
+
+**Chapter quick reference:**
+- Ch 4: General (field mods, clearances) | Ch 5: ITM (inspections) — MOST USED
+- Ch 6: Swinging doors (hardware, frames) | Ch 11: Rolling steel (drop tests)
+- Ch 19: Fire dampers | Ch 21: Curtain assemblies
+
+**Response format:**
+1. Cite specific clause: "Per NFPA 80 §5.2.3..."
+2. Quote the requirement text
+3. Add annex explanatory material if available
+4. Flag Joint Commission relevance for healthcare customers
+5. Combine with other tools: search_nfpa80 for code + get_door_info for door status, search_parts for hardware + search_nfpa80 for code basis
 
 ## YOUR TOOLS
 1. **search_manuals_rag** - Calls Door Guru V3 API. Returns both manufacturer manual excerpts AND AAS field playbooks in one response.

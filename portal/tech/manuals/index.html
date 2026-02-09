@@ -88,13 +88,14 @@
         <div class="mh-label">Door Type</div>
         <div id="mhChips" class="mh-chips" role="tablist" aria-label="Door type filters">
           <button class="mh-chip active" data-chip="" type="button">All</button>
-          <button class="mh-chip" data-chip="sliding" type="button">Sliding</button>
-          <button class="mh-chip" data-chip="swing" type="button">Swing</button>
-          <button class="mh-chip" data-chip="sensors" type="button">Sensors</button>
-          <button class="mh-chip" data-chip="revolving" type="button">Revolving</button>
-          <button class="mh-chip" data-chip="panic" type="button">Panic Hardware</button>
-          <button class="mh-chip" data-chip="lock" type="button">Locks</button>
-          <button class="mh-chip" data-chip="hardware" type="button">Hardware</button>
+          <button class="mh-chip" data-chip="Sliding" type="button">Sliding</button>
+          <button class="mh-chip" data-chip="Swing" type="button">Swing</button>
+          <button class="mh-chip" data-chip="Sensors" type="button">Sensors</button>
+          <button class="mh-chip" data-chip="Revolver" type="button">Revolver</button>
+          <button class="mh-chip" data-chip="Panic Hardware" type="button">Panic Hardware</button>
+          <button class="mh-chip" data-chip="Locks" type="button">Locks</button>
+          <button class="mh-chip" data-chip="Bi-Fold" type="button">Bi-Fold</button>
+          <button class="mh-chip" data-chip="Hardware" type="button">Hardware</button>
         </div>
       </div>
 
@@ -115,32 +116,64 @@
         <div class="mh-qgroup">
           <div class="mh-qtitle">Horton</div>
           <div class="mh-qbtns">
-            <button class="mh-qbtn" data-q="horton 2150" data-chip="sliding" type="button">2150 Series</button>
-            <button class="mh-qbtn" data-q="horton 4190|4190" data-chip="swing" type="button">4190 Swing</button>
-            <button class="mh-qbtn" data-q="horton 4000|4000 series" data-chip="sliding" type="button">4000 Series</button>
-            <button class="mh-qbtn" data-q="horton 7100|7100" data-chip="sliding" type="button">7100 Slider</button>
+            <button class="mh-qbtn" data-q="horton 2150" data-chip="Sliding" type="button">2150 Slider</button>
+            <button class="mh-qbtn" data-q="horton 4190|4190" data-chip="Swing" type="button">4190 Swing</button>
+            <button class="mh-qbtn" data-q="horton 4000|4000 series" data-chip="Swing" type="button">4000 Swing</button>
+            <button class="mh-qbtn" data-q="horton 7100|7100|7000" data-chip="Swing" type="button">7000/7100 Swing</button>
           </div>
         </div>
 
         <div class="mh-qgroup">
           <div class="mh-qtitle">Stanley</div>
           <div class="mh-qbtns">
-            <button class="mh-qbtn" data-q="stanley mc521" type="button">MC521</button>
-            <button class="mh-qbtn" data-q="stanley dura|duraglide|dura-glide" data-chip="sliding" type="button">Dura-Glide</button>
-            <button class="mh-qbtn" data-q="stanley iq|teleiq|tele-iq" type="button">Tele-IQ</button>
-            <button class="mh-qbtn" data-q="stanley magic|magic-access|magicaccess" type="button">Magic Access</button>
+            <button class="mh-qbtn" data-q="stanley mc521|mc-521" type="button">MC521 Universal</button>
+            <button class="mh-qbtn" data-q="stanley duraglide|dura-glide|dura glide" data-chip="Sliding" type="button">Duraglide Slider</button>
+            <button class="mh-qbtn" data-q="stanley iq|teleiq|tele-iq|tele iq" type="button">Tele-IQ Universal</button>
+            <button class="mh-qbtn" data-q="stanley magic|magic-access|magic access" data-chip="Swing" type="button">Magic Access Swing</button>
           </div>
         </div>
 
         <div class="mh-qgroup">
-          <div class="mh-qtitle">Other Brands</div>
+          <div class="mh-qtitle">Besam</div>
           <div class="mh-qbtns">
-            <button class="mh-qbtn" data-q="besam unislide|uni-slide" data-chip="sliding" type="button">Besam UniSlide</button>
-            <button class="mh-qbtn" data-q="besam sw200|sw-200" data-chip="swing" type="button">Besam SW200</button>
-            <button class="mh-qbtn" data-q="nabco opus|gyro" type="button">Nabco Opus/Gyro</button>
-            <button class="mh-qbtn" data-q="dorma esa|esa-2|esa 2" data-chip="sliding" type="button">Dorma ESA</button>
-            <button class="mh-qbtn" data-q="dorma ed400|ed700|ed-400|ed-700" data-chip="swing" type="button">Dorma ED Series</button>
-            <button class="mh-qbtn" data-q="record s5100|s8100|5100|8100" data-chip="sliding" type="button">Record 5100/8100</button>
+            <button class="mh-qbtn" data-q="besam sw200|sw-200|sw 200" data-chip="Swing" type="button">SW200 Swing</button>
+            <button class="mh-qbtn" data-q="besam sw100|sw-100|sw 100" data-chip="Swing" type="button">SW100 Swing</button>
+            <button class="mh-qbtn" data-q="besam unislide|uni-slide|uni slide" data-chip="Sliding" type="button">Unislide Slider</button>
+            <button class="mh-qbtn" data-q="besam sl500|sl-500|sl 500" data-chip="Sliding" type="button">SL500 Slider</button>
+          </div>
+        </div>
+
+        <div class="mh-qgroup">
+          <div class="mh-qtitle">Dorma</div>
+          <div class="mh-qbtns">
+            <button class="mh-qbtn" data-q="dorma esa|esa200|esa-200|esa 200" data-chip="Sliding" type="button">ESA Slider</button>
+            <button class="mh-qbtn" data-q="dorma ed400|ed-400|ed 400" data-chip="Swing" type="button">ED400 Swing</button>
+            <button class="mh-qbtn" data-q="dorma ed700|ed-700|ed 700" data-chip="Swing" type="button">ED700 Swing</button>
+          </div>
+        </div>
+
+        <div class="mh-qgroup">
+          <div class="mh-qtitle">Nabco / Gyro</div>
+          <div class="mh-qbtns">
+            <button class="mh-qbtn" data-q="nabco opus|opus" type="button">Opus Universal</button>
+            <button class="mh-qbtn" data-q="nabco 1175|1175" data-chip="Sliding" type="button">1175 Slider</button>
+            <button class="mh-qbtn" data-q="gyro|gyro-tech|gyrotech" data-chip="Sliding" type="button">Gyro-Tech Slider</button>
+          </div>
+        </div>
+
+        <div class="mh-qgroup">
+          <div class="mh-qtitle">Record</div>
+          <div class="mh-qbtns">
+            <button class="mh-qbtn" data-q="record s5100|s5100|5100" data-chip="Sliding" type="button">S5100 Slider</button>
+            <button class="mh-qbtn" data-q="record s8100|s8100|8100" data-chip="Swing" type="button">S8100 Swing</button>
+          </div>
+        </div>
+
+        <div class="mh-qgroup">
+          <div class="mh-qtitle">Brookfield</div>
+          <div class="mh-qbtns">
+            <button class="mh-qbtn" data-q="brookfield nb4000|nb-4000|nb4000" data-chip="Sliding" type="button">NB4000 Slider</button>
+            <button class="mh-qbtn" data-q="brookfield nb1000|nb-1000|nb1000" data-chip="Swing" type="button">NB1000 Swing</button>
           </div>
         </div>
       </div>
@@ -461,11 +494,53 @@
     font-size: 16px;
     font-weight: 650;
     letter-spacing: 0.2px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   #manualHub .mh-file{
-    font-size: 13px;
-    color: rgba(255,255,255,0.74);
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
     line-height: 1.25;
+    margin-top: 2px;
+  }
+  /* Door Type Badge */
+  #manualHub .mh-dtype{
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.8);
+    white-space: nowrap;
+  }
+  #manualHub .mh-dtype-swing{ background: rgba(255,180,100,0.2); color: rgba(255,200,140,0.95); }
+  #manualHub .mh-dtype-slide{ background: rgba(100,180,255,0.2); color: rgba(140,200,255,0.95); }
+  #manualHub .mh-dtype-sensor{ background: rgba(180,100,255,0.2); color: rgba(200,140,255,0.95); }
+  #manualHub .mh-dtype-revolv{ background: rgba(100,255,180,0.2); color: rgba(140,255,200,0.95); }
+  #manualHub .mh-dtype-panic{ background: rgba(255,100,100,0.2); color: rgba(255,150,150,0.95); }
+  #manualHub .mh-dtype-lock{ background: rgba(255,220,100,0.2); color: rgba(255,230,150,0.95); }
+  #manualHub .mh-dtype-bifold{ background: rgba(100,220,255,0.2); color: rgba(150,230,255,0.95); }
+  #manualHub .mh-dtype-hardware{ background: rgba(200,200,200,0.15); color: rgba(220,220,220,0.9); }
+  /* Meta row */
+  #manualHub .mh-pillRow--meta{
+    gap: 6px;
+    justify-content: flex-start;
+    margin-top: 6px;
+  }
+  #manualHub .mh-pill--mfg{
+    background: rgba(120,170,255,0.15);
+    border-color: rgba(120,170,255,0.25);
+    font-size: 11px;
+  }
+  #manualHub .mh-pill--type{
+    background: rgba(255,255,255,0.06);
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
   }
   #manualHub .mh-actions{
     margin-top: auto;
@@ -736,7 +811,7 @@
   const CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTU61rKQUtfzsyATsgMQIKIhFZP0p5u7xeHoxVUt32hY3gHWiNarTnPH9guNhRkci2ZWucvJTPUxCVY/pub?gid=613590590&single=true&output=csv";
   const ROOT_ID  = "manualHub";
   const FAV_KEY  = "aas_manual_favorites_v2";
-  const CACHE_KEY = "aas_manual_cache_v5";
+  const CACHE_KEY = "aas_manual_cache_v9";
   const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
   const MAX_FAVS = 80;
 
@@ -953,29 +1028,90 @@
   };
 
   const TYPE_WEIGHT = {
-    "Service": 600,
+    "Installation": 600,
     "Programming": 500,
     "Wiring": 450,
-    "Installation": 400,
+    "Parts": 400,
     "General": 300,
-    "Parts": 200
+    "Service": 100
   };
 
   function scoreRow(r, makerSel, typeSel, activeChip, compiledGroups){
     let s = 0;
+
+    // Base score from manual type
     s += TYPE_WEIGHT[r.ManualType_Final] ?? 0;
 
-    if (makerSel && r.Manufacturer === makerSel) s += 40;
-    if (typeSel && r.ManualType_Final === typeSel) s += 60;
+    // Dropdown selections
+    if (makerSel && r.Manufacturer === makerSel) s += 200;
+    if (typeSel && r.ManualType_Final === typeSel) s += 150;
 
+    // Chip filter bonus
     if (activeChip){
-      const chip = lower(activeChip);
-      if (r._door.includes(chip) || r._tags.includes(chip)) s += 40;
+      const chip = activeChip.toLowerCase();
+      const doorType = (r.DoorType_Final || '').toLowerCase();
+      if (doorType === chip) s += 100;
+      else if (r._tags.toLowerCase().includes(chip)) s += 50;
     }
+
+    // Search term matching with FIELD WEIGHTING
+    const model = lower(r.Model_Final || '');
+    const mfg = lower(r.Manufacturer || '');
+    const doorType = lower(r.DoorType_Final || '');
+    const manualType = lower(r.ManualType_Final || '');
+    const tags = lower(r.Tags || '');
+    const filename = lower(r.FileName || '');
 
     for (const group of compiledGroups){
-      if (group.some(t => termMatchesRow(r, t))) s += 8;
+      let groupMatched = false;
+      for (const term of group) {
+        if (groupMatched) break;
+
+        // Model_Final match - HIGHEST weight (this is what techs search for)
+        if (model.includes(term)) {
+          s += 150;
+          groupMatched = true;
+        }
+        // Manufacturer match
+        else if (mfg.includes(term)) {
+          s += 100;
+          groupMatched = true;
+        }
+        // ManualType match (programming, wiring, install, etc)
+        else if (manualType.includes(term)) {
+          s += 80;
+          groupMatched = true;
+        }
+        // DoorType match
+        else if (doorType.includes(term)) {
+          s += 60;
+          groupMatched = true;
+        }
+        // Tags match
+        else if (tags.includes(term)) {
+          s += 40;
+          groupMatched = true;
+        }
+        // Filename match - LOWEST weight (fallback only)
+        else if (filename.includes(term)) {
+          s += 15;
+          groupMatched = true;
+        }
+      }
     }
+
+    // Penalty for service bulletins/notes/TSBs
+    if (model.includes('bulletin') ||
+        model.includes('note') ||
+        model.includes('tsb') ||
+        model.includes('advisory') ||
+        model.includes('service bulletin')) {
+      s -= 300;
+    }
+
+    // Priority manufacturer bonus (when browsing without search)
+    const priorityMfgs = ['horton', 'stanley', 'besam', 'nabco', 'record', 'dorma', 'brookfield'];
+    if (priorityMfgs.includes(mfg)) s += 30;
 
     return s;
   }
@@ -1083,16 +1219,18 @@
     }
 
     function setChip(chip){
-      activeChip = lower(chip || "");
+      activeChip = chip || "";
       els.chipsWrap.querySelectorAll(".mh-chip").forEach(b => {
-        const c = lower(b.getAttribute("data-chip") || "");
+        const c = b.getAttribute("data-chip") || "";
         b.classList.toggle("active", c === activeChip);
       });
     }
 
     function chipMatch(r){
       if (!activeChip) return true;
-      return r._door.includes(activeChip) || r._tags.includes(activeChip);
+      const doorType = (r.DoorType_Final || '').toLowerCase();
+      const chip = activeChip.toLowerCase();
+      return doorType === chip || r._tags.toLowerCase().includes(chip);
     }
 
     function setQuery(q){
@@ -1130,19 +1268,35 @@
     function cardHTML(r){
       const id = favId(r);
       const isFav = favs.includes(id);
-      const model = r.Model_Final || r.Model_Auto || r.DoorType_Final || "";
+      const model = r.Model_Final || r.Model_Auto || "";
+      const doorType = r.DoorType_Final || "";
       const mtype = (r.ManualType_Final || "Manual").toUpperCase();
       const pretty = prettifyFileName(r.FileName);
+
+      // Door type badge color
+      const dtLower = doorType.toLowerCase();
+      const doorTypeClass = dtLower.includes('swing') ? 'mh-dtype-swing' :
+                            dtLower.includes('slid') ? 'mh-dtype-slide' :
+                            dtLower.includes('sensor') ? 'mh-dtype-sensor' :
+                            dtLower.includes('revolv') ? 'mh-dtype-revolv' :
+                            dtLower.includes('panic') ? 'mh-dtype-panic' :
+                            dtLower.includes('lock') ? 'mh-dtype-lock' :
+                            dtLower.includes('bi-fold') ? 'mh-dtype-bifold' :
+                            dtLower.includes('hardware') ? 'mh-dtype-hardware' : '';
 
       return `
         <div class="mh-card" data-id="${esc(id)}" tabindex="0">
           <div class="mh-pillRow">
-            <div class="mh-pill">${esc(r.Manufacturer)} • ${esc(mtype)}</div>
+            <div class="mh-model">${esc(model)}</div>
+            ${doorType ? `<span class="mh-dtype ${doorTypeClass}">${esc(doorType)}</span>` : ''}
             <button class="mh-favBtn ${isFav ? "active" : ""} mh-ripple" type="button" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
               ${isFav ? "★" : "☆"}
             </button>
           </div>
-          <div class="mh-model">${esc(model)}</div>
+          <div class="mh-pillRow mh-pillRow--meta">
+            <span class="mh-pill mh-pill--mfg">${esc(r.Manufacturer)}</span>
+            <span class="mh-pill mh-pill--type">${esc(mtype)}</span>
+          </div>
           <div class="mh-file">${esc(pretty)}</div>
           <div class="mh-actions">
             <a class="mh-open mh-ripple" href="${esc(r.DriveLink)}" target="_blank" rel="noopener noreferrer">Open PDF</a>
@@ -1179,28 +1333,34 @@
       attachFavHandlers(els.favResults);
     }
 
+    // Priority models for sorting
+    const priorityModels = [
+      'Horton 2150', 'Horton 4190', 'Horton 4000', 'Horton 7100', 'Horton 7000',
+      'Stanley MC521', 'Stanley Duraglide', 'Stanley IQ', 'Stanley Magic',
+      'Dorma ESA', 'Dorma ED400', 'Dorma ED700',
+      'Nabco Opus', 'Nabco 1175',
+      'Gyro-Tech',
+      'Brookfield NB4000', 'Brookfield NB1000',
+      'Besam SW200', 'Besam SW100', 'Besam Unislide', 'Besam SL500',
+      'Record S5100', 'Record S8100'
+    ];
+
+    const PRIORITY_MFGS = ['Horton', 'Stanley', 'Besam', 'Nabco', 'Record', 'Dorma', 'Brookfield'];
+    const DEPRIORITIZE_TYPES = ['Service Bulletin', 'Tech Note', 'TSB', 'Notes', 'Bulletin', 'Advisory'];
+
+    function matchesPriorityModel(r, modelName) {
+      const searchLower = modelName.toLowerCase();
+      const rowModel = (r.Model_Final || '').toLowerCase();
+      const rowMfg = (r.Manufacturer || '').toLowerCase();
+      return rowModel.includes(searchLower) || (rowMfg + ' ' + rowModel).includes(searchLower);
+    }
+
     function getFiltered(){
       const q = els.q.value;
       const maker = els.maker.value;
       const type = els.type.value;
 
       const compiled = compileQuery(q);
-
-      // Priority models - most common systems techs work on
-      const priorityModels = [
-        'Horton 2150', 'Horton 4190', 'Horton 4000', 'Horton 7100',
-        'Stanley MC521', 'Stanley Dura', 'Stanley IQ', 'Stanley Magic',
-        'Dorma ESA', 'Dorma ED400', 'Dorma ED700',
-        'Nabco Opus', 'Nabco 1175', 'Nabco NB4000', 'Nabco Gyro',
-        'Besam SW200', 'Besam SW100', 'Besam Unislide', 'Besam SL500',
-        'Record S5100', 'Record S8100', 'Record DFA'
-      ];
-
-      // Priority manufacturers
-      const priorityMfgs = ['Horton', 'Stanley', 'Besam', 'Nabco', 'Record', 'Dorma'];
-
-      // Deprioritize service notes/bulletins - push to bottom
-      const deprioritizeTypes = ['Service Bulletin', 'Tech Note', 'TSB', 'Notes', 'Bulletin', 'Advisory'];
 
       let rows = data.filter(r => {
         if (maker && r.Manufacturer !== maker) return false;
@@ -1220,29 +1380,27 @@
             // Check if it's a service note/bulletin - push to bottom
             const aModel = (a.r.Model_Final || '') + ' ' + (a.r.ManualType_Final || '');
             const bModel = (b.r.Model_Final || '') + ' ' + (b.r.ManualType_Final || '');
-            const aIsNote = deprioritizeTypes.some(t => aModel.toLowerCase().includes(t.toLowerCase()));
-            const bIsNote = deprioritizeTypes.some(t => bModel.toLowerCase().includes(t.toLowerCase()));
+            const aIsNote = DEPRIORITIZE_TYPES.some(t => aModel.toLowerCase().includes(t.toLowerCase()));
+            const bIsNote = DEPRIORITIZE_TYPES.some(t => bModel.toLowerCase().includes(t.toLowerCase()));
             if (aIsNote && !bIsNote) return 1;
             if (!aIsNote && bIsNote) return -1;
 
-            // Check priority models (partial match)
-            const aFullModel = `${a.r.Manufacturer || ''} ${a.r.Model_Final || ''}`.toLowerCase();
-            const bFullModel = `${b.r.Manufacturer || ''} ${b.r.Model_Final || ''}`.toLowerCase();
-            const aModelIdx = priorityModels.findIndex(m => aFullModel.includes(m.toLowerCase()));
-            const bModelIdx = priorityModels.findIndex(m => bFullModel.includes(m.toLowerCase()));
+            // Check priority models
+            const aModelIdx = priorityModels.findIndex(m => matchesPriorityModel(a.r, m));
+            const bModelIdx = priorityModels.findIndex(m => matchesPriorityModel(b.r, m));
             if (aModelIdx !== -1 && bModelIdx === -1) return -1;
             if (aModelIdx === -1 && bModelIdx !== -1) return 1;
             if (aModelIdx !== -1 && bModelIdx !== -1 && aModelIdx !== bModelIdx) return aModelIdx - bModelIdx;
 
             // Check priority manufacturers
-            const aMfgIdx = priorityMfgs.findIndex(m => (a.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
-            const bMfgIdx = priorityMfgs.findIndex(m => (b.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
+            const aMfgIdx = PRIORITY_MFGS.findIndex(m => (a.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
+            const bMfgIdx = PRIORITY_MFGS.findIndex(m => (b.r.Manufacturer || '').toLowerCase().includes(m.toLowerCase()));
             const aPriority = aMfgIdx === -1 ? 999 : aMfgIdx;
             const bPriority = bMfgIdx === -1 ? 999 : bMfgIdx;
             if (aPriority !== bPriority) return aPriority - bPriority;
           }
 
-          // Alphabetical by model, then filename
+          // Alphabetical by Model_Final, then filename
           const modelCmp = (a.r.Model_Final || '').localeCompare(b.r.Model_Final || '');
           if (modelCmp !== 0) return modelCmp;
           return a.r.FileName.localeCompare(b.r.FileName);
@@ -1329,10 +1487,21 @@
           const q = b.getAttribute("data-q");
           const chip = b.getAttribute("data-chip");
 
+          // Set chip filter if specified (use exact value for DoorType_Final match)
           if (chip != null) setChip(chip);
+          else setChip('');
 
-          if (quick) applyQuick(quick);
-          else setQuery(q || "");
+          // Handle quick search keywords
+          if (quick) {
+            applyQuick(quick);
+          }
+          // Handle data-q search queries (with | OR support)
+          else if (q) {
+            els.q.value = q;
+            visible = PAGE_SIZE;
+            renderResults();
+            els.q.focus();
+          }
         }, { signal: ctrl.signal });
       });
 

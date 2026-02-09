@@ -11,6 +11,14 @@ const AUTH_CONFIG = {
   namespace: 'https://aas-portal.com'
 };
 
+// Customer ID to path mapping
+const CUSTOMER_PATHS = {
+  'westbank': '/westbank/',
+  'mannings': '/mannings/',
+  'ochsner_westbank': '/westbank/',  // Alias
+  'manning': '/mannings/'             // Alias
+};
+
 // PUBLIC pages don't require auth
 const PUBLIC_PAGES = ['/service/', '/service'];
 
@@ -32,6 +40,11 @@ const PAGE_ACCESS = {
   '/customer/command': { roles: ['Admin', 'Customer'] },
   '/customer/': { roles: ['Admin', 'Customer'] },
   '/customer': { roles: ['Admin', 'Customer'] },
+  // Customer-specific portals
+  '/westbank/': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
+  '/westbank': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
+  '/mannings/': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
+  '/mannings': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
 };
 
 let auth0Client = null;
@@ -78,19 +91,37 @@ function isPublicPage() {
   return PUBLIC_PAGES.some(p => path === p || path.startsWith(p));
 }
 
-function getDefaultPage(roles) {
+function getDefaultPage(roles, customerId) {
   if (roles.includes('Admin')) return '/';
-  if (roles.includes('Customer')) return '/customer/command/';
+  if (roles.includes('Customer')) {
+    // Route to customer-specific portal based on customer_id
+    if (customerId && CUSTOMER_PATHS[customerId]) {
+      return CUSTOMER_PATHS[customerId];
+    }
+    // Fallback to generic customer command center
+    return '/customer/command/';
+  }
   if (roles.includes('Tech')) return '/tech/parts/';
   return '/tech/parts/';
 }
 
-function checkPageAccess(roles) {
+function checkPageAccess(roles, customerId) {
   const path = window.location.pathname;
   const access = PAGE_ACCESS[path] || PAGE_ACCESS[path.replace(/\/$/, '')] || { roles: ['Admin', 'Tech', 'Customer'] };
-  const allowed = access.roles.some(r => roles.includes(r));
-  // FIX: Use role-appropriate redirect instead of hardcoded /tech/parts/
-  const defaultRedirect = getDefaultPage(roles);
+
+  // Check if user has required role
+  const hasRole = access.roles.some(r => roles.includes(r));
+
+  // For customer-specific pages, also check customer_id matches (unless Admin)
+  let allowed = hasRole;
+  if (hasRole && access.customerId && !roles.includes('Admin')) {
+    // Customer must match the page's customerId
+    allowed = customerId === access.customerId ||
+              CUSTOMER_PATHS[customerId] === path ||
+              CUSTOMER_PATHS[customerId] === path.replace(/\/$/, '') + '/';
+  }
+
+  const defaultRedirect = getDefaultPage(roles, customerId);
   return { allowed, redirect: allowed ? null : defaultRedirect };
 }
 
@@ -218,11 +249,12 @@ async function handleAuth() {
   const user = await client.getUser();
   const claims = await client.getIdTokenClaims();
   const roles = claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
-  
-  console.log('[Auth] User:', user?.email, 'Roles:', roles);
-  
+  const customerId = claims?.[AUTH_CONFIG.namespace + '/customer_id'] || null;
+
+  console.log('[Auth] User:', user?.email, 'Roles:', roles, 'Customer:', customerId);
+
   // Check page access
-  const { allowed, redirect } = checkPageAccess(roles);
+  const { allowed, redirect } = checkPageAccess(roles, customerId);
   if (!allowed) {
     updateAuthOverlay('denied', 'Redirecting...');
     setTimeout(() => { window.location.href = redirect; }, 500);
@@ -236,7 +268,7 @@ async function handleAuth() {
   // Call page-specific init if defined
   if (typeof window.onPageReady === 'function') {
     try {
-      window.onPageReady(user, roles);
+      window.onPageReady(user, roles, customerId);
     } catch (e) {
       console.error('[Auth] onPageReady error:', e);
     }
