@@ -1604,6 +1604,23 @@
           }))
           .filter(t => t.taskId);
         console.log('[Portal] Open tasks loaded:', openTasks.length);
+
+        // Transform and merge open tasks into main tasks array
+        const openTasksMerged = openTasks.map(t => ({
+          taskId: t.taskId,
+          dateStr: t.createdDate,
+          dateObj: parseDate(t.createdDate),
+          tech: '',
+          status: t.status.toUpperCase().replace(/ /g, '_'),
+          summary: t.notes,
+          taskName: t.taskName,
+          doorName: t.doorName,
+          woLink: t.link,
+          isOpen: true
+        }));
+
+        tasks = [...openTasksMerged, ...tasks];
+        console.log('[Portal] Merged open tasks. Total:', tasks.length);
       } catch (e) {
         console.warn('[Portal] Open tasks not available:', e);
         openTasks = [];
@@ -2124,44 +2141,54 @@
 
     function updateCopilotSuggestions() {
       const failCount = doors.filter(d => baseStatus(d.status) === 'FAIL').length;
-      const openCount = tasks.filter(t => t.isOpen && baseStatus(t.status) === 'OPEN').length;
-      const inProgressCount = tasks.filter(t => baseStatus(t.status) === 'IN_PROGRESS').length;
+      const passCount = doors.filter(d => baseStatus(d.status) === 'PASS').length;
+      const totalInspected = failCount + passCount;
+      const compliancePct = totalInspected > 0 ? Math.round((passCount / totalInspected) * 100) : 0;
+
+      const openCount = tasks.filter(t => t.isOpen).length;
       const returnCount = tasks.filter(t => baseStatus(t.status) === 'RETURN_FOR_PARTS').length;
 
       let suggestions = [];
 
-      if (failCount > 0) {
-        suggestions.push({
-          text: `${failCount} doors failed`,
-          query: `Why did ${failCount} of my doors fail inspection? What are the common issues?`
-        });
-      }
+      // Always show compliance first
+      suggestions.push({
+        text: `My compliance: ${compliancePct}%`,
+        query: `What's my current compliance percentage and what does it mean? How can we improve it?`
+      });
+
+      // Open tasks if any
       if (openCount > 0) {
         suggestions.push({
-          text: `${openCount} open tasks`,
-          query: `I have ${openCount} open service tasks. What work is scheduled for my doors?`
+          text: `Explain ${openCount} open tasks`,
+          query: `I have ${openCount} open service tasks. Can you explain what work is scheduled and what I should expect?`
         });
       }
-      if (inProgressCount > 0) {
-        suggestions.push({
-          text: `${inProgressCount} in progress`,
-          query: `I have ${inProgressCount} tasks in progress. What's being worked on?`
-        });
-      }
+
+      // Parts needed if any
       if (returnCount > 0) {
         suggestions.push({
-          text: `${returnCount} need parts`,
-          query: `I have ${returnCount} tasks waiting for parts. What parts are needed and when will they arrive?`
+          text: `${returnCount} waiting on parts`,
+          query: `I have ${returnCount} tasks waiting for parts. What parts are needed and can you explain what they're for?`
         });
       }
 
-      if (suggestions.length < 4) {
-        suggestions.push({ text: 'What is NFPA 80?', query: 'What is NFPA 80 and why does it matter for my facility?' });
-      }
-      if (suggestions.length < 4) {
-        suggestions.push({ text: 'Compliance tips', query: 'What can we do to improve our door compliance percentage?' });
+      // Failing doors if any
+      if (failCount > 0) {
+        suggestions.push({
+          text: `Why ${failCount} doors failed`,
+          query: `${failCount} of my doors failed inspection. What are the issues and what will it take to fix them?`
+        });
       }
 
+      // Always have at least 3 options
+      if (suggestions.length < 3) {
+        suggestions.push({
+          text: 'NFPA 80 basics',
+          query: 'What is NFPA 80 and what are the key requirements I should know about for my facility?'
+        });
+      }
+
+      // Limit to 4 max
       suggestions = suggestions.slice(0, 4);
 
       $('copilotSuggestions').innerHTML = suggestions.map(s =>
