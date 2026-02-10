@@ -1045,31 +1045,26 @@
 
       <!-- Floor Map Section -->
       <section class="section" id="floorMap">
-        <div class="section-header" onclick="toggleSection(this.parentElement)">
+        <div class="section-header" style="cursor:pointer;" onclick="toggleFloorMap()">
           <div>
             <h2 class="section-title">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              Life Safety Floor Map
+              <span id="floorMapToggle" style="font-size:0.8em;">▼</span>
+              🗺️ Life Safety Floor Map
             </h2>
           </div>
           <div style="display:flex;align-items:center;gap:12px;">
-            <div class="floor-tabs">
-              <button class="floor-tab active" onclick="event.stopPropagation();showFloor(1)">1st</button>
-              <button class="floor-tab" onclick="event.stopPropagation();showFloor(2)">2nd</button>
-              <button class="floor-tab" onclick="event.stopPropagation();showFloor(3)">3rd</button>
-              <button class="floor-tab" onclick="event.stopPropagation();showFloor(4)">4th</button>
+            <div class="floor-tabs" id="floorTabs">
+              <button class="floor-tab active" onclick="event.stopPropagation();showFloor(1, event)">1st</button>
+              <button class="floor-tab" onclick="event.stopPropagation();showFloor(2, event)">2nd</button>
+              <button class="floor-tab" onclick="event.stopPropagation();showFloor(3, event)">3rd</button>
+              <button class="floor-tab" onclick="event.stopPropagation();showFloor(4, event)">4th</button>
             </div>
-            <span class="expand-icon">▼</span>
           </div>
         </div>
-        <div class="section-content expanded">
-          <div class="floor-map-container">
-            <iframe id="floorMapFrame" src="/westbank/maps/life-safety-map.pdf#page=2" width="100%" height="500px" style="border:none;"></iframe>
-          </div>
-          <p class="map-note">Door IDs correspond to the Door Registry below. Life Safety drawings by HCT LLC.</p>
+        <div id="floorMapContent" style="margin-top:12px;">
+          <!-- Content loaded by initFloorMap() -->
         </div>
+        <p class="map-note" id="floorMapNote">Door IDs correspond to the Door Registry below. Life Safety drawings by HCT LLC.</p>
       </section>
 
       <!-- Doors Section -->
@@ -1361,10 +1356,7 @@
   <div class="copilot-panel" id="copilotPanel">
     <div class="copilot-header">
       <div class="copilot-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5" />
-        </svg>
-        Compliance Assistant
+        🛡️ Compliance Assistant
       </div>
       <div style="display:flex;gap:8px;">
         <button class="copilot-close" onclick="resetCopilot()" title="Reset conversation">↺</button>
@@ -1559,16 +1551,85 @@
       section.classList.toggle('collapsed');
     }
 
-    // Floor map navigation
-    function showFloor(floorNum) {
-      // Update active tab
-      document.querySelectorAll('.floor-tab').forEach(tab => tab.classList.remove('active'));
-      event.target.classList.add('active');
+    // Floor map - Google Drive URL for mobile
+    const FLOOR_MAP_DRIVE_URL = 'https://drive.google.com/file/d/12Eqhejz9j7Syn7rcVkPiBffRxZDy_3Wl/view';
+
+    let floorMapCollapsed = false;
+
+    function toggleFloorMap() {
+      floorMapCollapsed = !floorMapCollapsed;
+      const content = $('floorMapContent');
+      const toggle = $('floorMapToggle');
+      const note = $('floorMapNote');
+      const tabs = $('floorTabs');
+
+      if (floorMapCollapsed) {
+        content.style.display = 'none';
+        note.style.display = 'none';
+        if (tabs) tabs.style.display = 'none';
+        toggle.textContent = '▶';
+      } else {
+        content.style.display = 'block';
+        note.style.display = 'block';
+        if (tabs) tabs.style.display = 'flex';
+        toggle.textContent = '▼';
+      }
+    }
+
+    function showFloor(floorNum, event) {
+      if (event) {
+        event.stopPropagation();
+        document.querySelectorAll('.floor-tab').forEach(tab => tab.classList.remove('active'));
+        event.target.classList.add('active');
+      }
 
       // PDF pages: cover=1, floor1=2, floor2=3, floor3=4, floor4=5
       const pageNum = floorNum + 1;
-      document.getElementById('floorMapFrame').src = '/westbank/maps/life-safety-map.pdf#page=' + pageNum;
+      const frame = $('floorMapFrame');
+      if (frame) {
+        frame.src = '/westbank/maps/life-safety-map.pdf#page=' + pageNum;
+      }
     }
+
+    function initFloorMap() {
+      const container = $('floorMapContent');
+      if (!container) return;
+
+      const isMobile = window.innerWidth < 768;
+
+      if (isMobile) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:24px;background:var(--cp-card);border-radius:8px;border:1px solid var(--cp-border);">
+            <p style="margin-bottom:16px;color:var(--cp-text-secondary);">
+              View the complete Life Safety floor plans:
+            </p>
+            <a href="${FLOOR_MAP_DRIVE_URL}" target="_blank" class="btn"
+               style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;text-decoration:none;">
+              📄 Open Floor Map
+            </a>
+            <p style="margin-top:12px;font-size:0.8rem;color:var(--cp-text-muted);">
+              Opens in Google Drive viewer
+            </p>
+          </div>
+        `;
+        if ($('floorTabs')) $('floorTabs').style.display = 'none';
+      } else {
+        container.innerHTML = `
+          <div class="floor-map-container" style="border-radius:8px;overflow:hidden;background:#f5f5f5;">
+            <iframe id="floorMapFrame" src="/westbank/maps/life-safety-map.pdf#page=2"
+                    width="100%" height="500px" style="border:none;"></iframe>
+          </div>
+        `;
+        if ($('floorTabs')) $('floorTabs').style.display = 'flex';
+      }
+    }
+
+    // Handle resize (desktop <-> mobile)
+    let floorMapResizeTimeout;
+    window.addEventListener('resize', function() {
+      clearTimeout(floorMapResizeTimeout);
+      floorMapResizeTimeout = setTimeout(initFloorMap, 250);
+    });
 
     // Jump navigation
     function setupJumpNav() {
@@ -2025,6 +2086,7 @@
       try {
         await loadData();
         render();
+        initFloorMap(); // Initialize floor map (mobile vs desktop)
       } catch (e) {
         console.error('[Portal] Load error:', e);
         $('doorsMeta').textContent = 'Error loading data';

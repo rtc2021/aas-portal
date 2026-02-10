@@ -10,6 +10,17 @@
 (function() {
   'use strict';
 
+  // Don't show site-wide copilot on customer portals - they have Compliance Assistant
+  const customerPortalPaths = ['/westbank/', '/manning/', '/umc/', '/portal/'];
+  const isCustomerPortal = customerPortalPaths.some(path =>
+    window.location.pathname.toLowerCase().includes(path.toLowerCase())
+  );
+
+  if (isCustomerPortal) {
+    console.log('[Copilot] Customer portal detected - using Compliance Assistant instead');
+    return;
+  }
+
   // ============================================================================
   // CONFIGURATION
   // ============================================================================

@@ -265,6 +265,28 @@ const TOOLS: Anthropic.Tool[] = [
       },
       required: ["query"]
     }
+  },
+  {
+    name: "search_nfpa101",
+    description: "Search NFPA 101 Life Safety Code for egress requirements, exit specifications, corridor widths, occupancy classifications, means of egress, and general life safety requirements. Use for questions about exits, egress, corridors, occupancy loads, travel distance, or general building safety.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query for NFPA 101 Life Safety Code" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_nfpa105",
+    description: "Search NFPA 105 Standard for Smoke Door Assemblies. Use for questions about smoke doors, smoke barriers, smoke compartments, horizontal exits, smoke dampers, and the differences between smoke doors and fire doors.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query for NFPA 105 Smoke Door Assemblies" }
+      },
+      required: ["query"]
+    }
   }
 ];
 
@@ -273,7 +295,7 @@ const TECH_TOOLS: Anthropic.Tool[] = TOOLS.filter(tool =>
   tool.name !== 'get_technicians'
 );
 
-// Customer tools - NFPA 80, door info, manuals (for AI reference only)
+// Customer tools - NFPA codes, door info, manuals (for AI reference only)
 const CUSTOMER_TOOLS: Anthropic.Tool[] = [
   {
     name: "search_nfpa80",
@@ -284,6 +306,28 @@ const CUSTOMER_TOOLS: Anthropic.Tool[] = [
         query: { type: "string", description: "Compliance question or topic" },
         healthcare_only: { type: "boolean", description: "Filter to healthcare-relevant clauses" },
         limit: { type: "number", description: "Number of results (default 5)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_nfpa101",
+    description: "Search NFPA 101 Life Safety Code for egress requirements, exit specifications, corridor widths, occupancy classifications, means of egress, travel distance. Use for questions about exits, egress, corridors, or general building safety.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query for NFPA 101 Life Safety Code" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_nfpa105",
+    description: "Search NFPA 105 Standard for Smoke Door Assemblies. Use for questions about smoke doors, smoke barriers, smoke compartments, and differences between smoke doors and fire doors.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query for NFPA 105 Smoke Door Assemblies" }
       },
       required: ["query"]
     }
@@ -1283,6 +1327,84 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         }
       }
 
+      case "search_nfpa101": {
+        const query = input.query as string;
+
+        try {
+          const response = await fetch(`${DROPLET_URL}/search-nfpa101`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, top_k: 5 })
+          });
+
+          if (!response.ok) {
+            console.error(`NFPA 101 search failed: ${response.status}`);
+            return JSON.stringify({
+              error: "NFPA 101 search unavailable",
+              status: response.status
+            });
+          }
+
+          const data = await response.json();
+
+          if (!data.results || data.results.length === 0) {
+            return "No relevant NFPA 101 Life Safety Code sections found for this query.";
+          }
+
+          return data.results.map((r: any, i: number) => {
+            const section = r.payload?.section || r.payload?.chapter || "N/A";
+            const text = r.payload?.text || r.text || "No content";
+            const score = (r.score * 100).toFixed(1);
+            return `[${i + 1}] NFPA 101 Section ${section}\n${text}\n(Relevance: ${score}%)`;
+          }).join("\n\n---\n\n");
+        } catch (error) {
+          console.error("NFPA 101 search error:", error);
+          return JSON.stringify({
+            error: "Failed to search NFPA 101",
+            details: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
+      case "search_nfpa105": {
+        const query = input.query as string;
+
+        try {
+          const response = await fetch(`${DROPLET_URL}/search-nfpa105`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, top_k: 5 })
+          });
+
+          if (!response.ok) {
+            console.error(`NFPA 105 search failed: ${response.status}`);
+            return JSON.stringify({
+              error: "NFPA 105 search unavailable",
+              status: response.status
+            });
+          }
+
+          const data = await response.json();
+
+          if (!data.results || data.results.length === 0) {
+            return "No relevant NFPA 105 Smoke Door Assembly sections found for this query.";
+          }
+
+          return data.results.map((r: any, i: number) => {
+            const section = r.payload?.section || r.payload?.chapter || "N/A";
+            const text = r.payload?.text || r.text || "No content";
+            const score = (r.score * 100).toFixed(1);
+            return `[${i + 1}] NFPA 105 Section ${section}\n${text}\n(Relevance: ${score}%)`;
+          }).join("\n\n---\n\n");
+        } catch (error) {
+          console.error("NFPA 105 search error:", error);
+          return JSON.stringify({
+            error: "Failed to search NFPA 105",
+            details: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
       case "search_assets": {
         const query = (input.query as string).toLowerCase().trim();
         const customerFilter = input.customer as string | undefined;
@@ -1595,25 +1717,52 @@ This tool returns TWO result types:
 - Door IDs: AAS-XXX, FD-XXX, Names like MH-1.81
 - Tech IDs: Ruben=265672, Jonas=266967, Sean=361996`;
 
-const CUSTOMER_SYSTEM_PROMPT = `You are a helpful assistant for customers of Automatic Access Solutions (AAS), a fire door and automatic door service company.
+const CUSTOMER_SYSTEM_PROMPT = `You are the Compliance Assistant for customers of Automatic Access Solutions (AAS), a fire door inspection and service company.
+
+## Your Knowledge Base
+
+You have access to search these NFPA codes:
+- **NFPA 80** - Fire Doors and Other Opening Protectives
+  - Fire ratings, door gaps, clearances, hardware requirements
+  - Closer and coordinator requirements
+  - Annual inspection requirements
+  - Labeling and signage
+
+- **NFPA 101** - Life Safety Code
+  - Means of egress requirements
+  - Exit and corridor specifications
+  - Occupancy classifications
+  - Travel distance limits
+  - Door swing direction requirements
+
+- **NFPA 105** - Smoke Door Assemblies
+  - Smoke barrier requirements
+  - Smoke compartment specifications
+  - Differences between smoke doors and fire doors
+  - Smoke door hardware requirements
+
+## Context Available
 
 The customer's portal data is included at the start of their messages, showing:
 - Their door inspection results and compliance percentage
 - Their open service tasks with details
 - Which doors are currently failing inspection
 
-YOUR ROLE:
-- Help customers understand their compliance status
-- Explain what their open service tasks involve
-- Answer questions about NFPA 80 fire door requirements
-- Explain inspection findings in plain, non-technical language
-- Help them understand what repairs their doors need
+## How to Help Customers
 
-WHEN ANSWERING:
+1. **Answer compliance questions** by searching the relevant NFPA code(s)
+2. **Cite specific sections** when possible (e.g., "According to NFPA 80, Section 5.2.1...")
+3. **Explain in plain language** what requirements mean for their facility
+4. **Help interpret inspection findings** - what failed and why it matters
+5. **Clarify the difference** between fire doors (NFPA 80) and smoke doors (NFPA 105)
+
+## Important Guidelines
+
+- Always search NFPA codes before answering technical compliance questions
+- Be helpful and educational - customers want to understand their compliance status
+- If you're unsure, say so and recommend they contact AAS for clarification
 - Reference the specific data provided (door IDs, task numbers, etc.)
 - Explain technical terms simply
-- Be helpful and reassuring
-- If they need scheduling changes or pricing, direct them to contact AAS
 
 DO NOT:
 - Invent information not in the provided context
