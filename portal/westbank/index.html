@@ -897,6 +897,26 @@
       color: white;
     }
 
+    /* Compliance Assistant Loading */
+    .searching-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--cp-text-muted);
+      font-style: italic;
+    }
+    .searching-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--cp-border);
+      border-top-color: var(--cp-accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     /* Floor Map */
     .floor-tabs {
       display: flex;
@@ -1091,10 +1111,10 @@
           </div>
           <div style="display:flex;align-items:center;gap:12px;">
             <div class="floor-tabs" id="floorTabs">
-              <button class="floor-tab active" onclick="event.stopPropagation();showFloor(1, event)">1st</button>
-              <button class="floor-tab" onclick="event.stopPropagation();showFloor(2, event)">2nd</button>
-              <button class="floor-tab" onclick="event.stopPropagation();showFloor(3, event)">3rd</button>
-              <button class="floor-tab" onclick="event.stopPropagation();showFloor(4, event)">4th</button>
+              <button class="floor-tab active" onclick="showFloor(1, event); return false;">1st</button>
+              <button class="floor-tab" onclick="showFloor(2, event); return false;">2nd</button>
+              <button class="floor-tab" onclick="showFloor(3, event); return false;">3rd</button>
+              <button class="floor-tab" onclick="showFloor(4, event); return false;">4th</button>
             </div>
           </div>
         </div>
@@ -1627,7 +1647,10 @@
     }
 
     function showFloor(floorNum, event) {
+      console.log('[Portal] showFloor called:', floorNum);
+
       if (event) {
+        event.preventDefault();
         event.stopPropagation();
         document.querySelectorAll('.floor-tab').forEach(tab => tab.classList.remove('active'));
         event.target.classList.add('active');
@@ -1635,7 +1658,9 @@
 
       // PDF pages: cover=1, floor1=2, floor2=3, floor3=4, floor4=5
       const pageNum = floorNum + 1;
-      const frame = $('floorMapFrame');
+      const frame = document.getElementById('floorMapFrame');
+      console.log('[Portal] Frame found:', !!frame, 'Setting page:', pageNum);
+
       if (frame) {
         frame.src = '/westbank/maps/life-safety-map.pdf#page=' + pageNum;
       }
@@ -2423,7 +2448,33 @@
       ).join('');
     }
 
+    // Show loading state when searching
+    function showSearchingState() {
+      const msgContainer = document.getElementById('copilotMessages');
+      if (!msgContainer) return;
+
+      removeSearchingState(); // Remove any existing
+
+      const searchingDiv = document.createElement('div');
+      searchingDiv.className = 'copilot-msg assistant';
+      searchingDiv.id = 'searchingMsg';
+      searchingDiv.innerHTML = `
+        <div class="searching-indicator">
+          <div class="searching-spinner"></div>
+          <span>Searching NFPA codes for accurate compliance information...</span>
+        </div>
+      `;
+      msgContainer.appendChild(searchingDiv);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+
+    function removeSearchingState() {
+      const existing = document.getElementById('searchingMsg');
+      if (existing) existing.remove();
+    }
+
     function addCopilotMessage(content, role) {
+      removeSearchingState(); // Remove searching indicator when adding real message
       const messages = $('copilotMessages');
       const msg = document.createElement('div');
       msg.className = `copilot-msg ${role}`;
@@ -2446,8 +2497,8 @@
       addCopilotMessage(message, 'user');
       $('copilotSuggestions').style.display = 'none';
 
-      addCopilotMessage('<em>Thinking...</em>', 'assistant');
-      const typingEl = $('copilotMessages').lastChild;
+      // Show searching indicator
+      showSearchingState();
 
       try {
         let authToken = null;
@@ -2528,7 +2579,7 @@ CUSTOMER QUESTION: `;
           })
         });
 
-        typingEl.remove();
+        removeSearchingState();
 
         if (response.status === 401) {
           addCopilotMessage('Please sign in to use the copilot.', 'assistant');
@@ -2547,7 +2598,7 @@ CUSTOMER QUESTION: `;
 
       } catch (e) {
         console.error('[Copilot] Error:', e);
-        typingEl.remove();
+        removeSearchingState();
         addCopilotMessage('Sorry, I\'m having trouble connecting. Please try again.', 'assistant');
       }
     }
