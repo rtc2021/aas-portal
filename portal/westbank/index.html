@@ -548,8 +548,13 @@
       .filters { flex-direction: column; }
       .date-group { flex-wrap: wrap; }
       .floating-user-name, .floating-user-role { display: none; }
-      /* Allow horizontal scroll on portal */
+      /* Allow horizontal scroll on tables */
       .portal { overflow-x: auto; }
+      .section-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .data-table { min-width: 600px; }
+      /* Load More button stays visible */
+      .load-more-row { position: sticky; left: 0; }
+      .load-more-row td { text-align: center; padding: 16px; min-width: auto !important; }
     }
 
     @media (min-width: 768px) {
