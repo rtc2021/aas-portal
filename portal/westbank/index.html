@@ -65,7 +65,6 @@
       background: var(--cp-bg);
       color: var(--cp-text);
       min-height: 100vh;
-      overflow-x: hidden;
     }
 
     .bg-effects {
@@ -549,6 +548,12 @@
       .filters { flex-direction: column; }
       .date-group { flex-wrap: wrap; }
       .floating-user-name, .floating-user-role { display: none; }
+      .hide-mobile { display: none !important; }
+      /* Map height on mobile */
+      #mapContainer { height: 400px !important; }
+      #mapFrame { height: 400px !important; }
+      /* Allow horizontal scroll on portal */
+      .portal { overflow-x: auto; }
     }
 
     @media (min-width: 768px) {
@@ -1123,14 +1128,22 @@
                class="btn" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;font-size:0.85rem;background:var(--cp-card);border:1px solid var(--cp-border);color:var(--cp-text);">
               ⬇️ Download PDF
             </a>
-            <span style="font-size:0.8rem;color:var(--cp-text-muted);margin-left:auto;">
-              Tip: Use scroll wheel to zoom, drag to pan
+            <!-- Zoom Controls -->
+            <div style="display:flex;gap:4px;margin-left:8px;">
+              <button onclick="zoomMap(-0.2)" class="btn" style="padding:6px 12px;font-size:1rem;" title="Zoom Out">−</button>
+              <button onclick="zoomMap(0.2)" class="btn" style="padding:6px 12px;font-size:1rem;" title="Zoom In">+</button>
+              <button onclick="resetMapZoom()" class="btn" style="padding:6px 10px;font-size:0.75rem;background:var(--cp-card);border:1px solid var(--cp-border);color:var(--cp-text);" title="Reset">Reset</button>
+            </div>
+            <span style="font-size:0.8rem;color:var(--cp-text-muted);margin-left:auto;" class="hide-mobile">
+              Scroll to zoom • Drag to pan
             </span>
           </div>
-          <!-- Map Viewer -->
-          <div style="border-radius:8px;overflow:hidden;background:#f5f5f5;">
-            <iframe src="https://drive.google.com/file/d/12Eqhejz9j7Syn7rcVkPiBffRxZDy_3Wl/preview"
-                    width="100%" height="600px" style="border:none;" allow="autoplay"></iframe>
+          <!-- Map Viewer with Zoom/Pan -->
+          <div id="mapContainer" style="border-radius:8px;overflow:auto;background:#f5f5f5;height:600px;cursor:grab;position:relative;">
+            <div id="mapWrapper" style="transform-origin:0 0;transition:transform 0.1s ease-out;min-width:100%;min-height:100%;">
+              <iframe id="mapFrame" src="https://drive.google.com/file/d/12Eqhejz9j7Syn7rcVkPiBffRxZDy_3Wl/preview"
+                      width="100%" height="600px" style="border:none;pointer-events:none;" allow="autoplay"></iframe>
+            </div>
           </div>
           <p style="font-size:0.8rem;color:var(--cp-text-muted);margin-top:8px;">
             Door IDs correspond to the Door Registry below. Life Safety drawings by HCT LLC.
@@ -1633,6 +1646,100 @@
     // Collapsible sections
     function toggleSection(section) {
       section.classList.toggle('collapsed');
+    }
+
+    // ============================================
+    // MAP ZOOM & PAN CONTROLS
+    // ============================================
+    let mapScale = 1;
+    let isDragging = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    function zoomMap(delta) {
+      mapScale = Math.max(0.5, Math.min(3, mapScale + delta));
+      const wrapper = document.getElementById('mapWrapper');
+      if (wrapper) {
+        wrapper.style.transform = `scale(${mapScale})`;
+        wrapper.style.width = `${100 / mapScale}%`;
+        wrapper.style.height = `${600 / mapScale}px`;
+      }
+    }
+
+    function resetMapZoom() {
+      mapScale = 1;
+      const wrapper = document.getElementById('mapWrapper');
+      const container = document.getElementById('mapContainer');
+      if (wrapper) {
+        wrapper.style.transform = 'scale(1)';
+        wrapper.style.width = '100%';
+        wrapper.style.height = '600px';
+      }
+      if (container) {
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
+      }
+    }
+
+    // Initialize map pan/drag
+    function initMapControls() {
+      const container = document.getElementById('mapContainer');
+      if (!container) return;
+
+      // Mouse wheel zoom
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        zoomMap(delta);
+      }, { passive: false });
+
+      // Drag to pan
+      container.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        container.style.cursor = 'grabbing';
+        startX = e.pageX - container.offsetLeft;
+        startY = e.pageY - container.offsetTop;
+        scrollLeft = container.scrollLeft;
+        scrollTop = container.scrollTop;
+      });
+
+      container.addEventListener('mouseleave', () => {
+        isDragging = false;
+        container.style.cursor = 'grab';
+      });
+
+      container.addEventListener('mouseup', () => {
+        isDragging = false;
+        container.style.cursor = 'grab';
+      });
+
+      container.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - container.offsetLeft;
+        const y = e.pageY - container.offsetTop;
+        const walkX = (x - startX) * 1.5;
+        const walkY = (y - startY) * 1.5;
+        container.scrollLeft = scrollLeft - walkX;
+        container.scrollTop = scrollTop - walkY;
+      });
+
+      // Touch support for mobile
+      let touchStartX, touchStartY;
+      container.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].pageX;
+        touchStartY = e.touches[0].pageY;
+        scrollLeft = container.scrollLeft;
+        scrollTop = container.scrollTop;
+      }, { passive: true });
+
+      container.addEventListener('touchmove', (e) => {
+        const touchX = e.touches[0].pageX;
+        const touchY = e.touches[0].pageY;
+        const walkX = touchStartX - touchX;
+        const walkY = touchStartY - touchY;
+        container.scrollLeft = scrollLeft + walkX;
+        container.scrollTop = scrollTop + walkY;
+      }, { passive: true });
     }
 
     // Floor map - Google Drive URL for mobile
@@ -2221,6 +2328,7 @@
       try {
         await loadData();
         render();
+        initMapControls(); // Initialize map zoom/pan
       } catch (e) {
         console.error('[Portal] Load error:', e);
         $('doorsMeta').textContent = 'Error loading data';
