@@ -1027,7 +1027,6 @@
       <!-- Jump Navigation (mobile) -->
       <nav class="jump-nav">
         <button class="jump-btn active" data-section="stats">Overview</button>
-        <button class="jump-btn" data-section="floorMap">🗺️ Map</button>
         <button class="jump-btn" data-section="doors">Doors</button>
         <button class="jump-btn" data-section="openTasks">Open Tasks</button>
         <button class="jump-btn" data-section="tasks">Service</button>
@@ -1098,30 +1097,6 @@
           </svg>
           PDF Report
         </button>
-      </section>
-
-      <!-- Floor Map Section -->
-      <section class="section" id="floorMap">
-        <div class="section-header" style="cursor:pointer;" onclick="toggleFloorMap()">
-          <div>
-            <h2 class="section-title">
-              <span id="floorMapToggle" style="font-size:0.8em;">▼</span>
-              🗺️ Life Safety Floor Map
-            </h2>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div class="floor-tabs" id="floorTabs">
-              <button class="floor-tab active" onclick="showFloor(1, event); return false;">1st</button>
-              <button class="floor-tab" onclick="showFloor(2, event); return false;">2nd</button>
-              <button class="floor-tab" onclick="showFloor(3, event); return false;">3rd</button>
-              <button class="floor-tab" onclick="showFloor(4, event); return false;">4th</button>
-            </div>
-          </div>
-        </div>
-        <div id="floorMapContent" style="margin-top:12px;">
-          <!-- Content loaded by initFloorMap() -->
-        </div>
-        <p class="map-note" id="floorMapNote">Door IDs correspond to the Door Registry below. Life Safety drawings by HCT LLC.</p>
       </section>
 
       <!-- Doors Section -->
@@ -2207,7 +2182,6 @@
       try {
         await loadData();
         render();
-        initFloorMap(); // Initialize floor map (mobile vs desktop)
       } catch (e) {
         console.error('[Portal] Load error:', e);
         $('doorsMeta').textContent = 'Error loading data';
