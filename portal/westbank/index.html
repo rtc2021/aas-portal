@@ -860,6 +860,43 @@
       color: var(--cp-accent);
     }
 
+    /* Mobile Table Fix */
+    @media (max-width: 768px) {
+      table { display: table !important; }
+      thead { display: table-header-group !important; }
+      tbody { display: table-row-group !important; }
+      tr { display: table-row !important; height: auto !important; }
+      td, th {
+        display: table-cell !important;
+        width: auto !important;
+        padding: 8px !important;
+        font-size: 12px !important;
+      }
+      .card {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      td::before { display: none !important; }
+    }
+
+    /* Load More Button */
+    .load-more-row td {
+      border-top: 1px solid var(--cp-border);
+    }
+    .load-more-row .btn {
+      background: var(--cp-accent-bg);
+      border: 1px solid var(--cp-accent);
+      color: var(--cp-accent);
+      padding: 10px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .load-more-row .btn:hover {
+      background: var(--cp-accent);
+      color: white;
+    }
+
     /* Floor Map */
     .floor-tabs {
       display: flex;
@@ -1393,6 +1430,19 @@
     const TASK_NOTES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=797841380&single=true&output=csv';
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxieMXC3yxR1TeJVbYPhzLpgS-IVtVd_JOfERJP76p1ZT6vzFVb4Wo2KjcHIe0_5O4WPg/exec';
 
+    // Pagination
+    let taskDisplayCount = 10;
+    let doorDisplayCount = 25;
+
+    // Status priority for deduplication (higher = more current)
+    const STATUS_PRIORITY = {
+      'OPEN': 1,
+      'IN_PROGRESS': 2,
+      'PARTS_NEEDED': 3,
+      'RETURN_FOR_PARTS': 3,
+      'COMPLETE': 4
+    };
+
     function $(id) { return document.getElementById(id); }
     function clean(v) { return (v == null ? '' : String(v)).trim(); }
     function escapeHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -1631,6 +1681,25 @@
       floorMapResizeTimeout = setTimeout(initFloorMap, 250);
     });
 
+    // ============================================
+    // PAGINATION FUNCTIONS
+    // ============================================
+
+    function loadMoreTasks() {
+      taskDisplayCount += 10;
+      render();
+    }
+
+    function loadMoreDoors() {
+      doorDisplayCount += 25;
+      render();
+    }
+
+    function resetPagination() {
+      taskDisplayCount = 10;
+      doorDisplayCount = 25;
+    }
+
     // Jump navigation
     function setupJumpNav() {
       const buttons = document.querySelectorAll('.jump-btn');
@@ -1747,19 +1816,46 @@
           .filter(t => t.taskId);
         console.log('[Portal] Open tasks loaded:', openTasks.length);
 
+        // Deduplicate: Keep only latest status per Task_ID
+        const latestByTaskId = new Map();
+        openTasks.forEach(t => {
+          const existing = latestByTaskId.get(t.taskId);
+          if (!existing) {
+            latestByTaskId.set(t.taskId, t);
+          } else {
+            const existingDate = new Date(existing.createdDate || 0);
+            const newDate = new Date(t.createdDate || 0);
+            const existingStatus = existing.status?.toUpperCase().replace(/ /g, '_') || '';
+            const newStatus = t.status?.toUpperCase().replace(/ /g, '_') || '';
+            const existingPriority = STATUS_PRIORITY[existingStatus] || 0;
+            const newPriority = STATUS_PRIORITY[newStatus] || 0;
+            if (newDate > existingDate || (newDate.getTime() === existingDate.getTime() && newPriority > existingPriority)) {
+              latestByTaskId.set(t.taskId, t);
+            }
+          }
+        });
+        openTasks = Array.from(latestByTaskId.values());
+        console.log('[Portal] Open tasks after dedup:', openTasks.length);
+
         // Transform and merge open tasks into main tasks array
-        const openTasksMerged = openTasks.map(t => ({
-          taskId: t.taskId,
-          dateStr: t.createdDate,
-          dateObj: parseDate(t.createdDate),
-          tech: '',
-          status: t.status.toUpperCase().replace(/ /g, '_'),
-          summary: t.notes || t.taskName || 'Scheduled service',
-          taskName: t.taskName,
-          doorName: t.doorName,
-          woLink: t.link,
-          isOpen: true
-        }));
+        const openTasksMerged = openTasks.map(t => {
+          let summary = t.notes || t.taskName || '';
+          if (!summary || summary.length < 10) {
+            summary = t.doorName ? `Service: ${t.doorName}` : 'Scheduled service';
+          }
+          return {
+            taskId: t.taskId,
+            dateStr: t.createdDate,
+            dateObj: parseDate(t.createdDate),
+            tech: t.tech || '',
+            status: t.status?.toUpperCase().replace(/ /g, '_') || 'OPEN',
+            summary: summary,
+            taskName: t.taskName,
+            doorName: t.doorName,
+            woLink: t.link,
+            isOpen: true
+          };
+        });
 
         // Merge open tasks, avoiding duplicates
         const existingTaskIds = new Set(tasks.map(t => t.taskId));
