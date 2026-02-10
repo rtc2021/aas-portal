@@ -903,6 +903,28 @@
       color: white;
     }
 
+    /* ===== MOBILE SCROLL FIX ===== */
+    @media (max-width: 768px) {
+      /* Allow horizontal scroll on tables */
+      section {
+        overflow: visible !important;
+      }
+
+      /* Allow vertical scroll - remove height constraints */
+      .section-body {
+        max-height: none;
+        height: auto;
+      }
+    }
+
+    /* Keep collapse working - needs to override mobile styles */
+    .collapsed .section-body {
+      max-height: 0 !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
     /* Compliance Assistant Loading */
     .searching-indicator {
       display: flex;
