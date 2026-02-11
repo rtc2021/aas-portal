@@ -822,6 +822,11 @@
       try {
         // Build request
         const includeContext = document.getElementById('aasCopilotContextToggle')?.checked;
+
+        // Debug: Log conversation history being sent
+        console.log('[Copilot Debug] Messages in history:', this.messages.length);
+        console.log('[Copilot Debug] Conversation:', this.messages.map(m => ({ role: m.role, content: m.content.substring(0, 50) + '...' })));
+
         const request = {
           messages: this.messages.map(m => ({ role: m.role, content: m.content }))
         };
