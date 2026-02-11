@@ -10,6 +10,13 @@
 (function() {
   'use strict';
 
+  // Prevent multiple initialization
+  if (window.__AASCopilotInitialized) {
+    console.log('[Copilot] Already initialized, skipping');
+    return;
+  }
+  window.__AASCopilotInitialized = true;
+
   // Don't show site-wide copilot on customer portals - they have Compliance Assistant
   const customerPortalPaths = ['/westbank/', '/manning/', '/umc/', '/portal/'];
   const isCustomerPortal = customerPortalPaths.some(path =>
@@ -824,8 +831,15 @@
         const includeContext = document.getElementById('aasCopilotContextToggle')?.checked;
 
         // Debug: Log conversation history being sent
-        console.log('[Copilot Debug] Messages in history:', this.messages.length);
-        console.log('[Copilot Debug] Conversation:', this.messages.map(m => ({ role: m.role, content: m.content.substring(0, 50) + '...' })));
+        console.group('[Copilot Debug] Sending Request');
+        console.log('Total messages in history:', this.messages.length);
+        console.log('Messages array reference:', this.messages);
+        console.table(this.messages.map((m, i) => ({
+          index: i,
+          role: m.role,
+          preview: m.content.substring(0, 60) + (m.content.length > 60 ? '...' : '')
+        })));
+        console.groupEnd();
 
         const request = {
           messages: this.messages.map(m => ({ role: m.role, content: m.content }))
