@@ -1494,6 +1494,18 @@ export default async function handler(req: Request, context: Context): Promise<R
         });
       }
 
+      // If we broke out due to tool budget, force a final text response
+      if (response.stop_reason === "tool_use") {
+        messages.push({ role: "assistant", content: response.content });
+        messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")?.id || "budget_limit", content: "Tool budget reached. Summarize your findings with the information you already have." }] });
+        response = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: CUSTOMER_SYSTEM_PROMPT,
+          messages,
+        });
+      }
+
       const textBlocks = response.content.filter(
         (block): block is Anthropic.TextBlock => block.type === "text"
       );
@@ -1598,6 +1610,22 @@ IMPORTANT RESTRICTIONS:
           }),
           { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
         );
+      }
+    }
+
+    // If we broke out due to tool budget, force a final text response
+    if (response.stop_reason === "tool_use") {
+      messages.push({ role: "assistant", content: response.content });
+      messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")?.id || "budget_limit", content: "Tool budget reached. Summarize your findings with the information you already have." }] });
+      try {
+        response = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages,
+        });
+      } catch (apiError) {
+        console.error("Claude API error during budget wrap-up:", apiError);
       }
     }
 
