@@ -2455,6 +2455,9 @@
 
     // ===== COPILOT FUNCTIONS =====
 
+    // Conversation history for multi-turn context
+    let copilotHistory = [];
+
     function toggleCopilot() {
       $('copilotPanel').classList.toggle('active');
       if ($('copilotPanel').classList.contains('active')) {
@@ -2463,6 +2466,9 @@
     }
 
     function resetCopilot() {
+      // Clear conversation history
+      copilotHistory = [];
+
       const messages = $('copilotMessages');
       messages.innerHTML = `
         <div class="copilot-msg assistant">
@@ -2545,7 +2551,7 @@
       if (existing) existing.remove();
     }
 
-    function addCopilotMessage(content, role) {
+    function addCopilotMessage(content, role, addToHistory = true) {
       removeSearchingState(); // Remove searching indicator when adding real message
       const messages = $('copilotMessages');
       const msg = document.createElement('div');
@@ -2553,6 +2559,12 @@
       msg.innerHTML = content.replace(/\n/g, '<br>');
       messages.appendChild(msg);
       messages.scrollTop = messages.scrollHeight;
+
+      // Track conversation history for multi-turn context
+      if (addToHistory) {
+        copilotHistory.push({ role, content });
+        console.log('[Copilot] History updated:', copilotHistory.length, 'messages');
+      }
     }
 
     function askCopilot(question) {
@@ -2626,6 +2638,17 @@ CUSTOMER QUESTION: `;
 
         const messageWithContext = contextPrefix + message;
 
+        // Build messages array from history, with context on current message
+        const messagesForApi = copilotHistory.map((msg, idx) => {
+          // For the last user message (current one), include context
+          if (idx === copilotHistory.length - 1 && msg.role === 'user') {
+            return { role: 'user', content: messageWithContext };
+          }
+          return { role: msg.role, content: msg.content };
+        });
+
+        console.log('[Copilot] Sending', messagesForApi.length, 'messages to API');
+
         const headers = { 'Content-Type': 'application/json' };
         if (authToken) {
           headers['Authorization'] = `Bearer ${authToken}`;
@@ -2635,7 +2658,7 @@ CUSTOMER QUESTION: `;
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
-            messages: [{ role: 'user', content: messageWithContext }],
+            messages: messagesForApi,
             mode: 'customer_portal',
             customer: CUSTOMER_KEY,
             customerContext: {
@@ -2654,12 +2677,16 @@ CUSTOMER QUESTION: `;
         removeSearchingState();
 
         if (response.status === 401) {
-          addCopilotMessage('Your session may have expired. Please refresh the page or sign out and back in.', 'assistant');
+          addCopilotMessage('Your session may have expired. Please refresh the page or sign out and back in.', 'assistant', false);
+          // Remove the failed user message from history
+          copilotHistory.pop();
           return;
         }
 
         if (response.status === 403) {
-          addCopilotMessage('You don\'t have access to this feature.', 'assistant');
+          addCopilotMessage('You don\'t have access to this feature.', 'assistant', false);
+          // Remove the failed user message from history
+          copilotHistory.pop();
           return;
         }
 
@@ -2671,7 +2698,9 @@ CUSTOMER QUESTION: `;
       } catch (e) {
         console.error('[Copilot] Error:', e);
         removeSearchingState();
-        addCopilotMessage('Sorry, I\'m having trouble connecting. Please try again.', 'assistant');
+        addCopilotMessage('Sorry, I\'m having trouble connecting. Please try again.', 'assistant', false);
+        // Remove the failed user message from history
+        copilotHistory.pop();
       }
     }
 
