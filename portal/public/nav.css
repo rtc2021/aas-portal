@@ -1,6 +1,7 @@
 /* =========================================================
    AAS GLOBAL NAV SYSTEM
    Token-Based | Theme-Aware | RBAC-Compatible
+   Matches existing nav HTML structure
    ========================================================= */
 
 /* ================================
@@ -18,7 +19,7 @@
   gap: 10px;
 
   padding: 8px 14px;
-  border-radius: 50px;
+  border-radius: 9999px;
 
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
@@ -28,30 +29,49 @@
   backdrop-filter: blur(20px);
 }
 
+.floating-user__info { text-align: right; }
+
 .floating-user__name {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 650;
+  font-size: 13px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .floating-user__role {
-  font-size: 12px;
-  opacity: 0.7;
-  color: var(--ui-text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ui-accent);
+  opacity: 0.9;
 }
 
 .floating-user__logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
   background: var(--ui-accent-soft);
   border: 1px solid var(--ui-border);
   color: var(--ui-text);
-  padding: 4px 8px;
-  border-radius: 8px;
+
+  border-radius: 9999px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .floating-user__logout:hover {
   border-color: var(--ui-border-hover);
-  background: var(--ui-accent-soft);
+}
+
+.floating-user__logout svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* ================================
@@ -64,8 +84,8 @@
   left: 20px;
   z-index: 10001;
 
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
 
   display: flex;
   align-items: center;
@@ -88,11 +108,18 @@
 }
 
 .nav-toggle svg {
+  width: 22px;
+  height: 22px;
   stroke: currentColor;
 }
 
+/* Match your existing HTML icon swap */
+.nav-toggle.active svg.menu-icon { display: none; }
+.nav-toggle svg.close-icon { display: none; }
+.nav-toggle.active svg.close-icon { display: block; }
+
 /* ================================
-   Nav Panel
+   Nav Panel + Overlay
    ================================ */
 
 .nav-panel {
@@ -102,10 +129,14 @@
   bottom: 0;
 
   width: 280px;
-  z-index: 9999;
+  max-width: 85vw;
 
+  z-index: 9999;
   display: flex;
   flex-direction: column;
+
+  /* IMPORTANT: matches original layout spacing */
+  padding: 80px 20px 20px;
 
   background: var(--ui-surface);
   border-right: 1px solid var(--ui-border);
@@ -119,39 +150,63 @@
   transform: translateX(0);
 }
 
+.nav-panel__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.nav-panel__overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* ================================
    Nav Links
    ================================ */
 
 .nav-panel__section {
-  padding: 16px 20px 8px;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   color: var(--ui-text-muted);
+
+  padding: 18px 16px 8px;
+  margin-top: 8px;
 }
 
 .nav-panel__divider {
   height: 1px;
-  margin: 12px 20px;
   background: var(--ui-border);
+  margin: 12px 0;
 }
 
 .nav-panel__link {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 
-  padding: 12px 20px;
+  padding: 14px 16px;
+  border-radius: 10px;
+
   text-decoration: none;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
 
   color: var(--ui-text-muted);
   transition: all 0.2s ease;
 }
 
 .nav-panel__link svg {
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
+  opacity: 0.8;
 }
 
 .nav-panel__link:hover {
@@ -181,30 +236,24 @@ body.is-admin #navSummary {
 }
 
 /* ================================
-   Overlay
+   Mobile refinements
    ================================ */
 
-.nav-panel__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background: rgba(0, 0, 0, 0.5);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
+@media (max-width: 480px) {
+  .floating-user__name,
+  .floating-user__role {
+    display: none;
+  }
 
-.nav-panel__overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+  .floating-user {
+    padding: 6px 8px 6px 10px;
+    gap: 8px;
+    top: 16px;
+    right: 16px;
+  }
 
-/* ================================
-   Mobile
-   ================================ */
-
-@media (max-width: 768px) {
-  .nav-panel {
-    width: 100%;
+  .nav-toggle {
+    top: 16px;
+    left: 16px;
   }
 }
