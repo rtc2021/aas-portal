@@ -1,11 +1,10 @@
 /**
- * AAS Portal - Auth0 Authentication Module (v1.1)
+ * AAS Portal - Auth0 Authentication Module (v1.2)
  * Role-based access control with floating user badge
  * /service/ is PUBLIC - no auth required
  *
- * v1.1 adds:
- * - applyRoleClasses(roles): sets body.is-admin / is-tech / is-customer for nav.css gating
- * - safer redirect handling
+ * v1.1: applyRoleClasses(roles) for nav.css data-admin-only gating
+ * v1.2: getToken() for authenticated API requests (copilot.js)
  */
 
 const AUTH_CONFIG = {
@@ -240,6 +239,19 @@ async function getUserRoles() {
   }
 }
 
+/**
+ * v1.2: Get access token for authenticated API requests (used by copilot.js)
+ */
+async function getToken() {
+  const client = await initAuth();
+  if (!client) return null;
+  try {
+    return await client.getTokenSilently({ authorizationParams: { audience: AUTH_CONFIG.audience } });
+  } catch {
+    return null;
+  }
+}
+
 async function handleAuth() {
   // Skip auth for public pages
   if (isPublicPage()) {
@@ -310,7 +322,7 @@ async function handleAuth() {
 }
 
 // Export for global use
-window.AASAuth = { login, logout, getUserRoles, initAuth };
+window.AASAuth = { login, logout, getUserRoles, getToken, initAuth };
 
 // Run on load
 if (document.readyState === 'loading') {
