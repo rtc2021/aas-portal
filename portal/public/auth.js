@@ -1,10 +1,7 @@
 /**
- * AAS Portal - Auth0 Authentication Module (v1.2)
- * Role-based access control with floating user badge
+ * AAS Portal - Auth0 Authentication Module v1.2
+ * Role-based access control with dropdown user menu
  * /service/ is PUBLIC - no auth required
- *
- * v1.1: applyRoleClasses(roles) for nav.css data-admin-only gating
- * v1.2: getToken() for authenticated API requests (copilot.js)
  */
 
 const AUTH_CONFIG = {
@@ -18,8 +15,8 @@ const AUTH_CONFIG = {
 const CUSTOMER_PATHS = {
   'westbank': '/westbank/',
   'mannings': '/mannings/',
-  'ochsner_westbank': '/westbank/', // Alias
-  'manning': '/mannings/'          // Alias
+  'ochsner_westbank': '/westbank/',
+  'manning': '/mannings/'
 };
 
 // PUBLIC pages don't require auth
@@ -27,37 +24,26 @@ const PUBLIC_PAGES = ['/service/', '/service'];
 
 const PAGE_ACCESS = {
   '/': { roles: ['Admin'], redirect: '/tech/parts/' },
-
   '/tech/command/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/command':  { roles: ['Admin'], redirect: '/tech/parts/' },
-
-  '/tech/parts/':   { roles: ['Admin', 'Tech'] },
-  '/tech/parts':    { roles: ['Admin', 'Tech'] },
-
+  '/tech/command': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/tech/parts/': { roles: ['Admin', 'Tech'] },
+  '/tech/parts': { roles: ['Admin', 'Tech'] },
   '/tech/manuals/': { roles: ['Admin', 'Tech'] },
-  '/tech/manuals':  { roles: ['Admin', 'Tech'] },
-
-  '/tech/doors/':   { roles: ['Admin', 'Tech'] },
-  '/tech/doors':    { roles: ['Admin', 'Tech'] },
-
+  '/tech/manuals': { roles: ['Admin', 'Tech'] },
+  '/tech/doors/': { roles: ['Admin', 'Tech'] },
+  '/tech/doors': { roles: ['Admin', 'Tech'] },
   '/tech/summary/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/summary':  { roles: ['Admin'], redirect: '/tech/parts/' },
-
+  '/tech/summary': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/door/': { roles: ['Admin', 'Tech', 'Customer'] },
-  '/door':  { roles: ['Admin', 'Tech', 'Customer'] },
-
+  '/door': { roles: ['Admin', 'Tech', 'Customer'] },
   '/customer/command/': { roles: ['Admin', 'Customer'] },
-  '/customer/command':  { roles: ['Admin', 'Customer'] },
-
+  '/customer/command': { roles: ['Admin', 'Customer'] },
   '/customer/': { roles: ['Admin', 'Customer'] },
-  '/customer':  { roles: ['Admin', 'Customer'] },
-
-  // Customer-specific portals
+  '/customer': { roles: ['Admin', 'Customer'] },
   '/westbank/': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
-  '/westbank':  { roles: ['Admin', 'Customer'], customerId: 'westbank' },
-
+  '/westbank': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
   '/mannings/': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
-  '/mannings':  { roles: ['Admin', 'Customer'], customerId: 'mannings' }
+  '/mannings': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
 };
 
 let auth0Client = null;
@@ -92,7 +78,6 @@ async function initAuth() {
       cacheLocation: 'localstorage',
       useRefreshTokens: true
     });
-
     return auth0Client;
   } catch (e) {
     console.error('[Auth] Init failed:', e);
@@ -117,19 +102,14 @@ function getDefaultPage(roles, customerId) {
 
 function checkPageAccess(roles, customerId) {
   const path = window.location.pathname;
-  const access =
-    PAGE_ACCESS[path] ||
-    PAGE_ACCESS[path.replace(/\/$/, '')] ||
-    { roles: ['Admin', 'Tech', 'Customer'] };
+  const access = PAGE_ACCESS[path] || PAGE_ACCESS[path.replace(/\/$/, '')] || { roles: ['Admin', 'Tech', 'Customer'] };
 
   const hasRole = access.roles.some(r => roles.includes(r));
-
   let allowed = hasRole;
   if (hasRole && access.customerId && !roles.includes('Admin')) {
-    allowed =
-      customerId === access.customerId ||
-      CUSTOMER_PATHS[customerId] === path ||
-      CUSTOMER_PATHS[customerId] === (path.replace(/\/$/, '') + '/');
+    allowed = customerId === access.customerId ||
+              CUSTOMER_PATHS[customerId] === path ||
+              CUSTOMER_PATHS[customerId] === path.replace(/\/$/, '') + '/';
   }
 
   const defaultRedirect = getDefaultPage(roles, customerId);
@@ -147,7 +127,7 @@ function updateAuthOverlay(state, message) {
 
   if (!overlay) return;
 
-  switch (state) {
+  switch(state) {
     case 'loading':
       overlay.classList.remove('hidden');
       if (spinner) spinner.style.display = 'block';
@@ -157,7 +137,6 @@ function updateAuthOverlay(state, message) {
       if (btn) btn.style.display = 'none';
       if (content) content.style.display = 'none';
       break;
-
     case 'login':
       overlay.classList.remove('hidden');
       if (spinner) spinner.style.display = 'none';
@@ -167,7 +146,6 @@ function updateAuthOverlay(state, message) {
       if (btn) { btn.style.display = 'inline-block'; btn.onclick = () => login(); }
       if (content) content.style.display = 'none';
       break;
-
     case 'denied':
       overlay.classList.remove('hidden');
       if (spinner) spinner.style.display = 'none';
@@ -177,7 +155,6 @@ function updateAuthOverlay(state, message) {
       if (btn) btn.style.display = 'none';
       if (content) content.style.display = 'none';
       break;
-
     case 'authenticated':
       overlay.classList.add('hidden');
       if (content) content.style.display = 'block';
@@ -185,47 +162,115 @@ function updateAuthOverlay(state, message) {
   }
 }
 
-function updateFloatingUser(user, roles) {
-  const badge = document.getElementById('floatingUser');
-  const nameEl = document.getElementById('floatingUserName');
-  const roleEl = document.getElementById('floatingUserRole');
+// =========================================================================
+// USER MENU — Dynamically created dropdown (replaces static floating badge)
+// =========================================================================
 
-  if (badge && user) {
-    if (nameEl) nameEl.textContent = user.name || user.email || 'User';
-    if (roleEl) roleEl.textContent = roles[0] || 'User';
-    badge.style.display = 'flex';
-  } else if (badge) {
-    badge.style.display = 'none';
+function getInitials(name, email) {
+  if (name && name.trim()) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0][0].toUpperCase();
   }
+  if (email) return email[0].toUpperCase();
+  return 'U';
 }
 
-/**
- * v1.1: Apply body classes so nav.css can gate admin links without setTimeout hacks.
- * nav.css expects body.is-admin for admin-only links.
- */
-function applyRoleClasses(roles) {
-  const r = Array.isArray(roles) ? roles : [];
-  document.body.classList.toggle('is-admin', r.includes('Admin'));
-  document.body.classList.toggle('is-tech', r.includes('Tech'));
-  document.body.classList.toggle('is-customer', r.includes('Customer'));
-}
+function createUserMenu(user, roles) {
+  // Remove legacy floating badge if present
+  const legacy = document.getElementById('floatingUser');
+  if (legacy) legacy.remove();
 
-async function login() {
-  const client = await initAuth();
-  if (!client) return;
+  // Don't double-create
+  if (document.getElementById('userMenu')) return;
 
-  await client.loginWithRedirect({
-    authorizationParams: {
-      redirect_uri: window.location.origin + window.location.pathname + window.location.search
+  const name = user.name || user.email || 'User';
+  const email = user.email || '';
+  const role = roles[0] || 'User';
+  const initials = getInitials(user.name, user.email);
+  const picture = user.picture || '';
+
+  const menu = document.createElement('div');
+  menu.id = 'userMenu';
+  menu.className = 'user-menu';
+  menu.innerHTML = `
+    <button class="user-menu__trigger" id="userMenuTrigger" aria-expanded="false" aria-haspopup="true" title="${name}">
+      ${picture
+        ? `<img class="user-menu__avatar-img" src="${picture}" alt="${initials}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        : ''}
+      <span class="user-menu__avatar-initials" ${picture ? 'style="display:none"' : ''}>${initials}</span>
+    </button>
+    <div class="user-menu__dropdown" id="userMenuDropdown">
+      <div class="user-menu__header">
+        <div class="user-menu__avatar-lg">
+          ${picture
+            ? `<img src="${picture}" alt="${initials}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            : ''}
+          <span ${picture ? 'style="display:none"' : ''}>${initials}</span>
+        </div>
+        <div class="user-menu__identity">
+          <div class="user-menu__name">${name}</div>
+          <div class="user-menu__email">${email}</div>
+        </div>
+      </div>
+      <div class="user-menu__role-badge">${role}</div>
+      <div class="user-menu__divider"></div>
+      <div class="user-menu__theme-slot" id="userMenuThemeSlot">
+        <!-- theme.js will inject theme selector here -->
+      </div>
+      <div class="user-menu__divider" id="userMenuThemeDivider" style="display:none"></div>
+      <button class="user-menu__item" onclick="window.AASAuth.logout()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+        Log out
+      </button>
+    </div>
+  `;
+  document.body.appendChild(menu);
+
+  // Toggle dropdown
+  const trigger = document.getElementById('userMenuTrigger');
+  const dropdown = document.getElementById('userMenuDropdown');
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = menu.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', isOpen);
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target)) {
+      menu.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menu.classList.contains('open')) {
+      menu.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.focus();
     }
   });
 }
 
+// =========================================================================
+
+async function login() {
+  const client = await initAuth();
+  if (client) {
+    await client.loginWithRedirect({
+      authorizationParams: { redirect_uri: window.location.origin + window.location.pathname + window.location.search }
+    });
+  }
+}
+
 async function logout() {
   const client = await initAuth();
-  if (!client) return;
-
-  await client.logout({ logoutParams: { returnTo: window.location.origin } });
+  if (client) {
+    await client.logout({ logoutParams: { returnTo: window.location.origin } });
+  }
 }
 
 async function getUserRoles() {
@@ -234,22 +279,15 @@ async function getUserRoles() {
   try {
     const claims = await client.getIdTokenClaims();
     return claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-/**
- * v1.2: Get access token for authenticated API requests (used by copilot.js)
- */
 async function getToken() {
   const client = await initAuth();
   if (!client) return null;
   try {
-    return await client.getTokenSilently({ authorizationParams: { audience: AUTH_CONFIG.audience } });
-  } catch {
-    return null;
-  }
+    return await client.getTokenSilently();
+  } catch { return null; }
 }
 
 async function handleAuth() {
@@ -267,7 +305,7 @@ async function handleAuth() {
     return;
   }
 
-  // Handle Auth0 redirect callback
+  // Handle callback
   const params = new URLSearchParams(window.location.search);
   if (params.has('code') && params.has('state')) {
     updateAuthOverlay('loading', 'Completing sign in...');
@@ -287,17 +325,19 @@ async function handleAuth() {
     return;
   }
 
-  // Get user + token claims
+  // Get user and roles
   const user = await client.getUser();
   const claims = await client.getIdTokenClaims();
-
   const roles = claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
   const customerId = claims?.[AUTH_CONFIG.namespace + '/customer_id'] || null;
+  const role = roles[0] || '';
 
   console.log('[Auth] User:', user?.email, 'Roles:', roles, 'Customer:', customerId);
 
-  // v1.1: immediately apply role classes for nav.css gating
-  applyRoleClasses(roles);
+  // Add role classes to body (for CSS-based visibility)
+  if (roles.includes('Admin')) document.body.classList.add('is-admin');
+  if (roles.includes('Tech')) document.body.classList.add('is-tech');
+  if (roles.includes('Customer')) document.body.classList.add('is-customer');
 
   // Check page access
   const { allowed, redirect } = checkPageAccess(roles, customerId);
@@ -307,8 +347,8 @@ async function handleAuth() {
     return;
   }
 
-  // Success - show page
-  updateFloatingUser(user, roles);
+  // Success - create user menu and show page
+  createUserMenu(user, roles);
   updateAuthOverlay('authenticated');
 
   // Call page-specific init if defined
