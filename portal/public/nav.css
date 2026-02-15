@@ -221,17 +221,15 @@
 
 /* ================================
    Admin Visibility (No Flash)
+   Targets data-admin-only attribute
+   on nav links AND dashboard cards
    ================================ */
 
-#navDashboard,
-#navCommand,
-#navSummary {
+[data-admin-only] {
   display: none;
 }
 
-body.is-admin #navDashboard,
-body.is-admin #navCommand,
-body.is-admin #navSummary {
+body.is-admin [data-admin-only] {
   display: flex;
 }
 
