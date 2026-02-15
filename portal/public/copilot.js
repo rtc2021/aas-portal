@@ -1,10 +1,17 @@
 /**
- * AAS Copilot UI v1.0
+ * AAS Copilot UI v1.1
  * Self-contained AI assistant panel
  * Auto-injects into page, role-gated for Admin/Tech only
- * 
- * Usage: Just include <script src="/copilot.js"></script> on any page
- * Or add to netlify.toml to auto-load on all pages
+ * Uses --ui-* design tokens from tokens.css (theme-aware)
+ *
+ * v1.1 changes:
+ * - Switched from orphan CSS vars to --ui-* design tokens
+ * - Light/dark theme support via body.light-theme
+ * - Auth headers sent with API requests
+ * - Improved markdown rendering (bold, code, links, images)
+ * - Fixed /mannings/ path in customer portal exclusion
+ *
+ * Injected via Netlify snippet before </body>
  */
 
 (function() {
@@ -18,7 +25,7 @@
   window.__AASCopilotInitialized = true;
 
   // Don't show site-wide copilot on customer portals - they have Compliance Assistant
-  const customerPortalPaths = ['/westbank/', '/manning/', '/umc/', '/portal/'];
+  const customerPortalPaths = ['/westbank/', '/manning/', '/mannings/', '/umc/', '/portal/'];
   const isCustomerPortal = customerPortalPaths.some(path =>
     window.location.pathname.toLowerCase().includes(path.toLowerCase())
   );
@@ -54,12 +61,12 @@
       align-items: center;
       gap: 10px;
       padding: 14px 20px;
-      background: var(--floating-bg, rgba(15, 15, 25, 0.9));
+      background: var(--ui-surface);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border-hover, rgba(0, 212, 255, 0.3));
+      border: 1px solid var(--ui-border-hover);
       border-radius: 50px;
-      color: var(--text-primary, #fff);
+      color: var(--ui-text);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 14px;
       font-weight: 600;
@@ -122,10 +129,10 @@
       z-index: 9995;
       display: flex;
       flex-direction: column;
-      background: var(--nav-bg, rgba(10, 10, 18, 0.95));
+      background: var(--ui-surface);
       backdrop-filter: blur(30px);
       -webkit-backdrop-filter: blur(30px);
-      border-left: 1px solid var(--border-color, rgba(0, 212, 255, 0.2));
+      border-left: 1px solid var(--ui-border-hover);
       box-shadow: -10px 0 50px rgba(0, 0, 0, 0.5);
       transform: translateX(100%);
       transition: transform ${CONFIG.animationDuration} cubic-bezier(0.4, 0, 0.2, 1);
@@ -142,8 +149,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 20px;
-      background: var(--accent-bg, rgba(0, 212, 255, 0.05));
-      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+      background: var(--ui-accent-soft);
+      border-bottom: 1px solid var(--ui-border);
     }
     
     .aas-copilot-title {
@@ -153,7 +160,7 @@
       margin: 0;
       font-size: 18px;
       font-weight: 700;
-      color: var(--text-primary, #fff);
+      color: var(--ui-text);
     }
     
     .aas-copilot-title-icon {
@@ -343,7 +350,7 @@
       align-items: center;
       gap: 8px;
       font-size: 11px;
-      color: var(--text-muted, rgba(255, 255, 255, 0.4));
+      color: var(--ui-text-muted);
     }
     
     .aas-copilot-message-role {
@@ -376,9 +383,9 @@
     }
     
     .aas-copilot-message.assistant .aas-copilot-message-content {
-      background: var(--bg-secondary, rgba(255, 255, 255, 0.05));
-      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-      color: var(--text-primary, rgba(255, 255, 255, 0.9));
+      background: var(--ui-surface);
+      border: 1px solid var(--ui-border);
+      color: var(--ui-text);
       border-bottom-left-radius: 4px;
     }
     
@@ -450,10 +457,10 @@
     .aas-copilot-input {
       flex: 1;
       padding: 14px 18px;
-      background: var(--bg-input, rgba(255, 255, 255, 0.05));
-      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+      background: var(--ui-accent-soft);
+      border: 1px solid var(--ui-border);
       border-radius: 12px;
-      color: var(--text-primary, #fff);
+      color: var(--ui-text);
       font-family: inherit;
       font-size: 16px; /* Prevents iOS zoom on focus */
       outline: none;
@@ -461,12 +468,12 @@
     }
     
     .aas-copilot-input:focus {
-      border-color: var(--accent, rgba(0, 212, 255, 0.5));
-      box-shadow: 0 0 0 3px var(--accent-bg, rgba(0, 212, 255, 0.1));
+      border-color: var(--ui-accent);
+      box-shadow: 0 0 0 3px var(--ui-accent-soft);
     }
     
     .aas-copilot-input::placeholder {
-      color: var(--text-muted, rgba(255, 255, 255, 0.3));
+      color: var(--ui-text-muted);
     }
     
     .aas-copilot-input:disabled {
@@ -851,9 +858,20 @@
         }
         
         // Call API
+        // Get auth token for API request
+        const headers = { 'Content-Type': 'application/json' };
+        if (window.AASAuth?.getToken) {
+          try {
+            const token = await window.AASAuth.getToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+          } catch (e) {
+            console.warn('[Copilot] Could not get auth token:', e.message);
+          }
+        }
+
         const response = await fetch(CONFIG.apiEndpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(request)
         });
         
@@ -912,7 +930,7 @@
           <span class="aas-copilot-message-role">${role === 'user' ? 'You' : 'Copilot'}</span>
           <span>${time}</span>
         </div>
-        <div class="aas-copilot-message-content">${this.escapeHtml(content)}</div>
+        <div class="aas-copilot-message-content">${this.renderMarkdown(content)}</div>
         ${manufacturerBadge}
       `;
       
@@ -948,21 +966,31 @@
       }
     }
 
-    escapeHtml(text) {
+    renderMarkdown(text) {
+      // Escape HTML entities first
       const div = document.createElement('div');
       div.textContent = text;
-      let html = div.innerHTML.replace(/\n/g, '<br>');
+      let html = div.innerHTML;
 
       // Convert markdown images ![alt](url) to inline images FIRST (before link conversion)
-      html = html.replace(/!\[([^\]]*)\]\((https:\/\/drive\.google\.com\/thumbnail\?id=[^)]+)\)/g,
-        '<br><img src="$2" alt="$1" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+      html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
+        '<br><img src="$2" alt="$1" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+
+      // Bold **text**
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+      // Inline code `text`
+      html = html.replace(/`([^`]+)`/g, '<code style="padding: 2px 6px; background: var(--ui-accent-soft); border-radius: 4px; font-size: 0.9em;">$1</code>');
 
       // Convert markdown links [text](url) to clickable HTML links
-      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color: #00d4ff; text-decoration: underline;">$1</a>');
+      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color: var(--ui-accent); text-decoration: underline;">$1</a>');
 
       // Fallback: Convert any remaining raw Google Drive thumbnail URLs to inline images
-      html = html.replace(/(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+&sz=w\d+)/g,
-        '<br><img src="$1" alt="Part image" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+      html = html.replace(/(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+(?:&amp;sz=w\d+)?)/g,
+        '<br><img src="$1" alt="Part image" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+
+      // Newlines to <br>
+      html = html.replace(/\n/g, '<br>');
 
       return html;
     }
