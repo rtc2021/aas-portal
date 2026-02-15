@@ -590,6 +590,12 @@
       .jump-nav { display: none; }
     }
 
+    /* Open Tasks inline Notes/Plan (mobile-safe: stays inside Task cell) */
+    .ot-task-title{ font-weight: 600; color: var(--cp-text); }
+    .ot-task-detail{ margin-top: 6px; display: grid; gap: 6px; }
+    .ot-task-detail .ot-label{ color: var(--cp-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: .62rem; margin-right: 6px; }
+    .ot-task-detail .ot-notes, .ot-task-detail .ot-plan{ color: var(--cp-text-secondary); font-size: .82rem; line-height: 1.35; white-space: pre-wrap; }
+
     /* Open Tasks Status */
     .badge.in-progress { background: var(--cp-accent-bg); color: var(--cp-accent); }
     .badge.return { background: var(--cp-amber-bg); color: var(--cp-amber); }
@@ -1875,7 +1881,8 @@
             createdDate: openTasksData.col(r, 'Created_Date'),
             notes: openTasksData.col(r, 'Notes'),
             link: openTasksData.col(r, 'Link')
-          }))
+          ,
+            instructionPlan: (openTasksData.col(r, 'Instruction Plan') || openTasksData.col(r, 'InstructionPlan') || openTasksData.col(r, 'Instruction_Plan'))}))
           .filter(t => t.taskId);
         console.log('[Portal] Open tasks loaded:', openTasks.length);
 
@@ -2162,7 +2169,7 @@
                 ${unreadBadge}
               </td>
               <td>${escapeHtml(t.doorName)}</td>
-              <td>${escapeHtml(t.taskName)}</td>
+              <td><div class="ot-task-title">${escapeHtml(t.taskName)}</div>${(t.notes || t.instructionPlan) ? `<div class="ot-task-detail">${t.notes ? `<div class="ot-notes"><span class="ot-label">Notes:</span> ${escapeHtml(t.notes)}</div>` : ``}${t.instructionPlan ? `<div class="ot-plan"><span class="ot-label">Plan:</span> ${escapeHtml(t.instructionPlan)}</div>` : ``}</div>` : ``}</td>
               <td><span class="badge ${statusClass}">${escapeHtml(t.status)}</span></td>
               <td>${escapeHtml(t.createdDate)}</td>
               <td>
