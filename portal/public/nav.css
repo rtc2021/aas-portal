@@ -1,77 +1,255 @@
 /* =========================================================
-   AAS GLOBAL NAV SYSTEM
+   AAS GLOBAL NAV SYSTEM v1.2
    Token-Based | Theme-Aware | RBAC-Compatible
-   Matches existing nav HTML structure
    ========================================================= */
 
 /* ================================
-   Floating User Badge
+   User Menu — Avatar + Dropdown
    ================================ */
 
-.floating-user {
+.user-menu {
   position: fixed;
   top: 20px;
   right: 20px;
   z-index: 10000;
+}
 
+/* Trigger — avatar circle */
+.user-menu__trigger {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
-
-  padding: 8px 14px;
-  border-radius: 9999px;
-
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-border);
-  color: var(--ui-text);
-
-  box-shadow: var(--ui-shadow);
-  backdrop-filter: blur(20px);
-}
-
-.floating-user__info { text-align: right; }
-
-.floating-user__name {
-  font-weight: 650;
-  font-size: 13px;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.floating-user__role {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--ui-accent);
-  opacity: 0.9;
-}
-
-.floating-user__logout {
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-
-  width: 34px;
-  height: 34px;
-
-  background: var(--ui-accent-soft);
-  border: 1px solid var(--ui-border);
-  color: var(--ui-text);
-
-  border-radius: 9999px;
-  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--ui-shadow);
   transition: all 0.2s ease;
 }
 
-.floating-user__logout:hover {
-  border-color: var(--ui-border-hover);
+.user-menu__trigger:hover {
+  border-color: var(--ui-accent);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
 }
 
-.floating-user__logout svg {
-  width: 16px;
-  height: 16px;
+.user-menu.open .user-menu__trigger {
+  border-color: var(--ui-accent);
+  box-shadow: 0 0 0 3px var(--ui-accent-soft);
+}
+
+.user-menu__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.user-menu__avatar-initials {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--ui-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Dropdown panel */
+.user-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  box-shadow: var(--ui-shadow);
+  backdrop-filter: blur(20px);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.97);
+  transform-origin: top right;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.user-menu.open .user-menu__dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+/* Header — avatar + name + email */
+.user-menu__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 14px;
+}
+
+.user-menu__avatar-lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--ui-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-menu__avatar-lg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.user-menu__avatar-lg span {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ui-accent);
+}
+
+.user-menu__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.user-menu__name {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ui-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu__email {
+  font-size: 12px;
+  color: var(--ui-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* Role badge */
+.user-menu__role-badge {
+  margin: 0 18px 4px;
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Divider */
+.user-menu__divider {
+  height: 1px;
+  background: var(--ui-border);
+  margin: 8px 0;
+}
+
+/* Theme slot — theme.js injects here */
+.user-menu__theme-slot {
+  padding: 6px 10px;
+}
+
+.user-menu__theme-slot:empty {
+  display: none;
+}
+
+.user-menu__theme-slot:empty + .user-menu__divider {
+  display: none;
+}
+
+/* When theme slot has content, show divider after it */
+.user-menu__theme-slot:not(:empty) + .user-menu__divider {
+  display: block;
+}
+
+/* Theme row inside slot */
+.user-menu__theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.user-menu__theme-row label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ui-text);
+}
+
+.user-menu__theme-row label svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+
+.user-menu__theme-row select {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+}
+
+.user-menu__theme-row select:focus {
+  border-color: var(--ui-accent);
+}
+
+/* Menu items (logout, etc.) */
+.user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 18px;
+  background: none;
+  border: none;
+  color: var(--ui-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.user-menu__item:hover {
+  background: var(--ui-accent-soft);
+  color: var(--ui-text);
+}
+
+.user-menu__item svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  flex-shrink: 0;
 }
 
 /* ================================
@@ -113,7 +291,6 @@
   stroke: currentColor;
 }
 
-/* Match your existing HTML icon swap */
 .nav-toggle.active svg.menu-icon { display: none; }
 .nav-toggle svg.close-icon { display: none; }
 .nav-toggle.active svg.close-icon { display: block; }
@@ -135,7 +312,6 @@
   display: flex;
   flex-direction: column;
 
-  /* IMPORTANT: matches original layout spacing */
   padding: 80px 20px 20px;
 
   background: var(--ui-surface);
@@ -234,20 +410,33 @@ body.is-admin [data-admin-only] {
 }
 
 /* ================================
+   Legacy Floating User — hidden
+   (Pages may still have #floatingUser
+   HTML; auth.js removes it on load)
+   ================================ */
+
+.floating-user {
+  display: none !important;
+}
+
+/* ================================
    Mobile refinements
    ================================ */
 
 @media (max-width: 480px) {
-  .floating-user__name,
-  .floating-user__role {
-    display: none;
-  }
-
-  .floating-user {
-    padding: 6px 8px 6px 10px;
-    gap: 8px;
+  .user-menu {
     top: 16px;
     right: 16px;
+  }
+
+  .user-menu__trigger {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-menu__dropdown {
+    width: calc(100vw - 32px);
+    right: -8px;
   }
 
   .nav-toggle {
