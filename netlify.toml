@@ -1,5 +1,5 @@
 # AAS Portal - Netlify Configuration
-# Includes: Copilot Function + Copilot UI Auto-Injection
+# Includes: Copilot Function + Snippet Injection for shared resources
 
 [build]
   base = "portal"
@@ -19,13 +19,13 @@
 # ============================================================================
 
 [[redirects]]
-  from = "/favicon.svg"
-  to = "/public/favicon.svg"
+  from = "/auth.js"
+  to = "/public/auth.js"
   status = 200
 
 [[redirects]]
-  from = "/auth.js"
-  to = "/public/auth.js"
+  from = "/theme.js"
+  to = "/public/theme.js"
   status = 200
 
 [[redirects]]
@@ -34,8 +34,28 @@
   status = 200
 
 [[redirects]]
-  from = "/theme.js"
-  to = "/public/theme.js"
+  from = "/nav.css"
+  to = "/public/nav.css"
+  status = 200
+
+[[redirects]]
+  from = "/favicon.svg"
+  to = "/public/favicon.svg"
+  status = 200
+
+[[redirects]]
+  from = "/favicon-dark.svg"
+  to = "/public/favicon-dark.svg"
+  status = 200
+
+[[redirects]]
+  from = "/favicon-light.svg"
+  to = "/public/favicon-light.svg"
+  status = 200
+
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/public/favicon.ico"
   status = 200
 
 # ============================================================================
@@ -112,6 +132,7 @@
 # ============================================================================
 # CORS HEADERS FOR API
 # ============================================================================
+# TODO: Lock down Access-Control-Allow-Origin to portal domains
 
 [[headers]]
   for = "/api/*"
@@ -121,10 +142,8 @@
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
 # ============================================================================
-# POST-PROCESSING: AUTO-INJECT COPILOT SCRIPT
+# POST-PROCESSING
 # ============================================================================
-# This injects the copilot.js script into every HTML page automatically
-# The script itself checks for Admin/Tech roles before showing UI
 
 [build.processing]
   skip_processing = false
@@ -132,6 +151,24 @@
 [build.processing.html]
   pretty_urls = false
 
-# Snippet injection - adds theme and copilot to all pages
-# Note: Configure in Netlify UI: Site settings > Build & deploy > Post processing > Snippet injection
-# Add: <script src="/theme.js" defer></script><script src="/copilot.js" defer></script> before </body>
+# ============================================================================
+# SNIPPET INJECTION (Configure in Netlify UI)
+# Site settings > Build & deploy > Post processing > Snippet injection
+#
+# 1. "AAS Global Styles" — before </head>
+#    <link rel="stylesheet" href="/src/styles/tokens.css">
+#    <link rel="stylesheet" href="/nav.css">
+#
+# 2. "Favicon and Theme Color" — before </head>
+#    <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)">
+#    <link rel="icon" type="image/svg+xml" href="/favicon-light.svg" media="(prefers-color-scheme: light)">
+#    <link rel="icon" href="/favicon.ico">
+#    <meta name="theme-color" content="#0b1220">
+#
+# 3. "AAS Auth Loader" — before </body>
+#    <script src="/auth.js" defer></script>
+#
+# 4. "AAS Theme & Copilot" — before </body>
+#    <script src="/theme.js" defer></script>
+#    <script src="/copilot.js" defer></script>
+# ============================================================================
