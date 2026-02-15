@@ -590,6 +590,13 @@
       .jump-nav { display: none; }
     }
 
+
+    /* Open Tasks inline Notes/Plan (mobile-safe: stays inside Task cell) */
+    .ot-task-title{ font-weight: 600; color: var(--cp-text); }
+    .ot-task-detail{ margin-top: 6px; display: grid; gap: 6px; }
+    .ot-task-detail .ot-label{ color: var(--cp-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: .62rem; margin-right: 6px; }
+    .ot-task-detail .ot-notes, .ot-task-detail .ot-plan{ color: var(--cp-text-secondary); font-size: .82rem; line-height: 1.35; white-space: pre-wrap; }
+
     /* Open Tasks Status */
     .badge.in-progress { background: var(--cp-accent-bg); color: var(--cp-accent); }
     .badge.return { background: var(--cp-amber-bg); color: var(--cp-amber); }
@@ -1027,7 +1034,6 @@
       color: var(--cp-accent);
     }
   </style>
-
   <!--
     Netlify snippets inject before </head>:
     - /src/styles/tokens.css, /nav.css
@@ -1435,7 +1441,7 @@
         <p>
           Phone: <a href="tel:+15043364422">(504) 336-4422</a><br>
           Text: <a href="sms:+15048105285">(504) 810-5285</a><br>
-          Email: <a href="/cdn-cgi/l/email-protection#03706671756a6066436276776c6e62776a60626060667070706c6f76776a6c6d2d606c6e"><span class="__cf_email__" data-cfemail="04776176726d6761446571706b6965706d67656767617777776b6871706d6b6a2a676b69">[email&#160;protected]</span></a>
+          Email: <a href="mailto:service@automaticaccesssolution.com">service@automaticaccesssolution.com</a>
         </p>
       </div>
     </div>
@@ -1477,7 +1483,7 @@
     </div>
   </div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     // Ochsner Westbank Customer Portal
     const CUSTOMER_KEY = 'ochsner_westbank';
     const CUSTOMER_LABEL = 'Ochsner Medical Center - Westbank';
@@ -1875,7 +1881,8 @@
             createdDate: openTasksData.col(r, 'Created_Date'),
             notes: openTasksData.col(r, 'Notes'),
             link: openTasksData.col(r, 'Link')
-          }))
+          ,
+            instructionPlan: (openTasksData.col(r, 'Instruction Plan') || openTasksData.col(r, 'InstructionPlan') || openTasksData.col(r, 'Instruction_Plan'))}))
           .filter(t => t.taskId);
         console.log('[Portal] Open tasks loaded:', openTasks.length);
 
@@ -1893,7 +1900,15 @@
             const existingPriority = STATUS_PRIORITY[existingStatus] || 0;
             const newPriority = STATUS_PRIORITY[newStatus] || 0;
             if (newDate > existingDate || (newDate.getTime() === existingDate.getTime() && newPriority > existingPriority)) {
-              lconst openTasksMerged = openTasks.map(t => {
+              latestByTaskId.set(t.taskId, t);
+            }
+          }
+        });
+        openTasks = Array.from(latestByTaskId.values());
+        console.log('[Portal] Open tasks after dedup:', openTasks.length);
+
+        // Transform and merge open tasks into main tasks array
+        const openTasksMerged = openTasks.map(t => {
           let summary = t.notes || t.taskName || '';
           if (!summary || summary.length < 10) {
             summary = t.doorName ? `Service: ${t.doorName}` : 'Scheduled service';
@@ -2154,7 +2169,7 @@
                 ${unreadBadge}
               </td>
               <td>${escapeHtml(t.doorName)}</td>
-              <td>${escapeHtml(t.taskName)}</td>
+              <td><div class="ot-task-title">${escapeHtml(t.taskName)}</div>${(t.notes || t.instructionPlan) ? `<div class="ot-task-detail">${t.notes ? `<div class="ot-notes"><span class="ot-label">Notes:</span> ${escapeHtml(t.notes)}</div>` : ``}${t.instructionPlan ? `<div class="ot-plan"><span class="ot-label">Plan:</span> ${escapeHtml(t.instructionPlan)}</div>` : ``}</div>` : ``}</td>
               <td><span class="badge ${statusClass}">${escapeHtml(t.status)}</span></td>
               <td>${escapeHtml(t.createdDate)}</td>
               <td>
@@ -2699,9 +2714,9 @@ CUSTOMER QUESTION: `;
   </script>
   <!--
     Netlify snippets inject before </body>:
-    /auth.js (defer) — auth overlay, role classes, floating user
-    /theme.js (defer) — dark/light toggle, favicon sync
-    /copilot.js (defer) — AI copilot panel
+    /auth.js (defer) -- auth overlay, role classes, floating user
+    /theme.js (defer) -- dark/light toggle, favicon sync
+    /copilot.js (defer) -- AI copilot panel
   -->
 </body>
 </html>
