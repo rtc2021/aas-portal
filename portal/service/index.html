@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Door Service • Automatic Access Solutions</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+  <!-- Page-specific: fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --bg-primary: #050508;
@@ -323,6 +325,13 @@
       .info-value { text-align: left; }
     }
   </style>
+
+  <!--
+    Netlify snippets inject before </head>:
+    - /src/styles/tokens.css, /nav.css
+    - favicon-dark.svg, favicon-light.svg, favicon.ico
+    - theme-color meta
+  -->
 </head>
 <body>
   <div class="bg-effects"></div>
@@ -547,5 +556,12 @@
     // Load immediately - no auth required
     document.addEventListener('DOMContentLoaded', loadService);
   </script>
+
+  <!--
+    Netlify snippets inject before </body>:
+    /auth.js (defer) — auth overlay, role classes, floating user
+    /theme.js (defer) — dark/light toggle, favicon sync
+    /copilot.js (defer) — AI copilot panel
+  -->
 </body>
 </html>
