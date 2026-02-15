@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manning Portal • AAS</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Page-specific dependencies -->
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -1027,6 +1027,13 @@
       color: var(--cp-accent);
     }
   </style>
+
+  <!--
+    Netlify snippets inject before </head>:
+    - /src/styles/tokens.css, /nav.css
+    - favicon-dark.svg, favicon-light.svg, favicon.ico
+    - theme-color meta
+  -->
 </head>
 <body>
   <div class="bg-effects"></div>
@@ -2698,8 +2705,11 @@ CUSTOMER QUESTION: `;
 
     window.onPageReady = initPage;
   </script>
-  <script src="/auth.js"></script>
-  <script src="/theme.js" defer></script>
-  <script src="/copilot.js" defer></script>
+  <!--
+    Netlify snippets inject before </body>:
+    /auth.js (defer) — auth overlay, role classes, floating user
+    /theme.js (defer) — dark/light toggle, favicon sync
+    /copilot.js (defer) — AI copilot panel
+  -->
 </body>
 </html>
