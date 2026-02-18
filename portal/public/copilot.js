@@ -426,7 +426,7 @@
     .aas-copilot-manufacturer.nabco { color: #a855f7; border-color: rgba(168, 85, 247, 0.3); }
     .aas-copilot-manufacturer.record { color: #ec4899; border-color: rgba(236, 72, 153, 0.3); }
     .aas-copilot-manufacturer.tormax { color: #14b8a6; border-color: rgba(20, 184, 166, 0.3); }
-    .aas-copilot-manufacturer.dormakaba { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
+    .aas-copilot-manufacturer.dorma { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
     
     /* Loading State */
     .aas-copilot-loading {
