@@ -2007,4 +2007,4 @@ function detectManufacturer(text: string): string | undefined {
   return undefined;
 }
 
-export const config: Config = { path: "/api/copilot" };
+export const config: Config = { path: "/api/copilot" }; 
