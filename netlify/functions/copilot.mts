@@ -1,22 +1,26 @@
 import type { Context, Config } from "@netlify/functions";
 import Anthropic from "@anthropic-ai/sdk";
+import { beforeLoop, afterLoop, MemoryContext } from "./memory/integration";
 
 // =============================================================================
-// COPILOT V20 — Retrieval Gateway Architecture
+// COPILOT V21.1 — Accuracy & Isolation Patch
 // =============================================================================
-// Changes from V19:
-// - ALL retrieval goes through DROPLET (single Retrieval Gateway)
-// - Removed: search_field_knowledge, search_playbooks (consolidated)
-// - Removed: Direct Qdrant calls from Netlify
-// - Removed: OPENAI_API_KEY dependency from Netlify
-// - Removed: QDRANT_URL dependency from Netlify  
-// - Added: NFPA 101/105 full system prompt routing
-// - Added: Standardized NFPA response format (all 3 return same JSON schema)
-// - Added: Deterministic pre-routing for NFPA keywords
-// - Added: Tool-call budget (max 2 per iteration, same-tool repeat blocked)
-// - Added: chapter/filter params to NFPA 101/105 tool schemas
-// - Reduced: Iteration limit 5→3 for admin/tech
-// - Tool count: 12 (admin), 11 (tech), 7 (customer)
+// V20 base: ALL retrieval goes through DROPLET (single Retrieval Gateway)
+// V21 upgrade: 3-tier memory (session/door/facility) via Netlify Blobs
+//   - beforeLoop() loads memory + builds prompt injection before Claude call
+//   - afterLoop() saves turns + generates Haiku summary (fire-and-forget)
+//   - Role redaction: admin=all, tech=no billing/political, customer=basic only
+// V21.1 patch (Feb 2026):
+//   - Fix #2: Pass manufacturer/door_type to droplet /search for server-side Qdrant filter
+//   - Fix #3: get_work_orders uses ?assets= fast path when asset_id provided (~50 API calls → 1-10)
+//   - Fix #4: Auto-inject customer filter from JWT in customer portal tool calls (tenant isolation)
+//   - Fix #5: Customer system prompt now has ## Tool Routing (STRICT) section
+//   - Fix #6: detectManufacturer expanded: +record, +tormax, +dormakaba
+// ANSI update (Feb 2026): search_ansi156_10, search_ansi156_19, search_ansi156_38
+// Tool count: 15 (admin), 14 (tech), 11 (customer)
+// Models: Admin/Tech → claude-opus-4-6 | Customer → claude-sonnet-4-5-20250929
+// Droplet endpoints /search-ansi156-{10,19,38} are LIVE (3 Qdrant collections, 357 total points)
+// Dependency: @netlify/blobs ^8.0.0 + ./memory/ (7 files, 811 lines)
 // =============================================================================
 
 const anthropic = new Anthropic({
@@ -128,12 +132,13 @@ function verifyCustomerToken(authHeader: string | null): { valid: boolean; email
 }
 
 // =============================================================================
-// TOOL DEFINITIONS — ADMIN MODE (12 tools)
+// TOOL DEFINITIONS — ADMIN MODE (15 tools)
 // =============================================================================
 // REMOVED: search_field_knowledge (consolidated into search_manuals_rag)
 // REMOVED: search_playbooks (legacy duplicate)
 // REMOVED: Direct Qdrant for parts (now via droplet /search-parts)
 // REMOVED: Direct Qdrant for assets (now via droplet /search-assets)
+// ADDED: search_ansi156_10, search_ansi156_19, search_ansi156_38 (Feb 2026)
 // =============================================================================
 
 const TOOLS: Anthropic.Tool[] = [
@@ -288,6 +293,42 @@ const TOOLS: Anthropic.Tool[] = [
       },
       required: ["query"]
     }
+  },
+  {
+    name: "search_ansi156_10",
+    description: "Search ANSI/BHMA A156.10 (2024) Power Operated Pedestrian Doors. Use for: automatic sliding/swinging door requirements, sensor activation zones, entrapment protection, break-away egress, safety signage, pedestrian door force limits, opening/closing speeds.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query about power operated pedestrian doors" },
+        limit: { type: "number", description: "Number of results (default 5, max 10)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_ansi156_19",
+    description: "Search ANSI/BHMA A156.19 (2019) Power Assist & Low Energy Power Operated Swing Doors. Use for: low energy operators, power assist doors, ADA openers, knowing-act activation, swing door force/speed limits, cycle testing requirements, 300,000 cycle test.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query about power assist or low energy swing doors" },
+        limit: { type: "number", description: "Number of results (default 5, max 10)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_ansi156_38",
+    description: "Search ANSI/BHMA A156.38 (2019) Low Energy Power Operated Sliding & Folding Doors. Use for: low energy sliders, folding door operators, activation requirements, force limits for sliding/folding low energy doors.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query about low energy sliding or folding doors" },
+        limit: { type: "number", description: "Number of results (default 5, max 10)" }
+      },
+      required: ["query"]
+    }
   }
 ];
 
@@ -296,7 +337,7 @@ const TECH_TOOLS: Anthropic.Tool[] = TOOLS.filter(tool =>
   tool.name !== 'get_technicians'
 );
 
-// Customer tools - NFPA codes, door info, manuals (for AI reference only)
+// Customer tools - NFPA codes, ANSI standards, door info, manuals, assets (11 tools)
 const CUSTOMER_TOOLS: Anthropic.Tool[] = [
   {
     name: "search_nfpa80",
@@ -333,6 +374,42 @@ const CUSTOMER_TOOLS: Anthropic.Tool[] = [
       properties: {
         query: { type: "string", description: "Search query for NFPA 105 Smoke Door Assemblies" },
         chapter: { type: "string", description: "Filter by chapter: 4=General, 5=Installation/Testing/Maintenance" },
+        limit: { type: "number", description: "Number of results (default 5)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_ansi156_10",
+    description: "Search ANSI/BHMA A156.10 (2024) standard for power operated pedestrian door requirements including safety, sensors, entrapment protection, and signage.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Compliance question or topic about automatic doors" },
+        limit: { type: "number", description: "Number of results (default 5)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_ansi156_19",
+    description: "Search ANSI/BHMA A156.19 (2019) standard for power assist and low energy swing door requirements including ADA openers, force limits, and activation.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Compliance question about low energy or power assist swing doors" },
+        limit: { type: "number", description: "Number of results (default 5)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "search_ansi156_38",
+    description: "Search ANSI/BHMA A156.38 (2019) standard for low energy power operated sliding and folding door requirements.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Compliance question about low energy sliding or folding doors" },
         limit: { type: "number", description: "Number of results (default 5)" }
       },
       required: ["query"]
@@ -376,6 +453,18 @@ const CUSTOMER_TOOLS: Anthropic.Tool[] = [
     }
   },
   {
+    name: "search_assets",
+    description: "Search asset/door locations by name, ID, customer, or address. Use when customer asks 'where is door X' or 'what doors at location Y'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Asset ID, door name, location, customer name, or address" },
+        customer: { type: "string", description: "Filter by customer/parent name" }
+      },
+      required: ["query"]
+    }
+  },
+  {
     name: "get_service_history",
     description: "Get service history for a specific door showing completed work, dates, and technician notes. Use the asset ID from door data or portal context.",
     input_schema: {
@@ -409,7 +498,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           const response = await fetch(`${DROPLET_URL}/search`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query, top_k: limit })
+            body: JSON.stringify({
+              query,
+              top_k: limit,
+              ...(manufacturer && { manufacturer }),
+              ...(doorType && { door_type: doorType })
+            })
           });
 
           if (!response.ok) {
@@ -611,6 +705,59 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           });
         } catch (error) {
           return JSON.stringify({ error: "Failed to search NFPA 105", details: error instanceof Error ? error.message : "Unknown error" });
+        }
+      }
+
+      // ====== ANSI/BHMA STANDARDS (A156.10, A156.19, A156.38) ======
+
+      case "search_ansi156_10":
+      case "search_ansi156_19":
+      case "search_ansi156_38": {
+        const query = input.query as string;
+        const limit = Math.min((input.limit as number) || 5, 10);
+
+        const endpointMap: Record<string, { url: string; standard: string; edition: number; title: string }> = {
+          search_ansi156_10: { url: "/search-ansi156-10", standard: "ANSI/BHMA A156.10", edition: 2024, title: "Power Operated Pedestrian Doors" },
+          search_ansi156_19: { url: "/search-ansi156-19", standard: "ANSI/BHMA A156.19", edition: 2019, title: "Power Assist & Low Energy Swing Doors" },
+          search_ansi156_38: { url: "/search-ansi156-38", standard: "ANSI/BHMA A156.38", edition: 2019, title: "Low Energy Sliding & Folding Doors" },
+        };
+
+        const ep = endpointMap[name];
+
+        try {
+          const response = await fetch(`${DROPLET_URL}${ep.url}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, limit })
+          });
+
+          if (!response.ok) {
+            return JSON.stringify({ error: `${ep.standard} search unavailable`, status: response.status });
+          }
+
+          const data = await response.json();
+
+          if (!data.results || data.results.length === 0) {
+            return JSON.stringify({
+              standard: ep.standard, edition: ep.edition, query, results: [],
+              message: `No relevant ${ep.standard} ${ep.title} sections found.`
+            });
+          }
+
+          return JSON.stringify({
+            standard: ep.standard,
+            edition: ep.edition,
+            query,
+            results: data.results.map((r: any) => ({
+              section: r.section || r.chapter || "N/A",
+              chapter: r.chapter || null,
+              title: r.title || r.section_title || null,
+              score: r.score ? parseFloat((r.score).toFixed(3)) : null,
+              text: r.text || "",
+            }))
+          });
+        } catch (error) {
+          return JSON.stringify({ error: `Failed to search ${ep.standard}`, details: error instanceof Error ? error.message : "Unknown error" });
         }
       }
 
@@ -831,40 +978,62 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         
         const COMPLETED_STATUS_IDS = [2, 3100];
         const OPEN_STATUS_IDS = [0, 1, 2969];
-        
-        const findLastPage = async (): Promise<number> => {
-          let low = 1, high = 100, lastPage = 1;
-          while (low <= high) {
-            const mid = Math.floor((low + high) / 2);
-            const resp = await fetch(`${LIMBLE_BASE_URL}/tasks?page=${mid}&limit=100`, { 
-              headers: { Authorization: getLimbleAuth() } 
-            });
-            if (!resp.ok) break;
+
+        let allTasks: any[] = [];
+        let maxPage = 0;
+
+        if (assetId && !userId) {
+          // FAST PATH: server-side filter via ?assets= (1-10 calls vs ~50)
+          let page = 1;
+          const maxPages = 10;
+          while (page <= maxPages) {
+            const url = `${LIMBLE_BASE_URL}/tasks?assets=${assetId}&limit=100&page=${page}`;
+            const resp = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
+            if (!resp.ok) {
+              if (page === 1) return JSON.stringify({ error: "Failed to fetch work orders for asset" });
+              break;
+            }
             const data = await resp.json();
             const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
-            if (tasks.length > 0) {
-              lastPage = mid;
-              low = mid + 1;
-            } else {
-              high = mid - 1;
-            }
+            if (tasks.length === 0) break;
+            allTasks = allTasks.concat(tasks);
+            if (tasks.length < 100) break;
+            page++;
           }
-          return lastPage;
-        };
-        
-        const maxPage = await findLastPage();
-        
-        let allTasks: any[] = [];
-        const pagesToFetch = Math.min(maxPage, 50);
-        
-        for (let page = maxPage; page >= Math.max(1, maxPage - pagesToFetch + 1); page--) {
-          const url = `${LIMBLE_BASE_URL}/tasks?page=${page}&limit=100`;
-          const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
-          if (!response.ok) continue;
-          
-          const data = await response.json();
-          const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
-          allTasks = allTasks.concat(tasks);
+          maxPage = page;
+        } else {
+          // FULL SCAN: no asset filter — need all tasks for dashboard/date queries
+          const findLastPage = async (): Promise<number> => {
+            let low = 1, high = 100, lastPage = 1;
+            while (low <= high) {
+              const mid = Math.floor((low + high) / 2);
+              const resp = await fetch(`${LIMBLE_BASE_URL}/tasks?page=${mid}&limit=100`, {
+                headers: { Authorization: getLimbleAuth() }
+              });
+              if (!resp.ok) break;
+              const data = await resp.json();
+              const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
+              if (tasks.length > 0) {
+                lastPage = mid;
+                low = mid + 1;
+              } else {
+                high = mid - 1;
+              }
+            }
+            return lastPage;
+          };
+
+          maxPage = await findLastPage();
+          const pagesToFetch = Math.min(maxPage, 50);
+
+          for (let page = maxPage; page >= Math.max(1, maxPage - pagesToFetch + 1); page--) {
+            const url = `${LIMBLE_BASE_URL}/tasks?page=${page}&limit=100`;
+            const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
+            if (!response.ok) continue;
+            const data = await response.json();
+            const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
+            allTasks = allTasks.concat(tasks);
+          }
         }
         
         allTasks.sort((a: any, b: any) => {
@@ -1002,33 +1171,57 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const assetId = input.asset_id as string;
         const days = (input.days as number) || 365;
         const startDateUnix = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
-        
-        const url = `${LIMBLE_BASE_URL}/tasks`;
-        const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
-        if (!response.ok) return JSON.stringify({ error: "Failed to fetch service history" });
-        
-        const allTasks = await response.json();
-        let tasks = Array.isArray(allTasks) ? allTasks : (allTasks.data || allTasks.tasks || []);
-        
-        const filtered = tasks.filter((t: any) => {
-          if (String(t.assetID) !== assetId) return false;
+
+        // Limble v2: ?assets= is server-side filter (from asset meta.tasks)
+        // Some assetIDs are building locations (parent assets) with 500+ tasks
+        let allTasks: any[] = [];
+        let page = 1;
+        const maxPages = 10; // Safety cap: 1,000 tasks max per lookup
+
+        while (page <= maxPages) {
+          const url = `${LIMBLE_BASE_URL}/tasks?assets=${assetId}&limit=100&page=${page}`;
+          const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
+          if (!response.ok) {
+            if (page === 1) return JSON.stringify({ error: "Failed to fetch service history" });
+            break;
+          }
+
+          const data = await response.json();
+          const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
+          if (tasks.length === 0) break;
+
+          allTasks = allTasks.concat(tasks);
+          if (tasks.length < 100) break; // Last page
+          page++;
+        }
+
+        // Filter to completed tasks within date range
+        const filtered = allTasks.filter((t: any) => {
           if (!t.dateCompleted || t.dateCompleted === 0) return false;
           return t.dateCompleted >= startDateUnix;
         });
-        
+
+        // Sort newest first
+        filtered.sort((a: any, b: any) => (b.dateCompleted || 0) - (a.dateCompleted || 0));
+
         const formatDate = (unix: number) => {
           if (!unix || unix === 0) return null;
-          return new Date(unix * 1000).toLocaleDateString('en-US', { 
+          return new Date(unix * 1000).toLocaleDateString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago'
           });
         };
-        
+
         const summary = filtered.slice(0, 30).map((t: any) => ({
           taskID: t.taskID, name: t.name, dateCompleted: formatDate(t.dateCompleted),
           completedByUser: t.completedByUser, completionNotes: t.completionNotes
         }));
-        
-        return JSON.stringify({ assetID: assetId, daysSearched: days, count: filtered.length, history: summary });
+
+        return JSON.stringify({
+          assetID: assetId, daysSearched: days,
+          totalTasksForAsset: allTasks.length, pagesSearched: page - 1,
+          completedInRange: filtered.length, showing: summary.length,
+          history: summary
+        });
       }
 
       case "get_technicians": {
@@ -1106,6 +1299,11 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - **NFPA 101 / life safety / egress / corridor / exit / travel distance / occupancy / means of egress** → search_nfpa101
 - **NFPA 105 / smoke door / smoke barrier / smoke compartment / horizontal exit / smoke damper** → search_nfpa105
 - **"Smoke door vs fire door" / "what type of door"** → search_nfpa80 AND search_nfpa105 (compare both)
+- **ANSI A156.10 / automatic door standard / sensor activation / entrapment / power operated pedestrian door** → search_ansi156_10
+- **ANSI A156.19 / power assist / low energy swing / ADA opener / knowing act activation** → search_ansi156_19
+- **ANSI A156.38 / low energy slider / low energy folding door** → search_ansi156_38
+- **"What does ANSI say" / "BHMA standard" / "door operator standard"** → pick the right A156 standard based on door type (sliding=A156.10 or A156.38, swing=A156.19)
+- **AAADM certification questions / inspector test prep** → search relevant ANSI A156 standard(s)
 
 ## PARTS SEARCH TRIGGERS (USE search_parts FOR THESE)
 Always use search_parts when user mentions:
@@ -1232,6 +1430,35 @@ Smoke doors, smoke barriers, smoke compartments, horizontal exits, smoke dampers
 4. Cross-reference NFPA 80 when fire/smoke ratings overlap
 5. For hospitals: note Joint Commission expects both standards compliance on smoke barrier doors
 
+## ANSI/BHMA A156.10 (2024) — POWER OPERATED PEDESTRIAN DOORS
+**Use search_ansi156_10 when query involves:**
+Automatic sliding doors, automatic swinging doors (full energy), sensor activation zones, entrapment protection, break-away force for egress, safety signage requirements, opening/closing speed limits, kinetic energy limits, guide rail requirements, emergency egress.
+
+**Response format:**
+1. Cite specific section: "Per ANSI/BHMA A156.10 §X.X..."
+2. Quote the requirement text
+3. Note that A156.10 covers FULL ENERGY (higher speed/force) operators
+4. If question is about LOW ENERGY doors, redirect to A156.19 (swing) or A156.38 (slide/fold)
+
+## ANSI/BHMA A156.19 (2019) — POWER ASSIST & LOW ENERGY SWING DOORS
+**Use search_ansi156_19 when query involves:**
+Power assist swing doors, low energy swing operators, ADA door openers, knowing-act activation (push button, push plate), swing door force limits, 300,000 cycle test, closing speed for low energy swing.
+
+**Response format:**
+1. Cite specific section: "Per ANSI/BHMA A156.19 §X.X..."
+2. Quote the requirement text
+3. Clarify: A156.19 = swing doors only. For sliding/folding low energy → A156.38
+4. Note: "knowing act" means user must intentionally activate (button press, etc.)
+
+## ANSI/BHMA A156.38 (2019) — LOW ENERGY SLIDING & FOLDING DOORS
+**Use search_ansi156_38 when query involves:**
+Low energy sliding doors, low energy folding doors, low energy bi-fold, activation requirements for low energy sliders, force limits for low energy sliding/folding.
+
+**Response format:**
+1. Cite specific section: "Per ANSI/BHMA A156.38 §X.X..."
+2. Quote the requirement text
+3. Clarify: A156.38 = sliding/folding only. For swing low energy → A156.19. For full energy → A156.10
+
 ## YOUR TOOLS
 1. **search_manuals_rag** - Door Guru V3 API (29,111 chunks). Returns manufacturer manual excerpts AND AAS field playbooks in one call.
 2. **search_manuals** - Search for PDF links by manufacturer, controller, door type
@@ -1245,6 +1472,9 @@ Smoke doors, smoke barriers, smoke compartments, horizontal exits, smoke dampers
 10. **search_nfpa80** - NFPA 80 (2019) fire door compliance. 404 clauses.
 11. **search_nfpa101** - NFPA 101 (2018) Life Safety Code. 5,842 clauses. Egress, corridors, occupancy.
 12. **search_nfpa105** - NFPA 105 (2019) Smoke Door Assemblies. 236 clauses. Smoke barriers, compartments.
+13. **search_ansi156_10** - ANSI/BHMA A156.10 (2024) Power Operated Pedestrian Doors. 259 sections. Sensors, entrapment, egress.
+14. **search_ansi156_19** - ANSI/BHMA A156.19 (2019) Power Assist & Low Energy Swing Doors. 50 sections. ADA openers, force limits.
+15. **search_ansi156_38** - ANSI/BHMA A156.38 (2019) Low Energy Sliding & Folding Doors. 48 sections. Low energy sliders, activation.
 
 ## search_manuals_rag V3 RESPONSE FORMAT
 This tool returns TWO result types:
@@ -1263,7 +1493,11 @@ This tool returns TWO result types:
 - **NFPA 80 standard** = authority for fire door compliance/inspection requirements
 - **NFPA 101 standard** = authority for egress, corridor, occupancy requirements
 - **NFPA 105 standard** = authority for smoke door/smoke barrier requirements
+- **ANSI/BHMA A156.10** = authority for power operated pedestrian door safety/performance
+- **ANSI/BHMA A156.19** = authority for power assist and low energy swing door safety/performance
+- **ANSI/BHMA A156.38** = authority for low energy sliding and folding door safety/performance
 - When standards overlap (e.g., fire-rated smoke door), cite BOTH applicable standards
+- When ANSI and NFPA overlap (e.g., automatic door in egress path), cite BOTH
 - **Manufacturer manuals** = authority for wiring/specs/pinouts
 - **Field knowledge** = practical experience and best practices
 
@@ -1328,6 +1562,23 @@ You have access to search these NFPA codes:
   - Differences between smoke doors and fire doors
   - Smoke door hardware requirements
 
+You also have access to ANSI/BHMA automatic door standards:
+- **ANSI/BHMA A156.10** (2024) - Power Operated Pedestrian Doors
+  - Automatic sliding and swinging door safety requirements
+  - Sensor activation zones, entrapment protection
+  - Break-away egress, opening/closing speeds
+  - Safety signage requirements
+
+- **ANSI/BHMA A156.19** (2019) - Power Assist & Low Energy Swing Doors
+  - ADA door openers, power assist requirements
+  - Low energy swing door force and speed limits
+  - Knowing-act activation requirements
+
+- **ANSI/BHMA A156.38** (2019) - Low Energy Sliding & Folding Doors
+  - Low energy sliding door requirements
+  - Low energy folding door requirements
+  - Activation and force limits
+
 ## Context Available
 
 The customer's portal data is included at the start of their messages, showing:
@@ -1337,16 +1588,32 @@ The customer's portal data is included at the start of their messages, showing:
 
 ## How to Help Customers
 
-1. **Answer compliance questions** by searching the relevant NFPA code(s)
-2. **Cite specific sections** when possible (e.g., "According to NFPA 80, Section 5.2.1...")
+1. **Answer compliance questions** by searching the relevant NFPA code(s) or ANSI standard(s)
+2. **Cite specific sections** when possible (e.g., "According to NFPA 80, Section 5.2.1..." or "Per ANSI A156.10 §4.3...")
 3. **Explain in plain language** what requirements mean for their facility
 4. **Help interpret inspection findings** - what failed and why it matters
 5. **Clarify the difference** between fire doors (NFPA 80) and smoke doors (NFPA 105)
-6. **Look up service history** for specific doors when customers ask about past work, repairs, or recurring issues. Use the asset ID from the portal context data.
+6. **Explain automatic door standards** - which ANSI standard applies to their door type
+7. **Look up service history** for specific doors when customers ask about past work, repairs, or recurring issues. Use the asset ID from the portal context data.
+
+## Tool Routing (STRICT)
+- **Fire door compliance / inspection / gap / label / self-closing** → search_nfpa80
+- **Egress / exit / corridor / occupancy / travel distance** → search_nfpa101
+- **Smoke door / smoke barrier / smoke compartment** → search_nfpa105
+- **"Smoke door vs fire door"** → search_nfpa80 AND search_nfpa105
+- **Automatic sliding door standard / sensor / entrapment** → search_ansi156_10
+- **ADA opener / low energy swing / power assist** → search_ansi156_19
+- **Low energy slider / folding door** → search_ansi156_38
+- **"What doors do I have?" / door list / door locations** → search_assets
+- **Door status / details / manufacturer / model** → get_door_info
+- **Past work / service history / repairs / recurring issues** → get_service_history
+- **"Why is my door doing X?" / troubleshooting explanation** → search_manuals_rag (explain simply, no repair steps)
+- **Door search by area or manufacturer** → search_doors
+- Maximum 2 tool calls per response. Pick the RIGHT tool first.
 
 ## Important Guidelines
 
-- Always search NFPA codes before answering technical compliance questions
+- Always search NFPA codes or ANSI standards before answering technical compliance questions
 - Be helpful and educational - customers want to understand their compliance status
 - If you're unsure, say so and recommend they contact AAS for clarification
 - Reference the specific data provided (door IDs, task numbers, etc.)
@@ -1451,14 +1718,29 @@ export default async function handler(req: Request, context: Context): Promise<R
         );
       }
 
+      // ========== MEMORY LAYER (CUSTOMER) ==========
+      let custMemCtx: MemoryContext | null = null;
+      try {
+        custMemCtx = await beforeLoop({
+          role: "customer",
+          customer: requestedCustomer || tokenCustomerId || "unknown",
+          facility: body.doorContext?.location,
+          doorId: body.doorId,
+          userMessage: body.messages[body.messages.length - 1]?.content || "",
+        });
+      } catch (err) {
+        console.error("[Memory] Customer beforeLoop failed:", err);
+      }
+      // ========== END MEMORY LAYER ==========
+
       const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
         role: m.role, content: m.content,
       }));
 
       let response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 1024,
-        system: CUSTOMER_SYSTEM_PROMPT,
+        system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
         tools: CUSTOMER_TOOLS,
         tool_choice: { type: "auto" },
         messages,
@@ -1478,7 +1760,17 @@ export default async function handler(req: Request, context: Context): Promise<R
         const toolResults: Anthropic.ToolResultBlockParam[] = [];
         for (const toolUse of toolUseBlocks) {
           customerToolsCalled.add(toolUse.name);
-          const result = await executeTool(toolUse.name, toolUse.input as Record<string, unknown>);
+          const toolInput = toolUse.input as Record<string, unknown>;
+
+          // Auto-inject customer scope for tenant isolation
+          const customerName = requestedCustomer || tokenCustomerId;
+          if (customerName && ['search_assets', 'search_doors'].includes(toolUse.name)) {
+            if (!toolInput.customer) {
+              toolInput.customer = customerName;
+            }
+          }
+
+          const result = await executeTool(toolUse.name, toolInput);
           toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result });
         }
 
@@ -1486,9 +1778,9 @@ export default async function handler(req: Request, context: Context): Promise<R
         messages.push({ role: "user", content: toolResults });
 
         response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 1024,
-          system: CUSTOMER_SYSTEM_PROMPT,
+          system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
           tools: CUSTOMER_TOOLS,
           messages,
         });
@@ -1499,9 +1791,9 @@ export default async function handler(req: Request, context: Context): Promise<R
         messages.push({ role: "assistant", content: response.content });
         messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")?.id || "budget_limit", content: "Tool budget reached. Summarize your findings with the information you already have." }] });
         response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 1024,
-          system: CUSTOMER_SYSTEM_PROMPT,
+          system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
           messages,
         });
       }
@@ -1510,6 +1802,16 @@ export default async function handler(req: Request, context: Context): Promise<R
         (block): block is Anthropic.TextBlock => block.type === "text"
       );
       const responseText = textBlocks.map((b) => b.text).join("\n");
+
+      // ========== SAVE MEMORY (CUSTOMER) ==========
+      if (custMemCtx) {
+        afterLoop(custMemCtx, {
+          responseText,
+          toolsCalled: Array.from(customerToolsCalled),
+          anthropic,
+        }).catch(err => console.error("[Memory] Customer afterLoop failed:", err));
+      }
+      // ========== END SAVE MEMORY ==========
 
       return new Response(
         JSON.stringify({ response: responseText }),
@@ -1543,12 +1845,31 @@ IMPORTANT RESTRICTIONS:
 - Focus on technical support: manuals, parts lookup, troubleshooting`;
     }
 
+    // ========== MEMORY LAYER (ADMIN/TECH) ==========
+    const memUserMsg = body.messages[body.messages.length - 1]?.content || "";
+    let memCtx: MemoryContext | null = null;
+    try {
+      memCtx = await beforeLoop({
+        role: isAdmin ? "admin" : "tech",
+        customer: body.doorContext?.customer || body.customer || "aas",
+        facility: body.doorContext?.location,
+        doorId: body.doorId,
+        userMessage: memUserMsg,
+      });
+      if (memCtx.promptBlock) {
+        systemPrompt += memCtx.promptBlock;
+      }
+    } catch (err) {
+      console.error("[Memory] beforeLoop failed (non-fatal):", err);
+    }
+    // ========== END MEMORY LAYER ==========
+
     const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
       role: m.role, content: m.content,
     }));
 
     let response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-opus-4-6",
       max_tokens: 2048,
       system: systemPrompt,
       tools: availableTools,
@@ -1560,7 +1881,7 @@ IMPORTANT RESTRICTIONS:
     let toolsUsed = false;
     const toolCalls: { name: string; input: any; result: string }[] = [];
     const toolsCalledThisRequest: Set<string> = new Set();
-    
+
     // Tool-call budget: max 3 iterations, hard cap at 2 tool calls
     while (response.stop_reason === "tool_use" && iterations < 3) {
       // Hard enforcement: stop after 2 tool calls
@@ -1578,10 +1899,10 @@ IMPORTANT RESTRICTIONS:
       for (const toolUse of toolUseBlocks) {
         // Track which tools have been called
         toolsCalledThisRequest.add(toolUse.name);
-        
+
         const result = await executeTool(toolUse.name, toolUse.input as Record<string, unknown>);
         toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result });
-        
+
         toolCalls.push({
           name: toolUse.name,
           input: toolUse.input,
@@ -1594,7 +1915,7 @@ IMPORTANT RESTRICTIONS:
 
       try {
         response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-opus-4-6",
           max_tokens: 2048,
           system: systemPrompt,
           tools: availableTools,
@@ -1619,7 +1940,7 @@ IMPORTANT RESTRICTIONS:
       messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")?.id || "budget_limit", content: "Tool budget reached. Summarize your findings with the information you already have." }] });
       try {
         response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-opus-4-6",
           max_tokens: 2048,
           system: systemPrompt,
           messages,
@@ -1639,6 +1960,16 @@ IMPORTANT RESTRICTIONS:
 
     const latestUserMsg = body.messages.filter((m) => m.role === "user").pop()?.content || "";
     const manufacturer = detectManufacturer(latestUserMsg + " " + responseText) || body.doorContext?.manufacturer;
+
+    // ========== SAVE MEMORY (ADMIN/TECH) ==========
+    if (memCtx) {
+      afterLoop(memCtx, {
+        responseText,
+        toolsCalled: Array.from(toolsCalledThisRequest),
+        anthropic,
+      }).catch(err => console.error("[Memory] afterLoop failed:", err));
+    }
+    // ========== END SAVE MEMORY ==========
 
     return new Response(
       JSON.stringify({
@@ -1664,6 +1995,9 @@ function detectManufacturer(text: string): string | undefined {
   if (/p\d{2}|double-click set|toggle switch|c3150|c4190|horton|series 2000/.test(lower)) return "horton";
   if (/handy terminal|u30|opus|nabco|gyro|gt[- ]?\d{3,4}/.test(lower)) return "nabco";
   if (/sl500|sw200|unislide|swingmaster|besam|assa abloy/.test(lower)) return "besam";
+  if (/record|fpc902|k-swing|8100/.test(lower)) return "record";
+  if (/tormax|ict|tx9[0-9]|uni-turn/.test(lower)) return "tormax";
+  if (/dormakaba|dorma|kaba|ed100|ed200|es200|esa\d{3}/.test(lower)) return "dormakaba";
   return undefined;
 }
 
