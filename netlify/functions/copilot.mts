@@ -247,6 +247,8 @@ const TOOLS: Anthropic.Tool[] = [
         query: { type: "string", description: "Natural language search - describe what you're looking for" },
         manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax" },
         door_type: { type: "string", description: "Filter by door type: slide, swing, folding, icu, fire, revolving" },
+        doc_type: { type: "string", description: "Filter by document type: installation, service, programming, wiring, parts, troubleshooting" },
+        component: { type: "string", description: "Filter by component: motor, controller, sensor, belt, carrier, track, gearbox" },
         limit: { type: "number", description: "Number of results (default 5, max 10)" }
       },
       required: ["query"]
@@ -491,6 +493,8 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       case "search_manuals_rag": {
         const query = input.query as string;
         const manufacturer = input.manufacturer as string | undefined;
+        const docType = input.doc_type as string | undefined;
+        const component = input.component as string | undefined;
         const doorType = input.door_type as string | undefined;
         const limit = Math.min((input.limit as number) || 5, 10);
 
@@ -502,7 +506,9 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
               query,
               top_k: limit,
               ...(manufacturer && { manufacturer }),
-              ...(doorType && { door_type: doorType })
+              ...(doorType && { door_type: doorType }),
+              ...(docType && { doc_type: docType }),
+              ...(component && { component })
             })
           });
 
