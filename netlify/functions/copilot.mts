@@ -1,6 +1,32 @@
 import type { Context, Config } from "@netlify/functions";
 import Anthropic from "@anthropic-ai/sdk";
-import { beforeLoop, afterLoop, MemoryContext } from "./memory/integration";
+
+// Memory layer stubs — V21 memory integration (no-op until Blobs wired)
+interface MemoryContext {
+  role: string;
+  customer?: string;
+  facility?: string;
+  doorId?: string;
+  userMessage?: string;
+  promptBlock?: string;
+}
+
+async function beforeLoop(ctx: {
+  role: string;
+  customer?: string;
+  facility?: string;
+  doorId?: string;
+  userMessage?: string;
+}): Promise<MemoryContext | null> {
+  return null;
+}
+
+async function afterLoop(
+  memCtx: MemoryContext,
+  result: { responseText: string; toolsCalled: string[]; anthropic: Anthropic }
+): Promise<void> {
+  return;
+}
 
 // =============================================================================
 // COPILOT V21.1 — Accuracy & Isolation Patch
