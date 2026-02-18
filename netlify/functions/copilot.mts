@@ -2027,9 +2027,9 @@ function detectManufacturer(text: string): string | undefined {
   if (/p\d{2}|double-click set|toggle switch|c3150|c4190|horton|series 2000/.test(lower)) return "horton";
   if (/handy terminal|u30|opus|nabco|gyro|gt[- ]?\d{3,4}/.test(lower)) return "nabco";
   if (/sl500|sw200|unislide|swingmaster|besam|assa abloy/.test(lower)) return "besam";
+  if (/dormakaba|dorma\b|kaba|ed100|ed200|es200|esa\d{3}/.test(lower)) return "dormakaba";
   if (/record|fpc902|k-swing|8100/.test(lower)) return "record";
   if (/tormax|ict|tx9[0-9]|uni-turn/.test(lower)) return "tormax";
-  if (/dormakaba|dorma|kaba|ed100|ed200|es200|esa\d{3}/.test(lower)) return "dormakaba";
   return undefined;
 }
 
