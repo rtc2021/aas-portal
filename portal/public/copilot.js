@@ -1,8 +1,23 @@
 /**
- * AAS Copilot UI v1.1
+ * AAS Copilot UI v1.3
  * Self-contained AI assistant panel
  * Auto-injects into page, role-gated for Admin/Tech only
  * Uses --ui-* design tokens from tokens.css (theme-aware)
+ *
+ * v1.3 changes:
+ * - Manufacturer badge colors for Record, Tormax, Dormakaba (backend V21.1 alignment)
+ * - Enriched detectContext(): reads Door Browser & Parts Finder filter dropdowns
+ * - Markdown: numbered lists, bullet lists, headers (##/###)
+ * - Tool names footer on assistant messages ("Used: search_nfpa80, get_door_info")
+ * - Token usage footer for admin ("↑432 ↓186 tokens")
+ * - Retry button on error messages
+ * - History truncation: caps at 20 messages before API call
+ * - Input maxlength 2000 with counter
+ * - Raw URL detection → clickable links
+ *
+ * v1.2 changes:
+ * - Rotating thinking status messages while waiting for response
+ * - Smooth fade transition between status messages
  *
  * v1.1 changes:
  * - Switched from orphan CSS vars to --ui-* design tokens
@@ -409,6 +424,9 @@
     .aas-copilot-manufacturer.horton { color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
     .aas-copilot-manufacturer.besam { color: #00d4ff; border-color: rgba(0, 212, 255, 0.3); }
     .aas-copilot-manufacturer.nabco { color: #a855f7; border-color: rgba(168, 85, 247, 0.3); }
+    .aas-copilot-manufacturer.record { color: #ec4899; border-color: rgba(236, 72, 153, 0.3); }
+    .aas-copilot-manufacturer.tormax { color: #14b8a6; border-color: rgba(20, 184, 166, 0.3); }
+    .aas-copilot-manufacturer.dormakaba { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
     
     /* Loading State */
     .aas-copilot-loading {
@@ -440,11 +458,71 @@
     .aas-copilot-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
     .aas-copilot-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
     
+    .aas-copilot-loading-text {
+      transition: opacity 0.15s ease;
+    }
+    
     @keyframes loading-dot {
       0%, 100% { opacity: 0.3; transform: scale(0.8); }
       50% { opacity: 1; transform: scale(1); }
     }
     
+    /* Tool/Usage Footer */
+    .aas-copilot-message-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--ui-text-muted);
+    }
+
+    .aas-copilot-tools-used {
+      padding: 2px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+    }
+
+    .aas-copilot-token-usage {
+      padding: 2px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      margin-left: auto;
+    }
+
+    .aas-copilot-retry {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 6px 14px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      color: #ef4444;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .aas-copilot-retry:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .aas-copilot-char-counter {
+      position: absolute;
+      bottom: 4px;
+      right: 60px;
+      font-size: 10px;
+      color: var(--ui-text-muted);
+      pointer-events: none;
+    }
+
+    .aas-copilot-char-counter.warn {
+      color: #f59e0b;
+    }
+
     /* Input Form */
     .aas-copilot-form {
       display: flex;
@@ -636,14 +714,16 @@
           </div>
         </div>
         
-        <form class="aas-copilot-form" id="aasCopilotForm">
-          <input 
-            type="text" 
-            class="aas-copilot-input" 
+        <form class="aas-copilot-form" id="aasCopilotForm" style="position:relative;">
+          <input
+            type="text"
+            class="aas-copilot-input"
             id="aasCopilotInput"
             placeholder="Ask about a door issue, part, or procedure..."
             autocomplete="off"
+            maxlength="2000"
           >
+          <span class="aas-copilot-char-counter" id="aasCopilotCharCounter"></span>
           <button type="submit" class="aas-copilot-submit" id="aasCopilotSubmit" aria-label="Send">
             ${ICONS.send}
           </button>
@@ -662,6 +742,8 @@
       this.messages = [];
       this.isLoading = false;
       this.doorContext = null;
+      this.thinkingInterval = null;
+      this.lastFailedMessage = null;
     }
 
     async init() {
@@ -740,6 +822,21 @@
       overlay?.addEventListener('click', () => this.close());
       form?.addEventListener('submit', (e) => this.handleSubmit(e));
 
+      // Character counter on input
+      const inputEl = document.getElementById('aasCopilotInput');
+      const counterEl = document.getElementById('aasCopilotCharCounter');
+      if (inputEl && counterEl) {
+        inputEl.addEventListener('input', () => {
+          const len = inputEl.value.length;
+          if (len > 1800) {
+            counterEl.textContent = `${len}/2000`;
+            counterEl.className = 'aas-copilot-char-counter' + (len > 1900 ? ' warn' : '');
+          } else {
+            counterEl.textContent = '';
+          }
+        });
+      }
+
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
         // Cmd/Ctrl + K to toggle
@@ -758,18 +855,41 @@
       const url = new URL(window.location.href);
       const doorId = url.searchParams.get('id');
       const path = url.pathname;
-      
+
       const contextInfo = document.getElementById('aasCopilotContextInfo');
-      
+      this.doorContext = { page: path };
+
       if (doorId) {
-        this.doorContext = { doorId, page: path };
+        this.doorContext.doorId = doorId;
         if (contextInfo) contextInfo.textContent = `Door: ${doorId}`;
-      } else if (path.includes('/tech/')) {
-        this.doorContext = { page: path };
+      }
+
+      // Door Browser page — read filter dropdowns
+      if (path.includes('/door-browser')) {
+        const custEl = document.getElementById('dbFilterCustomer');
+        const mfgEl = document.getElementById('dbFilterMfg');
+        if (custEl && custEl.value) this.doorContext.customer = custEl.value;
+        if (mfgEl && mfgEl.value) this.doorContext.manufacturer = mfgEl.value;
+        const parts = [];
+        if (this.doorContext.customer) parts.push(this.doorContext.customer);
+        if (this.doorContext.manufacturer) parts.push(this.doorContext.manufacturer);
+        if (contextInfo && parts.length) contextInfo.textContent = parts.join(' / ');
+        else if (contextInfo && !doorId) contextInfo.textContent = 'Door Browser';
+      }
+      // Parts Finder page — read manufacturer dropdown
+      else if (path.includes('/parts')) {
+        const mfgEl = document.getElementById('pfMfr');
+        if (mfgEl && mfgEl.value) this.doorContext.manufacturer = mfgEl.value;
+        if (contextInfo) contextInfo.textContent = this.doorContext.manufacturer
+          ? `Parts: ${this.doorContext.manufacturer}`
+          : 'Parts Finder';
+      }
+      // Tech portal
+      else if (path.includes('/tech/')) {
         if (contextInfo) contextInfo.textContent = 'Tech Portal';
-      } else {
-        this.doorContext = { page: path };
-        if (contextInfo) contextInfo.textContent = '';
+      }
+      else {
+        if (contextInfo && !doorId) contextInfo.textContent = '';
       }
     }
 
@@ -830,7 +950,7 @@
       // Add user message
       this.addMessage('user', message);
       
-      // Show loading
+      // Show loading with rotating status messages
       this.setLoading(true);
       
       try {
@@ -848,8 +968,10 @@
         })));
         console.groupEnd();
 
+        // History truncation: cap at 20 messages before sending to API
+        const recentMessages = this.messages.slice(-20);
         const request = {
-          messages: this.messages.map(m => ({ role: m.role, content: m.content }))
+          messages: recentMessages.map(m => ({ role: m.role, content: m.content }))
         };
         
         if (includeContext && this.doorContext) {
@@ -900,31 +1022,63 @@
           console.log('[AAS Copilot] No tools used for this query');
         }
         
-        // Add assistant message
-        this.addMessage('assistant', data.response, data.manufacturer);
-        
+        // Add assistant message with tool/usage metadata
+        this.addMessage('assistant', data.response, data.manufacturer, {
+          toolsUsed: data.toolsUsed || [],
+          usage: data.usage || null
+        });
+
       } catch (error) {
         console.error('[Copilot] Error:', error);
-        this.addMessage('assistant', `Sorry, I encountered an error: ${error.message}. Please try again.`);
+        this.lastFailedMessage = this.messages[this.messages.length - 1]?.content;
+        // Remove the failed user message from history so retry can re-add it
+        this.messages.pop();
+        this.addMessage('assistant', `Sorry, I encountered an error: ${error.message}. Please try again.`, null, { isError: true });
       } finally {
         this.setLoading(false);
       }
     }
 
-    addMessage(role, content, manufacturer = null) {
+    addMessage(role, content, manufacturer = null, extra = {}) {
       this.messages.push({ role, content, timestamp: new Date() });
-      
+
       const container = document.getElementById('aasCopilotMessages');
       const div = document.createElement('div');
       div.className = `aas-copilot-message ${role}`;
-      
+
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
+
       let manufacturerBadge = '';
       if (manufacturer) {
         manufacturerBadge = `<span class="aas-copilot-manufacturer ${manufacturer}">${manufacturer}</span>`;
       }
-      
+
+      // Tool names footer (assistant only)
+      let footerHtml = '';
+      if (role === 'assistant' && extra.toolsUsed && extra.toolsUsed.length > 0) {
+        const toolList = extra.toolsUsed.map(t => t.replace(/_/g, ' ')).join(', ');
+        footerHtml += `<span class="aas-copilot-tools-used">Used: ${toolList}</span>`;
+      }
+
+      // Token usage footer (admin only)
+      if (role === 'assistant' && extra.usage) {
+        const inp = extra.usage.inputTokens || extra.usage.input_tokens || 0;
+        const out = extra.usage.outputTokens || extra.usage.output_tokens || 0;
+        if (inp || out) {
+          footerHtml += `<span class="aas-copilot-token-usage">\u2191${inp} \u2193${out} tokens</span>`;
+        }
+      }
+
+      const footerBlock = footerHtml
+        ? `<div class="aas-copilot-message-footer">${footerHtml}</div>`
+        : '';
+
+      // Retry button for error messages
+      let retryBlock = '';
+      if (role === 'assistant' && extra.isError) {
+        retryBlock = `<button class="aas-copilot-retry" data-retry="true">\u21BB Retry</button>`;
+      }
+
       div.innerHTML = `
         <div class="aas-copilot-message-meta">
           <span class="aas-copilot-message-role">${role === 'user' ? 'You' : 'Copilot'}</span>
@@ -932,8 +1086,16 @@
         </div>
         <div class="aas-copilot-message-content">${this.renderMarkdown(content)}</div>
         ${manufacturerBadge}
+        ${footerBlock}
+        ${retryBlock}
       `;
-      
+
+      // Bind retry button if present
+      const retryBtn = div.querySelector('[data-retry]');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => this.retryLast());
+      }
+
       container?.appendChild(div);
       container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
@@ -948,22 +1110,68 @@
       if (input) input.disabled = loading;
       if (submit) submit.disabled = loading;
       
+      // Clear any existing thinking rotation
+      if (this.thinkingInterval) {
+        clearInterval(this.thinkingInterval);
+        this.thinkingInterval = null;
+      }
+      
       // Remove existing loading indicator
       const existing = document.querySelector('.aas-copilot-loading');
       if (existing) existing.remove();
       
       if (loading) {
+        const thinkingSteps = [
+          'Thinking...',
+          'Searching knowledge base...',
+          'Checking manuals & specs...',
+          'Reviewing compliance data...',
+          'Analyzing results...',
+          'Preparing response...'
+        ];
+        let stepIndex = 0;
+
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'aas-copilot-loading';
         loadingDiv.innerHTML = `
           <div class="aas-copilot-loading-dots">
             <span></span><span></span><span></span>
           </div>
-          <span>Thinking...</span>
+          <span class="aas-copilot-loading-text">${thinkingSteps[0]}</span>
         `;
         container?.appendChild(loadingDiv);
         container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+
+        // Rotate through status messages every 3 seconds
+        this.thinkingInterval = setInterval(() => {
+          stepIndex = (stepIndex + 1) % thinkingSteps.length;
+          const textEl = loadingDiv.querySelector('.aas-copilot-loading-text');
+          if (textEl) {
+            textEl.style.opacity = '0';
+            setTimeout(() => {
+              textEl.textContent = thinkingSteps[stepIndex];
+              textEl.style.opacity = '1';
+            }, 150);
+          }
+        }, 3000);
       }
+    }
+
+    retryLast() {
+      if (this.isLoading || !this.lastFailedMessage) return;
+      // Remove the error message from DOM
+      const container = document.getElementById('aasCopilotMessages');
+      const lastMsg = container?.querySelector('.aas-copilot-message:last-child');
+      if (lastMsg) lastMsg.remove();
+      // Also remove error from internal messages array
+      if (this.messages.length && this.messages[this.messages.length - 1].role === 'assistant') {
+        this.messages.pop();
+      }
+      // Re-submit the failed message
+      const input = document.getElementById('aasCopilotInput');
+      if (input) input.value = this.lastFailedMessage;
+      this.lastFailedMessage = null;
+      this.handleSubmit(new Event('submit'));
     }
 
     renderMarkdown(text) {
@@ -988,6 +1196,30 @@
       // Fallback: Convert any remaining raw Google Drive thumbnail URLs to inline images
       html = html.replace(/(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+(?:&amp;sz=w\d+)?)/g,
         '<br><img src="$1" alt="Part image" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+
+      // Headers: ### text → <h4>, ## text → <h3> (process before newline→br)
+      html = html.replace(/^### (.+)$/gm, '<strong style="font-size:1.05em;display:block;margin:8px 0 4px;">$1</strong>');
+      html = html.replace(/^## (.+)$/gm, '<strong style="font-size:1.15em;display:block;margin:10px 0 4px;">$1</strong>');
+
+      // Numbered lists: lines starting with "1. " etc → <ol><li>
+      html = html.replace(/((?:^|\n)\d+\. .+(?:\n\d+\. .+)*)/g, (block) => {
+        const items = block.trim().split('\n').map(line =>
+          '<li>' + line.replace(/^\d+\.\s+/, '') + '</li>'
+        ).join('');
+        return '<ol style="margin:6px 0;padding-left:20px;">' + items + '</ol>';
+      });
+
+      // Bullet lists: lines starting with "- " → <ul><li>
+      html = html.replace(/((?:^|\n)- .+(?:\n- .+)*)/g, (block) => {
+        const items = block.trim().split('\n').map(line =>
+          '<li>' + line.replace(/^- /, '') + '</li>'
+        ).join('');
+        return '<ul style="margin:6px 0;padding-left:20px;">' + items + '</ul>';
+      });
+
+      // Raw URLs → clickable links (only URLs not already inside href="" or src="")
+      html = html.replace(/(?<!="|'|>)(https?:\/\/[^\s<"']+)/g,
+        '<a href="$1" target="_blank" rel="noopener" style="color: var(--ui-accent); text-decoration: underline;">$1</a>');
 
       // Newlines to <br>
       html = html.replace(/\n/g, '<br>');
