@@ -857,13 +857,16 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       case "search_doors": {
         const query = input.query as string;
         const mfr = input.manufacturer as string | undefined;
+        const customer = input.customer as string | undefined;
         // Route through droplet search-assets (same Qdrant collection)
         const searchQuery = mfr ? `${mfr} ${query}` : query;
+        const searchBody: Record<string, string> = { query: searchQuery };
+        if (customer) searchBody.customer = customer;
         try {
           const response = await fetch(`${DROPLET_URL}/search-assets`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: searchQuery })
+            body: JSON.stringify(searchBody)
           });
           if (!response.ok) {
             return JSON.stringify({ error: "Door search unavailable", status: response.status });
@@ -1717,7 +1720,7 @@ export default async function handler(req: Request, context: Context): Promise<R
     const isAdmin = userInfo.roles.includes('Admin');
     const isTech = userInfo.roles.includes('Tech');
 
-    console.log(`[Copilot V20] Request from ${userInfo.email}, roles: ${userInfo.roles.join(', ')}`);
+    console.log(`[Copilot V21.2] Request from ${userInfo.email}, roles: ${userInfo.roles.join(', ')}`);
 
     // ========== CUSTOMER PORTAL MODE ==========
     if (body.mode === 'customer_portal') {
@@ -1809,25 +1812,40 @@ export default async function handler(req: Request, context: Context): Promise<R
         messages.push({ role: "assistant", content: response.content });
         messages.push({ role: "user", content: toolResults });
 
-        response = await anthropic.messages.create({
-          model: "claude-sonnet-4-5-20250929",
-          max_tokens: 1024,
-          system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
-          tools: CUSTOMER_TOOLS,
-          messages,
-        });
+        try {
+          response = await anthropic.messages.create({
+            model: "claude-sonnet-4-5-20250929",
+            max_tokens: 1024,
+            system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
+            tools: CUSTOMER_TOOLS,
+            messages,
+          });
+        } catch (apiError) {
+          console.error("[Customer Portal] Claude API error during tool loop:", apiError);
+          return new Response(
+            JSON.stringify({
+              response: "I found some information but encountered a temporary issue. Please try again in a moment.",
+              error: apiError instanceof Error ? apiError.message : "API error"
+            }),
+            { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          );
+        }
       }
 
       // If we broke out due to tool budget, force a final text response
       if (response.stop_reason === "tool_use") {
         messages.push({ role: "assistant", content: response.content });
         messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")?.id || "budget_limit", content: "Tool budget reached. Summarize your findings with the information you already have." }] });
-        response = await anthropic.messages.create({
-          model: "claude-sonnet-4-5-20250929",
-          max_tokens: 1024,
-          system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
-          messages,
-        });
+        try {
+          response = await anthropic.messages.create({
+            model: "claude-sonnet-4-5-20250929",
+            max_tokens: 1024,
+            system: CUSTOMER_SYSTEM_PROMPT + (custMemCtx?.promptBlock || ""),
+            messages,
+          });
+        } catch (apiError) {
+          console.error("[Customer Portal] Claude API error during budget wrap-up:", apiError);
+        }
       }
 
       const textBlocks = response.content.filter(
@@ -1914,7 +1932,7 @@ IMPORTANT RESTRICTIONS:
     const toolCalls: { name: string; input: any; result: string }[] = [];
     const toolsCalledThisRequest: Set<string> = new Set();
 
-    // Tool-call budget: max 3 iterations, hard cap at 2 tool calls
+    // Tool-call budget: max 3 iterations, hard cap at 2 unique tools (same tool with different params allowed)
     while (response.stop_reason === "tool_use" && iterations < 3) {
       // Hard enforcement: stop after 2 tool calls
       if (toolsCalledThisRequest.size >= 2) {
@@ -2025,11 +2043,15 @@ function detectManufacturer(text: string): string | undefined {
   const lower = text.toLowerCase();
   if (/index\s*\d{1,2}|fis|duraglide|duracare|mc521|stanley|magic-swing/.test(lower)) return "stanley";
   if (/p\d{2}|double-click set|toggle switch|c3150|c4190|horton|series 2000/.test(lower)) return "horton";
-  if (/handy terminal|u30|opus|nabco|gyro|gt[- ]?\d{3,4}/.test(lower)) return "nabco";
+  if (/handy terminal|u30|opus|nabco|gt[- ]?\d{3,4}/.test(lower)) return "nabco";
+  if (/gyro[- ]?tech/.test(lower)) return "nabco";
   if (/sl500|sw200|unislide|swingmaster|besam|assa abloy/.test(lower)) return "besam";
   if (/dormakaba|dorma\b|kaba|ed100|ed200|es200|esa\d{3}/.test(lower)) return "dorma";
-  if (/record|fpc902|k-swing|8100/.test(lower)) return "record";
+  if (/doro[- ]?matic|dor-o-matic/.test(lower)) return "dorma";
+  if (/record\b|fpc902|k-swing|8100/.test(lower)) return "record";
   if (/tormax|ict|tx9[0-9]|uni-turn/.test(lower)) return "tormax";
+  if (/\bbea\b|ixio|lzr[- ]?\w|eagle\s*\d/.test(lower)) return "bea";
+  if (/boon\s*edam|tourlock|speedlane|circlelock/.test(lower)) return "boon edam";
   return undefined;
 }
 

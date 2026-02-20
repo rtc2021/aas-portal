@@ -899,6 +899,8 @@
 
     open() {
       this.isOpen = true;
+      // Re-detect page context (user may have changed filters since init)
+      this.detectContext();
       document.getElementById('aasCopilotPanel')?.classList.add('open');
       document.getElementById('aasCopilotOverlay')?.classList.add('open');
       document.getElementById('aasCopilotToggle')?.classList.add('active');
@@ -1180,9 +1182,14 @@
       div.textContent = text;
       let html = div.innerHTML;
 
+      // Helper: decode &amp; back to & in URLs (HTML escaping corrupts query params)
+      const decodeUrl = (url) => url.replace(/&amp;/g, '&');
+
       // Convert markdown images ![alt](url) to inline images FIRST (before link conversion)
-      html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
-        '<br><img src="$2" alt="$1" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+      html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (match, alt, url) => {
+        const cleanUrl = decodeUrl(url);
+        return `<br><img src="${cleanUrl}" alt="${alt}" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display='none'"><br>`;
+      });
 
       // Bold **text**
       html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -1191,11 +1198,16 @@
       html = html.replace(/`([^`]+)`/g, '<code style="padding: 2px 6px; background: var(--ui-accent-soft); border-radius: 4px; font-size: 0.9em;">$1</code>');
 
       // Convert markdown links [text](url) to clickable HTML links
-      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color: var(--ui-accent); text-decoration: underline;">$1</a>');
+      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (match, text, url) => {
+        const cleanUrl = decodeUrl(url);
+        return `<a href="${cleanUrl}" target="_blank" rel="noopener" style="color: var(--ui-accent); text-decoration: underline;">${text}</a>`;
+      });
 
       // Fallback: Convert any remaining raw Google Drive thumbnail URLs to inline images
-      html = html.replace(/(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+(?:&amp;sz=w\d+)?)/g,
-        '<br><img src="$1" alt="Part image" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display=\'none\'"><br>');
+      html = html.replace(/(?<!="|'|src=")(https:\/\/drive\.google\.com\/thumbnail\?id=[^&\s<]+(?:(?:&amp;|&)sz=w\d+)?)/g, (match, url) => {
+        const cleanUrl = decodeUrl(url);
+        return `<br><img src="${cleanUrl}" alt="Part image" style="max-width: 280px; max-height: 200px; border-radius: 8px; margin: 8px 0; border: 1px solid var(--ui-border);" loading="lazy" onerror="this.style.display='none'"><br>`;
+      });
 
       // Headers: ### text → <h4>, ## text → <h3> (process before newline→br)
       html = html.replace(/^### (.+)$/gm, '<strong style="font-size:1.05em;display:block;margin:8px 0 4px;">$1</strong>');
@@ -1217,8 +1229,8 @@
         return '<ul style="margin:6px 0;padding-left:20px;">' + items + '</ul>';
       });
 
-      // Raw URLs → clickable links (only URLs not already inside href="" or src="")
-      html = html.replace(/(?<!="|'|>)(https?:\/\/[^\s<"']+)/g,
+      // Raw URLs → clickable links (skip URLs already inside href="", src="", or after >)
+      html = html.replace(/(?<!="|'|>|src=")(https?:\/\/(?!drive\.google\.com\/thumbnail)[^\s<"']+)/g,
         '<a href="$1" target="_blank" rel="noopener" style="color: var(--ui-accent); text-decoration: underline;">$1</a>');
 
       // Newlines to <br>
