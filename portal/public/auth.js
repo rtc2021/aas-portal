@@ -34,6 +34,8 @@ const PAGE_ACCESS = {
   '/tech/doors': { roles: ['Admin', 'Tech'] },
   '/tech/summary/': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/tech/summary': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/tech/pricing/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/tech/pricing': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/door/': { roles: ['Admin', 'Tech', 'Customer'] },
   '/door': { roles: ['Admin', 'Tech', 'Customer'] },
   '/customer/command/': { roles: ['Admin', 'Customer'] },

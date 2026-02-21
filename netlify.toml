@@ -72,6 +72,16 @@
   to = "/.netlify/functions/copilot"
   status = 200
 
+[[redirects]]
+  from = "/api/qb/*"
+  to = "/.netlify/functions/qb"
+  status = 200
+
+[[redirects]]
+  from = "/api/qb"
+  to = "/.netlify/functions/qb"
+  status = 200
+
 # ============================================================================
 # TECH ROUTES
 # ============================================================================
@@ -99,6 +109,11 @@
 [[redirects]]
   from = "/tech/summary"
   to = "/tech/summary/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tech/pricing"
+  to = "/tech/pricing/index.html"
   status = 200
 
 # ============================================================================

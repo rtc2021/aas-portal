@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing Console • AAS Portal</title>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+  <style>body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0a0a0f; color: #fff; min-height: 100vh; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+    .shell { max-width: 980px; margin: 0 auto; padding: 88px 20px 40px; }
+    .header h1 { margin: 0; font-size: 30px; }
+    .header p { margin: 8px 0 0; color: rgba(255,255,255,.7); }
+    .grid { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 18px; box-shadow: 0 8px 28px rgba(0,0,0,.25); }
+    .card h2 { font-size: 18px; margin: 0 0 10px; }
+    .muted { color: rgba(255,255,255,.66); font-size: 14px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.08); margin-top: 12px; font-size: 13px; font-weight: 600; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; }
+    .status-connected .status-dot { background: #10b981; }
+    .status-expired .status-dot { background: #f59e0b; }
+    .status-disconnected .status-dot { background: #ef4444; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button { border: 1px solid rgba(0,212,255,.36); color: #c9f4ff; background: rgba(0,212,255,.12); border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
+    button.secondary { border-color: rgba(255,255,255,.25); color: rgba(255,255,255,.86); background: rgba(255,255,255,.08); }
+    .table { margin-top: 14px; width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table th, .table td { text-align: left; padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .table th { color: rgba(255,255,255,.68); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="authOverlay" class="auth-overlay"><div class="auth-card"><div class="auth-spinner"></div><p id="authLoadingText">Loading...</p><h1 class="auth-title">Sign In Required</h1><p class="auth-subtitle">Please sign in to access Pricing Console</p><button id="authLoginBtn" class="auth-btn">Sign In</button></div></div>
+  <div id="pageContent" class="page-content"><div class="shell"><header class="header"><h1>Pricing Console</h1><p>QuickBooks connection, customer/item lookup, and invoice creation workflow.</p></header><section class="grid"><article class="card"><h2>QuickBooks Connection</h2><p class="muted">This section validates OAuth status through <code>/api/qb/status</code>.</p><div id="qbStatus" class="status-pill status-disconnected"><span class="status-dot"></span><span>Checking...</span></div><div class="actions"><button id="connectBtn" type="button">Connect QuickBooks</button><button id="refreshBtn" class="secondary" type="button">Refresh Status</button></div></article><article class="card"><h2>Pricing Workflow Placeholder</h2><p class="muted">UI skeleton is now in place for the approved workflow:</p><table class="table"><thead><tr><th>Step</th><th>Status</th></tr></thead><tbody><tr><td>Customer lookup</td><td>Pending wiring</td></tr><tr><td>Product/parts lookup</td><td>Pending wiring</td></tr><tr><td>Estimate preview</td><td>Pending wiring</td></tr><tr><td>Invoice create</td><td>Pending wiring</td></tr></tbody></table></article></section></div></div>
+  <script>
+    async function fetchQbStatus() {
+      const statusEl = document.getElementById('qbStatus');
+      try {
+        const response = await fetch('/api/qb/status', { method: 'GET' });
+        const payload = await response.json();
+        const state = (payload.status || 'disconnected').toLowerCase();
+        const cls = state === 'connected' ? 'status-connected' : state === 'expired' ? 'status-expired' : 'status-disconnected';
+        statusEl.className = `status-pill ${cls}`;
+        statusEl.innerHTML = `<span class="status-dot"></span><span>${state}</span>`;
+      } catch {
+        statusEl.className = 'status-pill status-disconnected';
+        statusEl.innerHTML = '<span class="status-dot"></span><span>Unavailable</span>';
+      }
+    }
+    document.getElementById('connectBtn')?.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/qb/connect', { method: 'GET' });
+        const payload = await response.json();
+        if (payload?.url) { window.location.href = payload.url; return; }
+        alert('Unable to start OAuth flow.');
+      } catch { alert('Unable to reach QB connect endpoint.'); }
+    });
+    document.getElementById('refreshBtn')?.addEventListener('click', fetchQbStatus);
+    window.onPageReady = () => { fetchQbStatus(); };
+  </script>
+</body>
+</html>
