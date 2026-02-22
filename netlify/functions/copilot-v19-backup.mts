@@ -6,8 +6,8 @@ const anthropic = new Anthropic({
 });
 
 const PORTAL_BASE_URL = Netlify.env.get("PORTAL_BASE_URL") || "https://aas-portal.netlify.app";
-const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://134.199.203.192:8000";
-const QDRANT_URL = Netlify.env.get("QDRANT_URL") || "http://134.199.203.192:6333";
+const DROPLET_URL = Netlify.env.get("DROPLET_URL");
+const QDRANT_URL = Netlify.env.get("QDRANT_URL");
 const OPENAI_API_KEY = Netlify.env.get("OPENAI_API_KEY");
 const LIMBLE_CLIENT_ID = Netlify.env.get("LIMBLE_CLIENT_ID");
 const LIMBLE_CLIENT_SECRET = Netlify.env.get("LIMBLE_CLIENT_SECRET");
@@ -1799,7 +1799,7 @@ export default async function handler(req: Request, context: Context): Promise<R
     return new Response(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://aas-portal.netlify.app",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
@@ -1838,7 +1838,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       if (!authResult.valid) {
         return new Response(
           JSON.stringify({ error: authResult.error || 'Unauthorized' }),
-          { status: 401, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          { status: 401, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
         );
       }
 
@@ -1860,7 +1860,7 @@ export default async function handler(req: Request, context: Context): Promise<R
         console.log(`[Copilot] Access denied: token customer_id=${tokenCustomerId}, requested=${requestedCustomer}`);
         return new Response(
           JSON.stringify({ error: 'Access denied to this customer portal' }),
-          { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
         );
       }
 
@@ -1913,7 +1913,7 @@ export default async function handler(req: Request, context: Context): Promise<R
 
       return new Response(
         JSON.stringify({ response: responseText }),
-        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
       );
     }
     // ========== END CUSTOMER PORTAL MODE ==========
@@ -2006,7 +2006,7 @@ IMPORTANT RESTRICTIONS:
             iterations,
             error: apiError instanceof Error ? apiError.message : "API error"
           }),
-          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+          { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
         );
       }
     }
@@ -2034,14 +2034,14 @@ IMPORTANT RESTRICTIONS:
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" },
       }
     );
   } catch (error) {
     console.error("Copilot error:", error);
     return new Response(
       JSON.stringify({ error: "Failed to process request", details: error instanceof Error ? error.message : "Unknown" }),
-      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
     );
   }
 }

@@ -2,6 +2,11 @@
 .netlify
 netlify/functions/node_modules/
 
+# Environment files (secrets)
+.env
+.env.*
+*.env
+
 # Local project memory (not production code)
 CLAUDE.md
 .claude/

@@ -1,10 +1,10 @@
 import type { Context } from "@netlify/functions";
 
-const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://134.199.203.192:8000";
+const DROPLET_URL = Netlify.env.get("DROPLET_URL");
 const DROPLET_INTERNAL_KEY = Netlify.env.get("DROPLET_INTERNAL_KEY") || "";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://aas-portal.netlify.app",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
