@@ -1,3 +1,8 @@
 # Local Netlify folder
 .netlify
 netlify/functions/node_modules/
+
+# Local project memory (not production code)
+CLAUDE.md
+.claude/
+staging/

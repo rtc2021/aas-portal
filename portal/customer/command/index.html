@@ -392,37 +392,6 @@
       margin-top: 8px;
     }
 
-    /* Floating user badge */
-    .floating-user {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 16px;
-      background: var(--ccc-surface);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--ccc-border);
-      border-radius: 50px;
-      z-index: 100;
-    }
-    .floating-user-info { text-align: right; }
-    .floating-user-name { font-size: 0.85rem; font-weight: 600; color: var(--ccc-text); }
-    .floating-user-role { font-size: 0.7rem; color: var(--ccc-accent); text-transform: uppercase; letter-spacing: 0.05em; }
-    .floating-user button {
-      background: none;
-      border: none;
-      color: var(--ccc-text-muted);
-      cursor: pointer;
-      padding: 6px;
-      display: flex;
-      border-radius: 50%;
-      transition: all 0.2s;
-    }
-    .floating-user button:hover { background: var(--ccc-red-bg); color: var(--ccc-red); }
-    .floating-user svg { width: 18px; height: 18px; }
-
     /* Quick Actions */
     .ccc-quick-actions {
       display: flex;
@@ -451,8 +420,6 @@
     @media (max-width: 600px) {
       .ccc-stats { grid-template-columns: 1fr; }
       #customerCommand { padding: 12px; padding-top: 70px; }
-      .floating-user { top: 12px; right: 12px; padding: 8px 12px; }
-      .floating-user-name, .floating-user-role { display: none; }
       .ccc-quick-actions { flex-direction: column; }
       .ccc-quick-actions .ccc-btn { justify-content: center; }
     }
@@ -718,18 +685,6 @@
       <div id="tasksMeta" class="ccc-meta">Loading...</div>
     </section>
   </div>
-  </div>
-
-  <div id="floatingUser" class="floating-user" style="display: none;">
-    <div class="floating-user-info">
-      <div id="floatingUserName" class="floating-user-name">User</div>
-      <div id="floatingUserRole" class="floating-user-role">Role</div>
-    </div>
-    <button onclick="window.AASAuth?.logout()" title="Sign Out">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-      </svg>
-    </button>
   </div>
 
   <script>
@@ -1292,6 +1247,5 @@
 
     window.onPageReady = initPage;
   </script>
-  <script src="/auth.js"></script>
-<script src="/theme.js" defer></script><script src="/copilot.js" defer></script></body>
+</body>
 </html>
