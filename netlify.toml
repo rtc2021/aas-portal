@@ -82,6 +82,16 @@
   to = "/.netlify/functions/qb"
   status = 200
 
+[[redirects]]
+  from = "/api/pipeline/*"
+  to = "/.netlify/functions/pipeline"
+  status = 200
+
+[[redirects]]
+  from = "/api/pipeline"
+  to = "/.netlify/functions/pipeline"
+  status = 200
+
 # ============================================================================
 # TECH ROUTES
 # ============================================================================
@@ -145,13 +155,47 @@
   status = 200
 
 # ============================================================================
+# PIPELINE ROUTES (admin only)
+# ============================================================================
+
+[[redirects]]
+  from = "/pipeline"
+  to = "/pipeline/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/customers"
+  to = "/pipeline/customers/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/parts"
+  to = "/pipeline/parts/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/preview"
+  to = "/pipeline/preview/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/log"
+  to = "/pipeline/log/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/rates"
+  to = "/pipeline/rates/index.html"
+  status = 200
+
+# ============================================================================
 # CORS HEADERS FOR API
 # ============================================================================
 [[headers]]
   for = "/api/*"
   [headers.values]
     Access-Control-Allow-Origin = "https://aas-portal.netlify.app"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Methods = "GET, POST, PATCH, PUT, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
 # ============================================================================

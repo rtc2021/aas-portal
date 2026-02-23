@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing Log - Invoice Pipeline - AAS Portal</title>
+
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access Billing Log</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <div class="page-wrapper">
+      <header class="page-header">
+        <div class="header-left">
+          <h1 class="page-title">Billing <span>Log</span></h1>
+          <a href="/pipeline" class="back-link">&larr; Pipeline Dashboard</a>
+        </div>
+      </header>
+
+      <div class="filter-bar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="searchInput" placeholder="Search invoices..." autocomplete="off">
+        </div>
+        <select class="filter-select" id="filterStatus">
+          <option value="">All Statuses</option>
+          <option value="CREATED">Created</option>
+          <option value="SENT">Sent</option>
+          <option value="PAID">Paid</option>
+          <option value="VOIDED">Voided</option>
+          <option value="ERROR">Error</option>
+        </select>
+        <span class="filter-count" id="filterCount">Loading...</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="sortable">Doc #</th>
+              <th class="sortable">Customer</th>
+              <th class="sortable">Amount</th>
+              <th class="sortable">Date</th>
+              <th>Limble Task</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="6" class="loading-cell">Loading...</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <span id="pageInfo">-</span>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<style>
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.page-wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 32px 48px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+.header-left { display: flex; flex-direction: column; gap: 4px; }
+.back-link { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none; }
+.back-link:hover { color: #00d4ff; }
+.page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-title span { color: #00d4ff; }
+.filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.search-box { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; flex: 1; min-width: 240px; max-width: 400px; }
+.search-box:focus-within { border-color: rgba(0,212,255,0.35); }
+.search-box svg { width: 16px; height: 16px; color: rgba(255,255,255,0.6); flex-shrink: 0; }
+.search-box input { background: none; border: none; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.875rem; width: 100%; outline: none; }
+.search-box input::placeholder { color: rgba(255,255,255,0.6); }
+.filter-select { padding: 8px 32px 8px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.875rem; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.filter-select:hover, .filter-select:focus { border-color: rgba(0,212,255,0.35); outline: none; }
+.filter-select option { background: #1a1a2e; }
+.filter-count { font-size: 0.875rem; color: rgba(255,255,255,0.6); margin-left: auto; white-space: nowrap; }
+.table-wrapper { background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { padding: 12px 16px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); text-align: left; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+.data-table th.sortable { cursor: pointer; }
+.data-table th.sortable:hover { color: #00d4ff; }
+.data-table td { padding: 12px 16px; font-size: 0.875rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+.data-table tbody tr { transition: background 200ms; }
+.data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.cell-mono { font-family: 'SF Mono','Fira Code',monospace; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+.cell-price { font-family: 'SF Mono','Fira Code',monospace; font-weight: 600; }
+.loading-cell { text-align: center; padding: 40px 16px; color: rgba(255,255,255,0.6); }
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.status-CREATED { background: rgba(0,212,255,0.1); color: #00d4ff; border: 1px solid rgba(0,212,255,0.2); }
+.status-SENT { background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
+.status-PAID { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
+.status-VOIDED { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
+.status-ERROR { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
+.table-footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.875rem; color: rgba(255,255,255,0.6); }
+.pagination { display: flex; gap: 4px; }
+.page-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: transparent; color: rgba(255,255,255,0.6); font-family: inherit; font-size: 0.8rem; cursor: pointer; }
+.page-btn:hover { border-color: rgba(0,212,255,0.35); color: rgba(255,255,255,0.92); }
+.page-btn.active { background: rgba(0,212,255,0.12); color: #00d4ff; border-color: rgba(0,212,255,0.3); font-weight: 600; }
+@media (max-width: 768px) {
+  .page-wrapper { padding: 16px; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .filter-bar { flex-direction: column; }
+  .search-box { max-width: 100%; }
+  .table-wrapper { overflow-x: auto; }
+  .data-table { min-width: 600px; }
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  const API_BASE = '/api/pipeline';
+  const PAGE_SIZE = 50;
+  let currentPage = 1;
+
+  async function api(path, options = {}) {
+    const res = await fetch(`${API_BASE}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+  async function loadLog() {
+    const status = document.getElementById('filterStatus').value;
+    const search = document.getElementById('searchInput').value.trim();
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+    params.set('page', currentPage);
+    params.set('limit', PAGE_SIZE);
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
+
+    try {
+      const data = await api(`/billing?${params}`);
+      const items = Array.isArray(data) ? data : (data.items || data.results || []);
+      const total = data.total || items.length;
+      renderTable(items);
+      renderPagination(total);
+      document.getElementById('filterCount').textContent = total === 0 ? 'No invoices yet' : `${total.toLocaleString()} invoice${total !== 1 ? 's' : ''}`;
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="loading-cell">Error: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderTable(items) {
+    const tbody = document.getElementById('tableBody');
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No billing records yet. Invoices will appear here once the pipeline processes tasks.</td></tr>';
+      return;
+    }
+
+    const statusLabels = { CREATED: 'Created', SENT: 'Sent', PAID: 'Paid', VOIDED: 'Voided', ERROR: 'Error' };
+
+    tbody.innerHTML = items.map(b => {
+      const status = b.status || 'CREATED';
+      const amount = b.amount != null ? `$${Number(b.amount).toFixed(2)}` : '—';
+      const date = b.created_at ? new Date(b.created_at).toLocaleDateString() : '—';
+      return `<tr>
+        <td><span class="cell-mono">${esc(b.qbo_doc_number || '—')}</span></td>
+        <td>${esc(b.customer_name || '—')}</td>
+        <td><span class="cell-price">${amount}</span></td>
+        <td>${date}</td>
+        <td><span class="cell-mono">${esc(b.limble_task_id ? `#${b.limble_task_id}` : '—')}</span></td>
+        <td><span class="status status-${status}">${esc(statusLabels[status] || status)}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderPagination(total) {
+    const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+    const container = document.getElementById('pagination');
+    const start = Math.min((currentPage - 1) * PAGE_SIZE + 1, total);
+    const end = Math.min(currentPage * PAGE_SIZE, total);
+    document.getElementById('pageInfo').textContent = total ? `${start}–${end} of ${total}` : '—';
+
+    let btns = [];
+    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+      btns.push(`<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`);
+    }
+    container.innerHTML = btns.join('');
+    container.querySelectorAll('.page-btn').forEach(b => b.addEventListener('click', () => { currentPage = Number(b.dataset.page); loadLog(); }));
+  }
+
+  let searchTimeout;
+  document.getElementById('searchInput').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { currentPage = 1; loadLog(); }, 400); });
+  document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; loadLog(); });
+
+  window.onPageReady = function(user, roles) { loadLog(); };
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Pipeline - AAS Portal</title>
+
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access Invoice Pipeline</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <div class="page-wrapper">
+
+      <header class="page-header">
+        <h1 class="page-title">Invoice <span>Pipeline</span></h1>
+      </header>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card" onclick="location.href='/pipeline/customers'">
+          <div class="stat-card-icon" style="background:rgba(255,204,0,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value" id="stat-customers">-</div>
+            <div class="stat-card-label">Customers Need Review</div>
+          </div>
+          <div class="stat-card-arrow">&rarr;</div>
+        </div>
+
+        <div class="stat-card" onclick="location.href='/pipeline/parts'">
+          <div class="stat-card-icon" style="background:rgba(255,68,68,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ff4444" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value" id="stat-parts">-</div>
+            <div class="stat-card-label">Parts Unmapped</div>
+          </div>
+          <div class="stat-card-arrow">&rarr;</div>
+        </div>
+
+        <div class="stat-card" onclick="location.href='/pipeline/rates'">
+          <div class="stat-card-icon" style="background:rgba(0,212,255,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value" id="stat-tiers">-</div>
+            <div class="stat-card-label">Active Rate Tiers</div>
+          </div>
+          <div class="stat-card-arrow">&rarr;</div>
+        </div>
+
+        <div class="stat-card" onclick="location.href='/pipeline/log'">
+          <div class="stat-card-icon" style="background:rgba(0,255,136,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value" id="stat-invoices">-</div>
+            <div class="stat-card-label">Invoices Created</div>
+          </div>
+          <div class="stat-card-arrow">&rarr;</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="actions-section">
+        <h2 class="section-title">Pipeline Actions</h2>
+        <div class="actions-grid">
+          <div class="action-card disabled">
+            <div class="action-card-title">Dry Run</div>
+            <div class="action-card-desc">Process tasks without creating invoices. Review what would be billed.</div>
+            <div class="action-card-badge">Phase 2</div>
+          </div>
+          <div class="action-card disabled">
+            <div class="action-card-title">Process Batch</div>
+            <div class="action-card-desc">Create invoices for all ready tasks (Scenario 1 only).</div>
+            <div class="action-card-badge">Phase 2</div>
+          </div>
+          <div class="action-card" onclick="location.href='/pipeline/preview'">
+            <div class="action-card-title">Invoice Preview</div>
+            <div class="action-card-desc">Review assembled invoices before creation.</div>
+            <div class="action-card-arrow">&rarr;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Revenue Estimate -->
+      <div class="revenue-card">
+        <div class="revenue-label">Estimated Unbilled Revenue</div>
+        <div class="revenue-value">$208K</div>
+        <div class="revenue-note">Based on completed tasks awaiting invoicing</div>
+      </div>
+
+    </div>
+  </div>
+
+<style>
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.page-wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 24px 32px 48px; }
+.page-header { margin-bottom: 32px; }
+.page-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-title span { color: #00d4ff; }
+
+/* Stats Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 40px; }
+.stat-card {
+  display: flex; align-items: center; gap: 16px; padding: 20px;
+  background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  backdrop-filter: blur(20px) saturate(180%); cursor: pointer; transition: all 200ms;
+}
+.stat-card:hover { border-color: rgba(0,212,255,0.35); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.stat-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-card-icon svg { width: 24px; height: 24px; }
+.stat-card-body { flex: 1; }
+.stat-card-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.stat-card-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.stat-card-arrow { font-size: 1.2rem; color: rgba(255,255,255,0.3); transition: color 200ms; }
+.stat-card:hover .stat-card-arrow { color: #00d4ff; }
+
+/* Actions Section */
+.actions-section { margin-bottom: 40px; }
+.section-title { font-size: 1.1rem; font-weight: 600; margin: 0 0 16px; color: rgba(255,255,255,0.8); }
+.actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.action-card {
+  padding: 20px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  backdrop-filter: blur(20px) saturate(180%); cursor: pointer; transition: all 200ms; position: relative;
+}
+.action-card:hover { border-color: rgba(0,212,255,0.35); }
+.action-card.disabled { opacity: 0.5; cursor: not-allowed; }
+.action-card.disabled:hover { border-color: rgba(255,255,255,0.1); }
+.action-card-title { font-weight: 700; margin-bottom: 6px; }
+.action-card-desc { font-size: 0.85rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+.action-card-badge { position: absolute; top: 12px; right: 12px; padding: 2px 8px; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; background: rgba(255,204,0,0.12); color: #ffcc00; }
+.action-card-arrow { position: absolute; top: 20px; right: 16px; font-size: 1.2rem; color: rgba(255,255,255,0.3); }
+.action-card:hover .action-card-arrow { color: #00d4ff; }
+
+/* Revenue Card */
+.revenue-card {
+  text-align: center; padding: 32px;
+  background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.revenue-label { font-size: 0.85rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.revenue-value { font-size: 3rem; font-weight: 700; color: #00ff88; font-family: 'SF Mono','Fira Code',monospace; }
+.revenue-note { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 8px; }
+
+@media (max-width: 768px) {
+  .page-wrapper { padding: 16px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .actions-grid { grid-template-columns: 1fr; }
+  .revenue-value { font-size: 2rem; }
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  const API_BASE = '/api/pipeline';
+
+  async function api(path) {
+    const res = await fetch(`${API_BASE}${path}`);
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    return res.json();
+  }
+
+  async function loadDashboard() {
+    try {
+      const stats = await api('/stats');
+      document.getElementById('stat-customers').textContent = (stats.customer_map?.NEEDS_REVIEW || 0).toLocaleString();
+      document.getElementById('stat-parts').textContent = (stats.part_map?.UNMAPPED || 0).toLocaleString();
+      document.getElementById('stat-tiers').textContent = (stats.rate_card?.active_tiers || 0).toLocaleString();
+      document.getElementById('stat-invoices').textContent = (stats.billing_log?.total || 0).toLocaleString();
+    } catch (e) {
+      console.error('Dashboard stats failed:', e);
+    }
+  }
+
+  window.onPageReady = function(user, roles) { loadDashboard(); };
+})();
+</script>
+
+</body>
+</html>
