@@ -970,7 +970,7 @@ body::before {
     const qbId = document.getElementById('modalQBId').value;
     const qbName = document.getElementById('modalQBName').value;
     if (qbId) {
-      body.qbo_customer_id = Number(qbId);
+      body.qbo_customer_id = String(qbId);
       body.qbo_display_name = qbName;
       body.status = 'VERIFIED';
     }

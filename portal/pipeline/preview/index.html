@@ -496,7 +496,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
           var isOk = r.result === 'INVOICED' || r.result === 'SUCCESS';
           var statusText = r.result || 'UNKNOWN';
           var qbInfo = '';
-          if (r.qb_txn_id) qbInfo = 'QB #' + r.qb_txn_id;
+          if (r.qb_invoice_id || r.qb_txn_id) qbInfo = 'QB #' + (r.qb_invoice_id || r.qb_txn_id);
           if (r.qb_doc_number) qbInfo += (qbInfo ? ' — ' : '') + 'Doc ' + r.qb_doc_number;
           return '<div class="process-result-row">' +
             '<div><span class="process-result-task">#' + (r.limble_task_id || '—') + ' ' + truncate(r.task_name || '', 40) + '</span>' +
