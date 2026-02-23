@@ -79,6 +79,7 @@
             <option value="ERROR">Error</option>
           </select>
           <button id="runBtn" type="button">Run Dry-Run</button>
+          <button id="processBtn" type="button" class="hidden">Create Invoices (<span id="processBtnCount">0</span>)</button>
         </div>
       </header>
 
@@ -110,9 +111,26 @@
         </table>
       </div>
 
+      <div class="process-results hidden" id="processResults">
+        <h3 class="process-results-title">Invoice Results</h3>
+        <div id="processResultsBody"></div>
+      </div>
+
       <div class="empty-state hidden" id="emptyState">
         <p>No unbilled tasks found. All tasks may already be billed or no completed tasks are available.</p>
         <a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="confirmOverlay">
+    <div class="confirm-dialog">
+      <h3>Create Real Invoices?</h3>
+      <p>This will create <strong id="confirmCount">0</strong> invoice(s) in QuickBooks and tag the tasks as @Billed in Limble. This action cannot be undone.</p>
+      <div class="confirm-tasks" id="confirmTasks"></div>
+      <div class="confirm-actions">
+        <button class="confirm-cancel" id="confirmCancel">Cancel</button>
+        <button class="confirm-go" id="confirmGo">Yes, Create Invoices</button>
       </div>
     </div>
   </div>
@@ -193,6 +211,36 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .empty-state p { color: rgba(255,255,255,0.6); margin: 0 0 20px; }
 .back-btn { color: #00d4ff; text-decoration: none; font-weight: 600; }
 .hidden { display: none; }
+
+/* Process button */
+#processBtn { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+#processBtn:hover { filter: brightness(1.1); }
+#processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Confirm overlay */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
+.confirm-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 28px; max-width: 480px; width: 90%; }
+.confirm-dialog h3 { font-size: 1.1rem; margin: 0 0 10px; color: #fff; }
+.confirm-dialog p { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin: 0 0 16px; line-height: 1.5; }
+.confirm-dialog strong { color: #00ff88; }
+.confirm-tasks { max-height: 160px; overflow-y: auto; margin-bottom: 18px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3); }
+.confirm-task-row { padding: 4px 0; color: rgba(255,255,255,0.7); display: flex; justify-content: space-between; }
+.confirm-task-row + .confirm-task-row { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-cancel { padding: 8px 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.confirm-go { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+.confirm-go:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Process results */
+.process-results { margin-top: 24px; padding: 20px; background: rgba(20,20,30,0.9); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; }
+.process-results-title { font-size: 1rem; font-weight: 700; margin: 0 0 14px; color: #00ff88; }
+.process-result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 0.85rem; }
+.process-result-row + .process-result-row { border-top: 1px solid rgba(255,255,255,0.06); }
+.process-result-task { color: rgba(255,255,255,0.8); }
+.process-result-status { font-weight: 600; }
+.process-result-status.invoiced { color: #00ff88; }
+.process-result-status.error { color: #ff4444; }
+.process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
 
 /* Mobile */
 @media (max-width: 768px) {
@@ -353,9 +401,11 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
       }
 
       renderTable(cachedResults);
+      updateProcessBtn();
     } catch (e) {
       console.error('[Preview] Dry-run error:', e);
       tbody.innerHTML = '<tr><td colspan="7" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
+      $('processBtn').classList.add('hidden');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Run Dry-Run';
@@ -378,6 +428,99 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 
   // Run button
   $('runBtn').addEventListener('click', runDryRun);
+
+  // ---- Process Invoices ----
+
+  function getSuccessTasks() {
+    return cachedResults.filter(function(r) { return r.result === 'SUCCESS'; });
+  }
+
+  function updateProcessBtn() {
+    var successTasks = getSuccessTasks();
+    var btn = $('processBtn');
+    $('processBtnCount').textContent = successTasks.length;
+    if (successTasks.length > 0) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+    $('processResults').classList.add('hidden');
+  }
+
+  $('processBtn').addEventListener('click', function() {
+    var tasks = getSuccessTasks();
+    if (!tasks.length) return;
+
+    $('confirmCount').textContent = tasks.length;
+    $('confirmTasks').innerHTML = tasks.map(function(t) {
+      return '<div class="confirm-task-row"><span>#' + t.limble_task_id + ' ' + truncate(t.task_name, 40) + '</span><span>' + money(t.total) + '</span></div>';
+    }).join('');
+
+    $('confirmOverlay').classList.remove('hidden');
+  });
+
+  $('confirmCancel').addEventListener('click', function() {
+    $('confirmOverlay').classList.add('hidden');
+  });
+
+  $('confirmOverlay').addEventListener('click', function(e) {
+    if (e.target === this) $('confirmOverlay').classList.add('hidden');
+  });
+
+  $('confirmGo').addEventListener('click', async function() {
+    var tasks = getSuccessTasks();
+    if (!tasks.length) return;
+
+    var goBtn = $('confirmGo');
+    var cancelBtn = $('confirmCancel');
+    goBtn.disabled = true;
+    goBtn.textContent = 'Processing...';
+    cancelBtn.style.display = 'none';
+
+    try {
+      var taskIds = tasks.map(function(t) { return t.limble_task_id; });
+      var data = await api('/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_ids: taskIds })
+      });
+
+      $('confirmOverlay').classList.add('hidden');
+
+      var results = data.results || [];
+      var body = $('processResultsBody');
+      if (!results.length) {
+        body.innerHTML = '<p style="color:rgba(255,255,255,0.5);">No results returned from process endpoint.</p>';
+      } else {
+        body.innerHTML = results.map(function(r) {
+          var isOk = r.result === 'INVOICED' || r.result === 'SUCCESS';
+          var statusText = r.result || 'UNKNOWN';
+          var qbInfo = '';
+          if (r.qb_txn_id) qbInfo = 'QB #' + r.qb_txn_id;
+          if (r.qb_doc_number) qbInfo += (qbInfo ? ' — ' : '') + 'Doc ' + r.qb_doc_number;
+          return '<div class="process-result-row">' +
+            '<div><span class="process-result-task">#' + (r.limble_task_id || '—') + ' ' + truncate(r.task_name || '', 40) + '</span>' +
+            (qbInfo ? '<div class="process-result-qb">' + qbInfo + '</div>' : '') +
+            '</div>' +
+            '<span class="process-result-status ' + (isOk ? 'invoiced' : 'error') + '">' + statusText + '</span>' +
+            '</div>';
+        }).join('');
+      }
+
+      $('processResults').classList.remove('hidden');
+      $('processBtn').classList.add('hidden');
+    } catch (e) {
+      console.error('[Preview] Process error:', e);
+      $('confirmOverlay').classList.add('hidden');
+      var body = $('processResultsBody');
+      body.innerHTML = '<p style="color:#ff4444;">Process failed: ' + e.message + '</p>';
+      $('processResults').classList.remove('hidden');
+    } finally {
+      goBtn.disabled = false;
+      goBtn.textContent = 'Yes, Create Invoices';
+      cancelBtn.style.display = '';
+    }
+  });
 
   window.onPageReady = function(user, roles) {
     runDryRun();
