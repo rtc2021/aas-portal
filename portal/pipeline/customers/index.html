@@ -686,7 +686,7 @@ body::before {
     if (status) params.set('status', status);
     if (tier) params.set('tier', tier);
     if (search) params.set('search', search);
-    params.set('page', currentPage);
+    params.set('offset', (currentPage - 1) * PAGE_SIZE);
     params.set('limit', PAGE_SIZE);
 
     const tbody = document.getElementById('tableBody');
@@ -694,7 +694,7 @@ body::before {
 
     try {
       const data = await api(`/customers?${params}`);
-      const items = Array.isArray(data) ? data : (data.items || data.results || []);
+      const items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
       const total = data.total || items.length;
       currentData = items;
       renderTable(items);
@@ -722,7 +722,7 @@ body::before {
       const scoreClass = scorePct >= 80 ? 'high' : scorePct >= 50 ? 'mid' : 'low';
       const status = c.status || 'NEEDS_REVIEW';
       const tier = c.tier || 'standard';
-      const qbName = c.qbo_customer_name || '';
+      const qbName = c.qbo_display_name || '';
       const qbId = c.qbo_customer_id || '';
       const limbleName = c.limble_asset_name || c.asset_name || `Asset #${id}`;
       const parentName = c.parent_name || c.hierarchy || '';
@@ -908,7 +908,7 @@ body::before {
     editingAssetId = id;
     document.getElementById('modalLimbleName').value = item.limble_asset_name || item.asset_name || `Asset #${id}`;
     document.getElementById('modalTier').value = item.tier || 'standard';
-    document.getElementById('modalQBName').value = item.qbo_customer_name || '';
+    document.getElementById('modalQBName').value = item.qbo_display_name || '';
     document.getElementById('modalQBId').value = item.qbo_customer_id || '';
     document.getElementById('modalQBSearch').value = '';
     document.getElementById('qbResults').innerHTML = '';
@@ -971,7 +971,7 @@ body::before {
     const qbName = document.getElementById('modalQBName').value;
     if (qbId) {
       body.qbo_customer_id = Number(qbId);
-      body.qbo_customer_name = qbName;
+      body.qbo_display_name = qbName;
       body.status = 'VERIFIED';
     }
 

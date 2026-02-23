@@ -204,7 +204,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 
     try {
       const data = await api('/rates');
-      const rates = Array.isArray(data) ? data : (data.rates || data.items || []);
+      const rates = Array.isArray(data) ? data : (data.data || data.rates || data.items || []);
       ratesData = rates;
       document.getElementById('stat-tiers').textContent = rates.length;
       renderRates(rates);
@@ -222,10 +222,10 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
       const badge = TIER_BADGES[tier] || tier.toUpperCase();
       const labor = fmtPrice(r.labor_rate, '/hr');
       const travel = fmtPrice(r.travel_rate, ' flat');
-      const laborQB = r.labor_qbo_item_id ? `#${r.labor_qbo_item_id}` : '';
-      const travelQB = r.travel_qbo_item_id ? `#${r.travel_qbo_item_id}` : '';
-      const laborName = r.labor_item_name || 'Service Labor';
-      const travelName = r.travel_item_name || 'Travel';
+      const laborQB = r.qb_labor_item_id ? `#${r.qb_labor_item_id}` : '';
+      const travelQB = r.qb_travel_item_id ? `#${r.qb_travel_item_id}` : '';
+      const laborName = r.qb_labor_item_name || 'Service Labor';
+      const travelName = r.qb_travel_item_name || 'Travel';
 
       return `<div class="rate-card tier-${esc(tier)}" data-tier="${esc(tier)}">
         <div class="rate-card-header">

@@ -322,7 +322,7 @@ body::before {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (search) params.set('search', search);
-    params.set('page', currentPage);
+    params.set('offset', (currentPage - 1) * PAGE_SIZE);
     params.set('limit', PAGE_SIZE);
 
     const tbody = document.getElementById('tableBody');
@@ -330,7 +330,7 @@ body::before {
 
     try {
       const data = await api(`/parts?${params}`);
-      const items = Array.isArray(data) ? data : (data.items || data.results || []);
+      const items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
       const total = data.total || items.length;
       currentData = items;
       renderTable(items);
@@ -348,10 +348,10 @@ body::before {
     tbody.innerHTML = items.map(p => {
       const id = p.limble_part_id;
       const name = p.limble_part_name || p.part_name || `Part #${id}`;
-      const partNum = p.part_number || p.sku || '';
+      const partNum = p.limble_part_number || p.sku || '';
       const qbName = p.qbo_item_name || '';
       const qbId = p.qbo_item_id || '';
-      const price = p.qbo_price != null ? `$${Number(p.qbo_price).toFixed(2)}` : '';
+      const price = p.qbo_unit_price != null ? `$${Number(p.qbo_unit_price).toFixed(2)}` : '';
       const status = p.status || 'UNMAPPED';
       const isReview = status === 'NEEDS_REVIEW';
 
