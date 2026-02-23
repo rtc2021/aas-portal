@@ -461,7 +461,7 @@ body::before {
     const qbId = document.getElementById('modalQBId').value;
     const qbName = document.getElementById('modalQBName').value;
     const body = {};
-    if (qbId) { body.qbo_item_id = Number(qbId); body.qbo_item_name = qbName; body.status = 'MATCHED'; }
+    if (qbId) { body.qbo_item_id = String(qbId); body.qbo_item_name = qbName; body.status = 'MATCHED'; }
     try {
       await api(`/parts/${editingPartId}`, { method: 'PATCH', body: JSON.stringify(body) });
       toast('Part updated');
