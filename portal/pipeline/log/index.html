@@ -201,7 +201,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (search) params.set('search', search);
-    params.set('page', currentPage);
+    params.set('offset', (currentPage - 1) * PAGE_SIZE);
     params.set('limit', PAGE_SIZE);
 
     const tbody = document.getElementById('tableBody');
@@ -209,7 +209,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 
     try {
       const data = await api(`/billing?${params}`);
-      const items = Array.isArray(data) ? data : (data.items || data.results || []);
+      const items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
       const total = data.total || items.length;
       renderTable(items);
       renderPagination(total);
@@ -233,7 +233,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
       const amount = b.amount != null ? `$${Number(b.amount).toFixed(2)}` : '—';
       const date = b.created_at ? new Date(b.created_at).toLocaleDateString() : '—';
       return `<tr>
-        <td><span class="cell-mono">${esc(b.qbo_doc_number || '—')}</span></td>
+        <td><span class="cell-mono">${esc(b.qb_doc_number || '—')}</span></td>
         <td>${esc(b.customer_name || '—')}</td>
         <td><span class="cell-price">${amount}</span></td>
         <td>${date}</td>
