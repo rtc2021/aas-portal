@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Preview - Invoice Pipeline - AAS Portal</title>
+
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access Invoice Preview</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <div class="page-wrapper">
+      <header class="page-header">
+        <div class="header-left">
+          <h1 class="page-title">Invoice <span>Preview</span></h1>
+          <a href="/pipeline" class="back-link">&larr; Pipeline Dashboard</a>
+        </div>
+      </header>
+
+      <div class="phase2-notice">
+        <div class="phase2-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2 class="phase2-title">Phase 2 — Coming Soon</h2>
+        <p class="phase2-desc">
+          Invoice preview requires the pipeline processing endpoints (<code>POST /dry-run</code> and <code>POST /process</code>)
+          which are being built in Phase 2.
+        </p>
+        <p class="phase2-desc">
+          Once available, this page will show assembled invoice previews for each processable task with
+          customer name, tier, line items (travel + labor + parts), and calculated totals.
+        </p>
+        <div class="phase2-actions">
+          <a href="/pipeline/customers" class="phase2-btn">Review Customers</a>
+          <a href="/pipeline/parts" class="phase2-btn secondary">Review Parts</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<style>
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.page-wrapper { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 24px 32px 48px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+.header-left { display: flex; flex-direction: column; gap: 4px; }
+.back-link { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none; }
+.back-link:hover { color: #00d4ff; }
+.page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-title span { color: #00d4ff; }
+
+.phase2-notice {
+  text-align: center;
+  padding: 60px 40px;
+  background: rgba(20,20,30,0.9);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.phase2-icon { color: rgba(255,204,0,0.6); margin-bottom: 20px; }
+.phase2-title { font-size: 1.3rem; font-weight: 700; margin: 0 0 16px; color: #ffcc00; }
+.phase2-desc { font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.6; max-width: 500px; margin: 0 auto 12px; }
+.phase2-desc code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+.phase2-actions { display: flex; gap: 12px; justify-content: center; margin-top: 28px; }
+.phase2-btn {
+  padding: 10px 24px; border-radius: 8px; font-family: inherit; font-size: 0.875rem; font-weight: 600;
+  text-decoration: none; transition: all 200ms;
+  background: #00d4ff; color: #0a0a0f;
+}
+.phase2-btn:hover { filter: brightness(1.1); }
+.phase2-btn.secondary { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.92); border: 1px solid rgba(255,255,255,0.15); }
+.phase2-btn.secondary:hover { border-color: rgba(0,212,255,0.35); }
+
+@media (max-width: 768px) {
+  .page-wrapper { padding: 16px; }
+  .phase2-notice { padding: 40px 20px; }
+  .phase2-actions { flex-direction: column; }
+}
+</style>
+
+<script>
+  window.onPageReady = function(user, roles) {
+    // Phase 2: will load preview data here
+  };
+</script>
+
+</body>
+</html>

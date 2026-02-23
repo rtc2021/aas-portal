@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Part Mapping - Invoice Pipeline - AAS Portal</title>
+
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access Part Mapping</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <div class="page-wrapper">
+
+      <header class="page-header">
+        <div class="header-left">
+          <h1 class="page-title">Part <span>Mapping</span></h1>
+          <a href="/pipeline" class="back-link">&larr; Pipeline Dashboard</a>
+        </div>
+        <div class="header-stats">
+          <div class="stat-pill">
+            <div class="dot dot-blue"></div>
+            <span class="label">Matched</span>
+            <span class="value" id="stat-matched">-</span>
+          </div>
+          <div class="stat-pill">
+            <div class="dot dot-yellow"></div>
+            <span class="label">Needs Review</span>
+            <span class="value" id="stat-review">-</span>
+          </div>
+          <div class="stat-pill">
+            <div class="dot dot-red"></div>
+            <span class="label">Unmapped</span>
+            <span class="value" id="stat-unmapped">-</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="filter-bar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="searchInput" placeholder="Search parts, SKUs..." autocomplete="off">
+        </div>
+        <select class="filter-select" id="filterStatus">
+          <option value="">All Statuses</option>
+          <option value="NEEDS_REVIEW">Needs Review</option>
+          <option value="MATCHED">Matched</option>
+          <option value="UNMAPPED" selected>Unmapped</option>
+        </select>
+        <span class="filter-count" id="filterCount">Loading...</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="sortable">Limble Part</th>
+              <th>Part #</th>
+              <th class="sortable">QB Match</th>
+              <th class="sortable">QB Price</th>
+              <th>Status</th>
+              <th style="width:80px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="6" class="loading-cell">Loading parts...</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <span id="pageInfo">-</span>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Edit Part Mapping</h2>
+          <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Limble Part</label>
+            <input type="text" class="form-input" id="modalPartName" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">QB Product Search</label>
+            <input type="text" class="form-input" id="modalQBSearch" placeholder="Search QuickBooks products...">
+            <div class="qb-results" id="qbResults"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selected QB Product</label>
+            <input type="text" class="form-input" id="modalQBName" readonly placeholder="Select from search above">
+            <input type="hidden" id="modalQBId">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" id="modalCancel">Cancel</button>
+          <button class="btn-save" id="modalSave">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<style>
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+.page-wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 32px 48px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+.header-left { display: flex; flex-direction: column; gap: 4px; }
+.back-link { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none; transition: color 200ms; }
+.back-link:hover { color: #00d4ff; }
+.page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-title span { color: #00d4ff; }
+.header-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+.stat-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9999px; font-size: 0.875rem; backdrop-filter: blur(20px) saturate(180%); }
+.stat-pill .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-blue { background: #00d4ff; box-shadow: 0 0 6px rgba(0,212,255,0.4); }
+.dot-yellow { background: #ffcc00; box-shadow: 0 0 6px rgba(255,204,0,0.4); }
+.dot-red { background: #ff4444; box-shadow: 0 0 6px rgba(255,68,68,0.4); }
+.stat-pill .label { color: rgba(255,255,255,0.6); }
+.stat-pill .value { font-weight: 600; }
+.filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.search-box { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; flex: 1; min-width: 240px; max-width: 400px; transition: border-color 200ms; }
+.search-box:focus-within { border-color: rgba(0,212,255,0.35); }
+.search-box svg { width: 16px; height: 16px; color: rgba(255,255,255,0.6); flex-shrink: 0; }
+.search-box input { background: none; border: none; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.875rem; width: 100%; outline: none; }
+.search-box input::placeholder { color: rgba(255,255,255,0.6); }
+.filter-select { padding: 8px 32px 8px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.875rem; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.filter-select:hover, .filter-select:focus { border-color: rgba(0,212,255,0.35); outline: none; }
+.filter-select option { background: #1a1a2e; }
+.filter-count { font-size: 0.875rem; color: rgba(255,255,255,0.6); margin-left: auto; white-space: nowrap; }
+.table-wrapper { background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { padding: 12px 16px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); text-align: left; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; user-select: none; }
+.data-table th.sortable { cursor: pointer; }
+.data-table th.sortable:hover { color: #00d4ff; }
+.data-table td { padding: 12px 16px; font-size: 0.875rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+.data-table tbody tr { transition: background 200ms; }
+.data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.cell-primary { font-weight: 500; }
+.cell-secondary { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+.cell-mono { font-family: 'SF Mono','Fira Code','Cascadia Code',monospace; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+.cell-muted { color: rgba(255,255,255,0.6); font-style: italic; }
+.cell-price { font-family: 'SF Mono','Fira Code',monospace; font-weight: 600; }
+.loading-cell { text-align: center; padding: 40px 16px; color: rgba(255,255,255,0.6); }
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.status-MATCHED { background: rgba(0,212,255,0.1); color: #00d4ff; border: 1px solid rgba(0,212,255,0.2); }
+.status-NEEDS_REVIEW { background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
+.status-UNMAPPED { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
+.action-group { display: flex; gap: 6px; }
+.btn-action { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: transparent; cursor: pointer; transition: all 200ms; color: rgba(255,255,255,0.6); }
+.btn-action:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.92); }
+.btn-action.approve:hover { border-color: rgba(0,255,136,0.4); color: #00ff88; background: rgba(0,255,136,0.08); }
+.btn-action.edit:hover { border-color: rgba(0,212,255,0.35); color: #00d4ff; background: rgba(0,212,255,0.12); }
+.btn-action svg { width: 16px; height: 16px; }
+.table-footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.875rem; color: rgba(255,255,255,0.6); }
+.pagination { display: flex; gap: 4px; }
+.page-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: transparent; color: rgba(255,255,255,0.6); font-family: inherit; font-size: 0.8rem; cursor: pointer; transition: all 200ms; }
+.page-btn:hover { border-color: rgba(0,212,255,0.35); color: rgba(255,255,255,0.92); }
+.page-btn.active { background: rgba(0,212,255,0.12); color: #00d4ff; border-color: rgba(0,212,255,0.3); font-weight: 600; }
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; }
+.modal-overlay.visible { display: flex; }
+.modal { background: #12121f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 90%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.modal-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
+.modal-close { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.5rem; cursor: pointer; padding: 4px 8px; line-height: 1; }
+.modal-close:hover { color: rgba(255,255,255,0.92); }
+.modal-body { padding: 24px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.1); }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.form-input { width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.875rem; outline: none; box-sizing: border-box; }
+.form-input:focus { border-color: rgba(0,212,255,0.35); }
+.form-input[readonly] { opacity: 0.6; }
+.qb-results { max-height: 160px; overflow-y: auto; margin-top: 4px; border-radius: 8px; }
+.qb-result-item { padding: 8px 12px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 200ms; }
+.qb-result-item:hover { background: rgba(0,212,255,0.08); }
+.qb-result-item .qb-id { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+.btn-cancel { padding: 10px 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.875rem; cursor: pointer; }
+.btn-cancel:hover { background: rgba(255,255,255,0.1); }
+.btn-save { padding: 10px 20px; background: #00d4ff; border: none; border-radius: 8px; color: #0a0a0f; font-family: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.btn-save:hover { filter: brightness(1.1); }
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 500; z-index: 10001; animation: slideUp 300ms ease; transition: opacity 300ms; }
+.toast-success { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+.toast-error { background: rgba(255,68,68,0.15); color: #ff4444; border: 1px solid rgba(255,68,68,0.3); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 768px) {
+  .page-wrapper { padding: 16px; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .filter-bar { flex-direction: column; }
+  .search-box { max-width: 100%; }
+  .filter-count { margin-left: 0; }
+  .table-wrapper { overflow-x: auto; }
+  .data-table { min-width: 600px; }
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  const API_BASE = '/api/pipeline';
+  const QB_API = '/api/qb';
+  const PAGE_SIZE = 50;
+  let currentPage = 1;
+  let currentData = [];
+  let editingPartId = null;
+
+  async function api(path, options = {}) {
+    const res = await fetch(`${API_BASE}${path}`, { headers: { 'Content-Type': 'application/json', ...options.headers }, ...options });
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  async function qbApi(path) {
+    const res = await fetch(`${QB_API}${path}`);
+    if (!res.ok) throw new Error(`QB API ${res.status}`);
+    return res.json();
+  }
+
+  function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  async function loadStats() {
+    try {
+      const stats = await api('/stats');
+      const pm = stats.part_map || {};
+      document.getElementById('stat-matched').textContent = (pm.MATCHED || 0).toLocaleString();
+      document.getElementById('stat-review').textContent = (pm.NEEDS_REVIEW || 0).toLocaleString();
+      document.getElementById('stat-unmapped').textContent = (pm.UNMAPPED || 0).toLocaleString();
+    } catch (e) { console.error('Stats failed:', e); }
+  }
+
+  async function loadParts() {
+    const status = document.getElementById('filterStatus').value;
+    const search = document.getElementById('searchInput').value.trim();
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+    params.set('page', currentPage);
+    params.set('limit', PAGE_SIZE);
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Loading...</td></tr>';
+
+    try {
+      const data = await api(`/parts?${params}`);
+      const items = Array.isArray(data) ? data : (data.items || data.results || []);
+      const total = data.total || items.length;
+      currentData = items;
+      renderTable(items);
+      renderPagination(total);
+      document.getElementById('filterCount').textContent = `Showing ${items.length} of ${total.toLocaleString()}`;
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="loading-cell">Error: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderTable(items) {
+    const tbody = document.getElementById('tableBody');
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No parts found</td></tr>'; return; }
+
+    tbody.innerHTML = items.map(p => {
+      const id = p.limble_part_id;
+      const name = p.limble_part_name || p.part_name || `Part #${id}`;
+      const partNum = p.part_number || p.sku || '';
+      const qbName = p.qbo_item_name || '';
+      const qbId = p.qbo_item_id || '';
+      const price = p.qbo_price != null ? `$${Number(p.qbo_price).toFixed(2)}` : '';
+      const status = p.status || 'UNMAPPED';
+      const isReview = status === 'NEEDS_REVIEW';
+
+      const statusLabels = { 'MATCHED': 'Matched', 'NEEDS_REVIEW': 'Review', 'UNMAPPED': 'Unmapped' };
+
+      return `<tr data-id="${id}">
+        <td><div class="cell-primary">${esc(name)}</div></td>
+        <td><span class="cell-mono">${esc(partNum)}</span></td>
+        <td>
+          ${qbName
+            ? `<div class="cell-primary">${esc(qbName)}</div><div class="cell-secondary">Item #${esc(String(qbId))}</div>`
+            : `<div class="cell-muted">— No match —</div>`
+          }
+        </td>
+        <td>${price ? `<span class="cell-price">${price}</span>` : '<span class="cell-mono" style="opacity:0.3">—</span>'}</td>
+        <td><span class="status status-${status}">${esc(statusLabels[status] || status)}</span></td>
+        <td>
+          <div class="action-group">
+            ${isReview ? `<button class="btn-action approve" title="Confirm" onclick="confirmPart(${id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></button>` : ''}
+            <button class="btn-action edit" title="Edit" onclick="openEdit(${id})">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderPagination(total) {
+    const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+    const container = document.getElementById('pagination');
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = Math.min(currentPage * PAGE_SIZE, total);
+    document.getElementById('pageInfo').textContent = `Showing ${start}–${end} of ${total.toLocaleString()}`;
+
+    let btns = [];
+    const maxV = 5;
+    let sp = Math.max(1, currentPage - 2);
+    let ep = Math.min(totalPages, sp + maxV - 1);
+    if (ep - sp < maxV - 1) sp = Math.max(1, ep - maxV + 1);
+    if (sp > 1) btns.push(pgBtn(1));
+    if (sp > 2) btns.push('<span style="color:rgba(255,255,255,0.3);padding:0 4px">...</span>');
+    for (let i = sp; i <= ep; i++) btns.push(pgBtn(i));
+    if (ep < totalPages - 1) btns.push('<span style="color:rgba(255,255,255,0.3);padding:0 4px">...</span>');
+    if (ep < totalPages) btns.push(pgBtn(totalPages));
+    container.innerHTML = btns.join('');
+    container.querySelectorAll('.page-btn').forEach(b => b.addEventListener('click', () => { currentPage = Number(b.dataset.page); loadParts(); }));
+  }
+
+  function pgBtn(n) { return `<button class="page-btn ${n === currentPage ? 'active' : ''}" data-page="${n}">${n}</button>`; }
+
+  window.confirmPart = async function(id) {
+    try {
+      await api(`/parts/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'MATCHED' }) });
+      toast('Part confirmed');
+      loadParts(); loadStats();
+    } catch (e) { toast(`Error: ${e.message}`, 'error'); }
+  };
+
+  window.openEdit = function(id) {
+    const item = currentData.find(p => p.limble_part_id === id);
+    if (!item) return;
+    editingPartId = id;
+    document.getElementById('modalPartName').value = item.limble_part_name || item.part_name || `Part #${id}`;
+    document.getElementById('modalQBName').value = item.qbo_item_name || '';
+    document.getElementById('modalQBId').value = item.qbo_item_id || '';
+    document.getElementById('modalQBSearch').value = '';
+    document.getElementById('qbResults').innerHTML = '';
+    document.getElementById('editModal').classList.add('visible');
+  };
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('editModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+  function closeModal() { document.getElementById('editModal').classList.remove('visible'); editingPartId = null; }
+
+  let qbTimeout;
+  document.getElementById('modalQBSearch').addEventListener('input', function() {
+    clearTimeout(qbTimeout);
+    const q = this.value.trim();
+    if (q.length < 2) { document.getElementById('qbResults').innerHTML = ''; return; }
+    qbTimeout = setTimeout(async () => {
+      try {
+        const data = await qbApi(`/products/search?q=${encodeURIComponent(q)}`);
+        const items = Array.isArray(data) ? data : (data.QueryResponse?.Item || data.items || []);
+        const container = document.getElementById('qbResults');
+        if (!items.length) { container.innerHTML = '<div class="qb-result-item cell-muted">No results</div>'; return; }
+        container.innerHTML = items.slice(0, 10).map(i => {
+          const name = i.Name || i.name || '';
+          const id = i.Id || i.id || '';
+          const price = i.UnitPrice != null ? `$${Number(i.UnitPrice).toFixed(2)}` : '';
+          return `<div class="qb-result-item" data-id="${esc(String(id))}" data-name="${esc(name)}">${esc(name)} ${price ? `<span class="cell-price">${price}</span>` : ''} <span class="qb-id">#${esc(String(id))}</span></div>`;
+        }).join('');
+        container.querySelectorAll('.qb-result-item').forEach(el => {
+          el.addEventListener('click', function() {
+            document.getElementById('modalQBName').value = this.dataset.name;
+            document.getElementById('modalQBId').value = this.dataset.id;
+            container.innerHTML = '';
+          });
+        });
+      } catch (e) { document.getElementById('qbResults').innerHTML = `<div class="qb-result-item cell-muted">Error: ${esc(e.message)}</div>`; }
+    }, 400);
+  });
+
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    if (!editingPartId) return;
+    const qbId = document.getElementById('modalQBId').value;
+    const qbName = document.getElementById('modalQBName').value;
+    const body = {};
+    if (qbId) { body.qbo_item_id = Number(qbId); body.qbo_item_name = qbName; body.status = 'MATCHED'; }
+    try {
+      await api(`/parts/${editingPartId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      toast('Part updated');
+      closeModal(); loadParts(); loadStats();
+    } catch (e) { toast(`Error: ${e.message}`, 'error'); }
+  });
+
+  let searchTimeout;
+  document.getElementById('searchInput').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { currentPage = 1; loadParts(); }, 400); });
+  document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; loadParts(); });
+
+  window.onPageReady = function(user, roles) { loadStats(); loadParts(); };
+})();
+</script>
+
+</body>
+</html>

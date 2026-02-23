@@ -46,6 +46,18 @@ const PAGE_ACCESS = {
   '/westbank': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
   '/mannings/': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
   '/mannings': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
+  '/pipeline': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/customers': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/customers/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/parts': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/parts/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/preview': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/preview/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/log': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/log/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/rates': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/rates/': { roles: ['Admin'], redirect: '/tech/parts/' },
 };
 
 let auth0Client = null;

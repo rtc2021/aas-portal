@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rate Cards - Invoice Pipeline - AAS Portal</title>
+
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access Rate Cards</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <div class="page-wrapper">
+
+      <header class="page-header">
+        <div class="header-left">
+          <h1 class="page-title">Billing <span>Rates</span></h1>
+          <a href="/pipeline" class="back-link">&larr; Pipeline Dashboard</a>
+        </div>
+        <div class="header-stats">
+          <div class="stat-pill">
+            <div class="dot dot-blue"></div>
+            <span class="label">Active Tiers</span>
+            <span class="value" id="stat-tiers">-</span>
+          </div>
+        </div>
+      </header>
+
+      <div id="rateGrid" class="rate-grid">
+        <div class="loading-cell">Loading rate cards...</div>
+      </div>
+    </div>
+  </div>
+
+<style>
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.page-wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 32px 48px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+.header-left { display: flex; flex-direction: column; gap: 4px; }
+.back-link { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none; transition: color 200ms; }
+.back-link:hover { color: #00d4ff; }
+.page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-title span { color: #00d4ff; }
+.header-stats { display: flex; gap: 20px; }
+.stat-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9999px; font-size: 0.875rem; backdrop-filter: blur(20px) saturate(180%); }
+.stat-pill .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-blue { background: #00d4ff; box-shadow: 0 0 6px rgba(0,212,255,0.4); }
+.stat-pill .label { color: rgba(255,255,255,0.6); }
+.stat-pill .value { font-weight: 600; }
+.loading-cell { text-align: center; padding: 40px 16px; color: rgba(255,255,255,0.6); }
+
+/* Rate Card Grid */
+.rate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.rate-card { background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; backdrop-filter: blur(20px) saturate(180%); transition: border-color 200ms; }
+.rate-card:hover { border-color: rgba(0,212,255,0.35); }
+.rate-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.rate-card-tier { font-weight: 700; font-size: 1rem; text-transform: capitalize; }
+.rate-card-tier-badge { padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.tier-standard .rate-card-tier-badge { background: rgba(0,212,255,0.12); color: #00d4ff; }
+.tier-lcmc .rate-card-tier-badge { background: rgba(0,255,136,0.12); color: #00ff88; }
+.tier-ochsner .rate-card-tier-badge { background: rgba(0,255,136,0.12); color: #00ff88; }
+.tier-service_charge .rate-card-tier-badge { background: rgba(255,204,0,0.12); color: #ffcc00; }
+.tier-emergency .rate-card-tier-badge { background: rgba(255,68,68,0.12); color: #ff4444; }
+.tier-after_hours .rate-card-tier-badge { background: rgba(255,107,53,0.12); color: #ff6b35; }
+.tier-warranty .rate-card-tier-badge { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+
+.rate-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rate-row:last-child { border-bottom: none; }
+.rate-label { font-size: 0.875rem; color: rgba(255,255,255,0.6); }
+.rate-item-name { font-size: 0.8rem; font-weight: 500; }
+.rate-value { font-family: 'SF Mono','Fira Code',monospace; font-size: 1rem; font-weight: 700; }
+.rate-value.zero { color: rgba(255,255,255,0.6); opacity: 0.5; }
+.rate-qb-id { font-family: 'SF Mono','Fira Code',monospace; font-size: 0.7rem; color: rgba(255,255,255,0.6); opacity: 0.6; }
+
+.rate-card-actions { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: flex-end; }
+.btn-edit-rate { padding: 6px 16px; font-family: inherit; font-size: 0.8rem; font-weight: 600; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: rgba(255,255,255,0.6); cursor: pointer; transition: all 200ms; }
+.btn-edit-rate:hover { border-color: rgba(0,212,255,0.35); color: #00d4ff; background: rgba(0,212,255,0.08); }
+
+/* Edit form inside card */
+.rate-edit-row { display: flex; align-items: center; gap: 8px; }
+.rate-edit-input { width: 100px; padding: 6px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: rgba(255,255,255,0.92); font-family: 'SF Mono','Fira Code',monospace; font-size: 0.875rem; outline: none; }
+.rate-edit-input:focus { border-color: rgba(0,212,255,0.35); }
+.rate-edit-actions { display: flex; gap: 6px; margin-top: 12px; justify-content: flex-end; }
+.btn-rate-save { padding: 6px 14px; background: #00d4ff; border: none; border-radius: 6px; color: #0a0a0f; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.btn-rate-cancel { padding: 6px 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.8rem; cursor: pointer; }
+
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 500; z-index: 10001; animation: slideUp 300ms ease; transition: opacity 300ms; }
+.toast-success { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+.toast-error { background: rgba(255,68,68,0.15); color: #ff4444; border: 1px solid rgba(255,68,68,0.3); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 768px) {
+  .page-wrapper { padding: 16px; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .rate-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  const API_BASE = '/api/pipeline';
+  let ratesData = [];
+
+  async function api(path, options = {}) {
+    const res = await fetch(`${API_BASE}${path}`, { headers: { 'Content-Type': 'application/json', ...options.headers }, ...options });
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+  const TIER_BADGES = {
+    standard: 'DEFAULT', lcmc: 'HEALTHCARE', ochsner: 'HEALTHCARE',
+    service_charge: 'FLAGGED', emergency: 'PRIORITY', after_hours: 'OVERTIME', warranty: 'NO INVOICE'
+  };
+
+  function fmtPrice(val, unit) {
+    if (val == null || val === 0) return { text: '$0', cls: 'zero', unit: unit || '' };
+    return { text: `$${Number(val).toFixed(2).replace(/\.00$/, '')}`, cls: '', unit: unit || '' };
+  }
+
+  async function loadRates() {
+    const grid = document.getElementById('rateGrid');
+    grid.innerHTML = '<div class="loading-cell">Loading...</div>';
+
+    try {
+      const data = await api('/rates');
+      const rates = Array.isArray(data) ? data : (data.rates || data.items || []);
+      ratesData = rates;
+      document.getElementById('stat-tiers').textContent = rates.length;
+      renderRates(rates);
+    } catch (e) {
+      grid.innerHTML = `<div class="loading-cell">Error: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderRates(rates) {
+    const grid = document.getElementById('rateGrid');
+    if (!rates.length) { grid.innerHTML = '<div class="loading-cell">No rate cards found</div>'; return; }
+
+    grid.innerHTML = rates.map(r => {
+      const tier = r.tier || 'unknown';
+      const badge = TIER_BADGES[tier] || tier.toUpperCase();
+      const labor = fmtPrice(r.labor_rate, '/hr');
+      const travel = fmtPrice(r.travel_rate, ' flat');
+      const laborQB = r.labor_qbo_item_id ? `#${r.labor_qbo_item_id}` : '';
+      const travelQB = r.travel_qbo_item_id ? `#${r.travel_qbo_item_id}` : '';
+      const laborName = r.labor_item_name || 'Service Labor';
+      const travelName = r.travel_item_name || 'Travel';
+
+      return `<div class="rate-card tier-${esc(tier)}" data-tier="${esc(tier)}">
+        <div class="rate-card-header">
+          <span class="rate-card-tier">${esc(tier.replace(/_/g, ' '))}</span>
+          <span class="rate-card-tier-badge">${esc(badge)}</span>
+        </div>
+        <div class="rate-row">
+          <div>
+            <div class="rate-label">Labor</div>
+            <div class="rate-item-name">${esc(laborName)} <span class="rate-qb-id">${esc(laborQB)}</span></div>
+          </div>
+          <div class="rate-value ${labor.cls}">${labor.text}<span style="font-size:0.7rem;opacity:0.6">${labor.unit}</span></div>
+        </div>
+        <div class="rate-row">
+          <div>
+            <div class="rate-label">Travel</div>
+            <div class="rate-item-name">${esc(travelName)} <span class="rate-qb-id">${esc(travelQB)}</span></div>
+          </div>
+          <div class="rate-value ${travel.cls}">${travel.text}<span style="font-size:0.7rem;opacity:0.6">${travel.unit}</span></div>
+        </div>
+        <div class="rate-card-actions">
+          <button class="btn-edit-rate" onclick="editRate('${esc(tier)}')">Edit</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.editRate = function(tier) {
+    const rate = ratesData.find(r => r.tier === tier);
+    if (!rate) return;
+    const card = document.querySelector(`.rate-card[data-tier="${tier}"]`);
+    if (!card) return;
+
+    const laborVal = rate.labor_rate || 0;
+    const travelVal = rate.travel_rate || 0;
+
+    card.innerHTML = `
+      <div class="rate-card-header">
+        <span class="rate-card-tier">${esc(tier.replace(/_/g, ' '))}</span>
+        <span class="rate-card-tier-badge">EDITING</span>
+      </div>
+      <div class="rate-row rate-edit-row">
+        <div class="rate-label" style="min-width:60px">Labor</div>
+        <input type="number" class="rate-edit-input" id="edit-labor-${tier}" value="${laborVal}" step="0.50" min="0">
+        <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">/hr</span>
+      </div>
+      <div class="rate-row rate-edit-row">
+        <div class="rate-label" style="min-width:60px">Travel</div>
+        <input type="number" class="rate-edit-input" id="edit-travel-${tier}" value="${travelVal}" step="0.50" min="0">
+        <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">flat</span>
+      </div>
+      <div class="rate-edit-actions">
+        <button class="btn-rate-cancel" onclick="loadRates()">Cancel</button>
+        <button class="btn-rate-save" onclick="saveRate('${esc(tier)}')">Save</button>
+      </div>
+    `;
+  };
+
+  window.saveRate = async function(tier) {
+    const labor = parseFloat(document.getElementById(`edit-labor-${tier}`).value);
+    const travel = parseFloat(document.getElementById(`edit-travel-${tier}`).value);
+
+    try {
+      await api(`/rates/${encodeURIComponent(tier)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ labor_rate: labor, travel_rate: travel })
+      });
+      toast(`${tier} rates updated`);
+      loadRates();
+    } catch (e) {
+      toast(`Error: ${e.message}`, 'error');
+    }
+  };
+
+  window.onPageReady = function(user, roles) { loadRates(); };
+})();
+</script>
+
+</body>
+</html>
