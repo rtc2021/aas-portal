@@ -139,13 +139,6 @@
         </div>
       </div>
 
-      <!-- Revenue Estimate -->
-      <div class="revenue-card">
-        <div class="revenue-label">Estimated Unbilled Revenue</div>
-        <div class="revenue-value" id="stat-revenue">—</div>
-        <div class="revenue-note">Based on completed tasks awaiting invoicing</div>
-      </div>
-
     </div>
   </div>
 
@@ -189,28 +182,16 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .action-card-arrow { position: absolute; top: 20px; right: 16px; font-size: 1.2rem; color: rgba(255,255,255,0.3); }
 .action-card:hover .action-card-arrow { color: #00d4ff; }
 
-/* Revenue Card */
-.revenue-card {
-  text-align: center; padding: 32px;
-  background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-  backdrop-filter: blur(20px) saturate(180%);
-}
-.revenue-label { font-size: 0.85rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-.revenue-value { font-size: 3rem; font-weight: 700; color: #00ff88; font-family: 'SF Mono','Fira Code',monospace; }
-.revenue-note { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 8px; }
-
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
   .stats-grid { grid-template-columns: 1fr; }
   .actions-grid { grid-template-columns: 1fr; }
-  .revenue-value { font-size: 2rem; }
 }
 
 /* Light theme */
 body.light-theme::before { opacity: 0; }
 body.light-theme .stat-card,
-body.light-theme .action-card,
-body.light-theme .revenue-card { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .action-card { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .stat-card:hover,
 body.light-theme .action-card:hover { border-color: rgba(0,102,170,0.35); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
 body.light-theme .action-card.disabled:hover { border-color: rgba(0,0,0,0.1); }
@@ -218,9 +199,7 @@ body.light-theme .stat-card-label,
 body.light-theme .stat-card-arrow,
 body.light-theme .section-title,
 body.light-theme .action-card-desc,
-body.light-theme .action-card-arrow,
-body.light-theme .revenue-label,
-body.light-theme .revenue-note { color: rgba(26,26,46,0.6); }
+body.light-theme .action-card-arrow { color: rgba(26,26,46,0.6); }
 body.light-theme .action-card-badge { background: rgba(255,180,0,0.15); }
 </style>
 
@@ -259,10 +238,6 @@ body.light-theme .action-card-badge { background: rgba(255,180,0,0.15); }
       document.getElementById('stat-parts').textContent = (stats.part_map?.UNMAPPED || 0).toLocaleString();
       document.getElementById('stat-tiers').textContent = (stats.rate_card?.active_tiers || 0).toLocaleString();
       document.getElementById('stat-invoices').textContent = (stats.billing_log?.total || 0).toLocaleString();
-      const revenue = stats.billing_log?.unbilled_revenue ?? stats.unbilled_revenue;
-      if (revenue != null) {
-        document.getElementById('stat-revenue').textContent = '$' + Number(revenue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-      }
     } catch (e) {
       console.error('Dashboard stats failed:', e);
     }
