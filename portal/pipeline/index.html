@@ -8,7 +8,8 @@
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 
   <style>
-    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--ui-bg, #0a0a0f); color: var(--ui-text, rgba(255,255,255,0.92)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
     .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
     .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
@@ -204,6 +205,23 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   .actions-grid { grid-template-columns: 1fr; }
   .revenue-value { font-size: 2rem; }
 }
+
+/* Light theme */
+body.light-theme::before { opacity: 0; }
+body.light-theme .stat-card,
+body.light-theme .action-card,
+body.light-theme .revenue-card { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .stat-card:hover,
+body.light-theme .action-card:hover { border-color: rgba(0,102,170,0.35); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+body.light-theme .action-card.disabled:hover { border-color: rgba(0,0,0,0.1); }
+body.light-theme .stat-card-label,
+body.light-theme .stat-card-arrow,
+body.light-theme .section-title,
+body.light-theme .action-card-desc,
+body.light-theme .action-card-arrow,
+body.light-theme .revenue-label,
+body.light-theme .revenue-note { color: rgba(26,26,46,0.6); }
+body.light-theme .action-card-badge { background: rgba(255,180,0,0.15); }
 </style>
 
 <script>

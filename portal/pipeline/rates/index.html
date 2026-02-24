@@ -8,7 +8,8 @@
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 
   <style>
-    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--ui-bg, #0a0a0f); color: var(--ui-text, rgba(255,255,255,0.92)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
     .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
     .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
@@ -147,6 +148,29 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   .page-header { flex-direction: column; align-items: flex-start; }
   .rate-grid { grid-template-columns: 1fr; }
 }
+
+/* Light theme */
+body.light-theme::before { opacity: 0; }
+body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .stat-pill .label,
+body.light-theme .back-link,
+body.light-theme .rate-label,
+body.light-theme .rate-qb-id,
+body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
+body.light-theme .rate-card { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .rate-card:hover { border-color: rgba(0,102,170,0.35); }
+body.light-theme .rate-row { border-bottom-color: rgba(0,0,0,0.06); }
+body.light-theme .rate-card-actions { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .btn-edit-rate { border-color: rgba(0,0,0,0.1); color: rgba(26,26,46,0.6); }
+body.light-theme .btn-edit-rate:hover { border-color: rgba(0,102,170,0.35); color: #0077b6; background: rgba(0,102,170,0.06); }
+body.light-theme .rate-edit-input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
+body.light-theme .rate-edit-input:focus { border-color: rgba(0,102,170,0.35); }
+body.light-theme .btn-rate-save { color: #fff; }
+body.light-theme .btn-rate-cancel { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: rgba(26,26,46,0.92); }
+body.light-theme .rate-value.zero { color: rgba(26,26,46,0.4); }
+body.light-theme .tier-warranty .rate-card-tier-badge { background: rgba(0,0,0,0.06); color: rgba(26,26,46,0.6); }
+body.light-theme .toast-success { background: rgba(0,180,80,0.12); color: #008844; border-color: rgba(0,180,80,0.25); }
+body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828; border-color: rgba(220,40,40,0.25); }
 </style>
 
 <script>

@@ -8,7 +8,8 @@
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 
   <style>
-    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0a0a0f; color: rgba(255,255,255,0.92); min-height: 100vh; }
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--ui-bg, #0a0a0f); color: var(--ui-text, rgba(255,255,255,0.92)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
     .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
     .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
@@ -252,6 +253,58 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   .data-table { font-size: 0.8rem; }
   .data-table th, .data-table td { padding: 8px 6px; }
 }
+
+/* Light theme */
+body.light-theme::before { opacity: 0; }
+body.light-theme .limit-label { color: rgba(26,26,46,0.6); }
+body.light-theme .limit-label input,
+body.light-theme #filterSelect { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
+body.light-theme .limit-label input:focus,
+body.light-theme #filterSelect:focus { border-color: #0077b6; }
+body.light-theme #runBtn { color: #fff; }
+body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .stat-pill .label,
+body.light-theme .back-link,
+body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
+body.light-theme .data-table th { color: rgba(26,26,46,0.5); border-bottom-color: rgba(0,0,0,0.1); }
+body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.06); }
+body.light-theme .data-table tr.result-row:hover { background: rgba(0,0,0,0.03); }
+body.light-theme .detail-panel { background: rgba(0,0,0,0.02); border-left-color: rgba(0,102,170,0.4); }
+body.light-theme .detail-section h4 { color: rgba(26,26,46,0.5); }
+body.light-theme .detail-table th { color: rgba(26,26,46,0.4); border-bottom-color: rgba(0,0,0,0.06); }
+body.light-theme .detail-table td { border-bottom-color: rgba(0,0,0,0.04); }
+body.light-theme .hold-reason { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
+body.light-theme .walk-step { color: rgba(26,26,46,0.7); }
+body.light-theme .walk-step + .walk-step::before { color: rgba(26,26,46,0.3); }
+body.light-theme .walk-VERIFIED { background: rgba(0,160,80,0.08); color: #008844; }
+body.light-theme .walk-NEEDS_REVIEW { background: rgba(200,150,0,0.1); color: #997a00; }
+body.light-theme .walk-NOT_IN_MAP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); }
+body.light-theme .result-SUCCESS { background: rgba(0,160,80,0.08); color: #008844; border-color: rgba(0,160,80,0.2); }
+body.light-theme .result-HOLD { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
+body.light-theme .result-SKIP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); border-color: rgba(0,0,0,0.08); }
+body.light-theme .result-ERROR { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
+body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
+body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
+body.light-theme .dot-gray { background: rgba(0,0,0,0.25); }
+body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
+body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
+body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
+body.light-theme .confirm-dialog p { color: rgba(26,26,46,0.7); }
+body.light-theme .confirm-dialog strong { color: #008844; }
+body.light-theme .confirm-tasks { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.light-theme .confirm-task-row { color: rgba(26,26,46,0.7); }
+body.light-theme .confirm-task-row + .confirm-task-row { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .confirm-cancel { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.8); }
+body.light-theme #processBtn { color: #fff; }
+body.light-theme .confirm-go { color: #fff; }
+body.light-theme .process-results { background: rgba(255,255,255,0.9); border-color: rgba(0,160,80,0.25); }
+body.light-theme .process-results-title { color: #008844; }
+body.light-theme .process-result-row + .process-result-row { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .process-result-task { color: rgba(26,26,46,0.8); }
+body.light-theme .process-result-status.invoiced { color: #008844; }
+body.light-theme .process-result-status.error { color: #cc2828; }
+body.light-theme .process-result-qb { color: rgba(26,26,46,0.5); }
 </style>
 
 <script>
