@@ -142,7 +142,7 @@
       <!-- Revenue Estimate -->
       <div class="revenue-card">
         <div class="revenue-label">Estimated Unbilled Revenue</div>
-        <div class="revenue-value">$208K</div>
+        <div class="revenue-value" id="stat-revenue">—</div>
         <div class="revenue-note">Based on completed tasks awaiting invoicing</div>
       </div>
 
@@ -259,6 +259,10 @@ body.light-theme .action-card-badge { background: rgba(255,180,0,0.15); }
       document.getElementById('stat-parts').textContent = (stats.part_map?.UNMAPPED || 0).toLocaleString();
       document.getElementById('stat-tiers').textContent = (stats.rate_card?.active_tiers || 0).toLocaleString();
       document.getElementById('stat-invoices').textContent = (stats.billing_log?.total || 0).toLocaleString();
+      const revenue = stats.billing_log?.unbilled_revenue ?? stats.unbilled_revenue;
+      if (revenue != null) {
+        document.getElementById('stat-revenue').textContent = '$' + Number(revenue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
     } catch (e) {
       console.error('Dashboard stats failed:', e);
     }

@@ -474,9 +474,22 @@ body.light-theme .process-result-qb { color: rgba(26,26,46,0.5); }
     if (detail) detail.classList.toggle('open');
   });
 
-  // Filter change
+  // Filter change — update summary + table
   $('filterSelect').addEventListener('change', function() {
-    if (cachedResults.length) renderTable(cachedResults);
+    if (!cachedResults.length) return;
+    var filter = this.value;
+    var filtered = filter ? cachedResults.filter(function(r) { return r.result === filter; }) : cachedResults;
+    var summary = {
+      total: filtered.length,
+      success: filtered.filter(function(r) { return r.result === 'SUCCESS'; }).length,
+      hold: filtered.filter(function(r) { return r.result === 'HOLD'; }).length,
+      skip: filtered.filter(function(r) { return r.result === 'SKIP'; }).length,
+      error: filtered.filter(function(r) { return r.result === 'ERROR'; }).length,
+      total_amount: filtered.reduce(function(sum, r) { return sum + (r.total || 0); }, 0)
+    };
+    renderSummary(summary);
+    renderTable(cachedResults);
+    updateProcessBtn();
   });
 
   // Run button

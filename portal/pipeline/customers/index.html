@@ -1000,20 +1000,22 @@ body.light-theme .btn-bulk-reject:hover { background: rgba(200,40,40,0.18); }
   // Save modal
   document.getElementById('modalSave').addEventListener('click', async () => {
     if (!editingAssetId) return;
-    const body = {
-      tier: document.getElementById('modalTier').value,
-    };
     const qbId = document.getElementById('modalQBId').value;
     const qbName = document.getElementById('modalQBName').value;
-    if (qbId) {
-      body.qbo_customer_id = String(qbId);
-      body.qbo_display_name = qbName;
-      body.status = 'VERIFIED';
+    if (!qbId) {
+      toast('Select a QuickBooks customer match first', 'error');
+      return;
     }
+    const body = {
+      tier: document.getElementById('modalTier').value,
+      qbo_customer_id: String(qbId),
+      qbo_display_name: qbName,
+      status: 'VERIFIED'
+    };
 
     try {
       await api(`/customers/${editingAssetId}`, { method: 'PATCH', body: JSON.stringify(body) });
-      toast('Customer updated');
+      toast('Customer verified');
       closeModal();
       loadCustomers();
       loadStats();
