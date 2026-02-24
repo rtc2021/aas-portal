@@ -504,11 +504,14 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
     if (!editingPartId) return;
     const qbId = document.getElementById('modalQBId').value;
     const qbName = document.getElementById('modalQBName').value;
-    const body = {};
-    if (qbId) { body.qbo_item_id = String(qbId); body.qbo_item_name = qbName; body.status = 'MATCHED'; }
+    if (!qbId) {
+      toast('Select a QuickBooks item match first', 'error');
+      return;
+    }
+    const body = { qbo_item_id: String(qbId), qbo_item_name: qbName, status: 'MATCHED' };
     try {
       await api(`/parts/${editingPartId}`, { method: 'PATCH', body: JSON.stringify(body) });
-      toast('Part updated');
+      toast('Part matched');
       closeModal(); loadParts(); loadStats();
     } catch (e) { toast(`Error: ${e.message}`, 'error'); }
   });
