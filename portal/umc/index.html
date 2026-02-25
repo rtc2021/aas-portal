@@ -1710,7 +1710,7 @@
       try {
         const openTasksData = await loadCSV(OPEN_TASKS_CSV);
         openTasks = openTasksData.rows
-          .filter(r => openTasksData.col(r, 'Customer') === 'UMC')
+          .filter(r => openTasksData.col(r, 'Asset_ID') === '70')
           .map(r => ({
             taskId: openTasksData.col(r, 'Task_ID'),
             assetId: openTasksData.col(r, 'Asset_ID'),
