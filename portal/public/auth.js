@@ -16,7 +16,8 @@ const CUSTOMER_PATHS = {
   'westbank': '/westbank/',
   'mannings': '/mannings/',
   'ochsner_westbank': '/westbank/',
-  'manning': '/mannings/'
+  'manning': '/mannings/',
+  'umc': '/umc/'
 };
 
 // PUBLIC pages don't require auth
@@ -46,6 +47,8 @@ const PAGE_ACCESS = {
   '/westbank': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
   '/mannings/': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
   '/mannings': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
+  '/umc/': { roles: ['Admin', 'Customer'], customerId: 'umc' },
+  '/umc': { roles: ['Admin', 'Customer'], customerId: 'umc' },
   '/pipeline': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/pipeline/': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/pipeline/customers': { roles: ['Admin'], redirect: '/tech/parts/' },
