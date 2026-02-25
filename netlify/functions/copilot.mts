@@ -1737,7 +1737,8 @@ export default async function handler(req: Request, context: Context): Promise<R
         'westbank': ['westbank', 'ochsner_westbank'],
         'ochsner_westbank': ['westbank', 'ochsner_westbank'],
         'mannings': ['mannings', 'manning'],
-        'manning': ['mannings', 'manning']
+        'manning': ['mannings', 'manning'],
+        'umc': ['umc']
       };
 
       const requestedCustomer = body.customerContext?.customer || body.customer;
