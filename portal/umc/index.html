@@ -462,14 +462,14 @@
       /* Hide table headers — labels come from ::before */
       .data-table thead { display: none !important; }
 
-      /* Convert table elements to block layout */
-      .data-table, .data-table tbody, .data-table tr, .data-table td {
+      /* Convert table elements to block layout — exclude deficiency sub-rows */
+      .data-table, .data-table tbody, .data-table tr:not(.deficiency-row), .data-table td:not(.deficiency-row td) {
         display: block !important;
         width: 100% !important;
       }
 
-      /* Each row becomes a card */
-      .data-table tbody tr {
+      /* Each row becomes a card — exclude deficiency sub-rows */
+      .data-table tbody tr:not(.deficiency-row) {
         margin: 10px 0 !important;
         padding: 14px !important;
         border-radius: 14px !important;
@@ -529,14 +529,7 @@
       #openTasksBody td:nth-child(5)::before { content: "Created"; }
       #openTasksBody td:nth-child(6)::before { content: "Actions"; }
 
-      /* AAADM deficiency sub-rows in mobile */
-      .deficiency-row { display: none !important; }
-      .deficiency-row.visible { display: block !important; }
-      .deficiency-row.visible td { border: 0 !important; padding: 0 !important; }
-      .deficiency-row td::before { display: none !important; }
-
-      /* Deficiency cards shouldn't look like data cards */
-      .deficiency-row { margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; }
+      /* Deficiency sub-rows on mobile: single-column checkpoint grid */
       .deficiency-grid { grid-template-columns: 1fr !important; }
 
       /* Scroll and layout fixes */
