@@ -558,6 +558,14 @@
       #tasksBody td:nth-child(6)::before { content: "Summary"; }
       #tasksBody td:nth-child(7)::before { content: "Actions"; }
 
+      /* AAADM Doors table labels */
+      #aaadmDoorsBody td:nth-child(1)::before { content: "Door ID"; }
+      #aaadmDoorsBody td:nth-child(2)::before { content: "Status"; }
+      #aaadmDoorsBody td:nth-child(3)::before { content: "Building"; }
+      #aaadmDoorsBody td:nth-child(4)::before { content: "Floor"; }
+      #aaadmDoorsBody td:nth-child(5)::before { content: "Location"; }
+      #aaadmDoorsBody td:nth-child(6)::before { content: "Deficiencies"; }
+
       /* Open Tasks table labels */
       #openTasksBody td:nth-child(1)::before { content: "Task ID"; }
       #openTasksBody td:nth-child(2)::before { content: "Door"; }
@@ -565,6 +573,10 @@
       #openTasksBody td:nth-child(4)::before { content: "Status"; }
       #openTasksBody td:nth-child(5)::before { content: "Created"; }
       #openTasksBody td:nth-child(6)::before { content: "Actions"; }
+
+      /* AAADM deficiency sub-rows in mobile */
+      .deficiency-row.visible { display: block !important; }
+      .deficiency-row.visible td { border: 0 !important; padding: 0 !important; }
 
       /* Scroll and layout fixes */
       .filters { flex-direction: column; }
@@ -993,6 +1005,32 @@
     .help-content a {
       color: var(--cp-accent);
     }
+
+    /* Deficiency detail expandable rows */
+    .door-row { cursor: pointer; }
+    .door-row:hover { background: var(--cp-accent-bg); }
+    .door-row td:first-child::before {
+      content: '\25B6'; display: inline-block; margin-right: 6px;
+      font-size: 10px; transition: transform 0.2s; color: var(--cp-text-muted);
+    }
+    .door-row.expanded td:first-child::before { transform: rotate(90deg); }
+    .deficiency-row { display: none; }
+    .deficiency-row.visible { display: table-row; }
+    .deficiency-detail {
+      padding: 12px 16px; background: var(--cp-surface);
+      border-left: 3px solid var(--cp-accent);
+    }
+    .deficiency-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 6px 16px; font-size: 13px;
+    }
+    .checkpoint { display: flex; align-items: center; gap: 6px; }
+    .checkpoint.pass { color: var(--cp-green); }
+    .checkpoint.fail { color: var(--cp-red); }
+    .deficiency-meta { font-size: 12px; color: var(--cp-text-secondary); margin-bottom: 8px; }
+
+    /* AAADM stats bar */
+    .aaadm-stats { border-top: 1px solid var(--cp-border); padding-top: 12px; margin-top: 8px; }
   </style>
   <!--
     Netlify snippets inject before </head>:
@@ -1021,6 +1059,7 @@
       <nav class="jump-nav">
         <button class="jump-btn active" data-section="stats">Overview</button>
         <button class="jump-btn" data-section="doors">Doors</button>
+        <button class="jump-btn" data-section="aaadmDoors">AAADM</button>
         <button class="jump-btn" data-section="openTasks">Open Tasks</button>
         <button class="jump-btn" data-section="tasks">Service</button>
         <button class="jump-btn" data-section="actions">Actions</button>
@@ -1060,6 +1099,30 @@
         <div class="stat-card">
           <div class="stat-label">Failing</div>
           <div class="stat-value fail" id="statFail">--</div>
+          <div class="stat-hint">Needs attention</div>
+        </div>
+      </section>
+
+      <!-- AAADM Stats -->
+      <section class="stats-grid aaadm-stats" id="aaadmStatsBar" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-label">AAADM Doors</div>
+          <div class="stat-value" id="statAaadmDoors">--</div>
+          <div class="stat-hint">Automatic doors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">AAADM Compliance</div>
+          <div class="stat-value good" id="statAaadmCompliance">--</div>
+          <div class="stat-hint">ANSI A156.10</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Passing</div>
+          <div class="stat-value good" id="statAaadmPass">--</div>
+          <div class="stat-hint">Compliant</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Failing</div>
+          <div class="stat-value fail" id="statAaadmFail">--</div>
           <div class="stat-hint">Needs attention</div>
         </div>
       </section>
@@ -1144,6 +1207,64 @@
                 </tr>
               </thead>
               <tbody id="doorsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- AAADM Automatic Door Inspections Section -->
+      <section class="section" id="aaadmDoors" style="display:none;">
+        <div class="section-header" onclick="toggleSection(this.parentElement)">
+          <div>
+            <h2 class="section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              AAADM Automatic Door Inspections
+            </h2>
+            <p class="section-meta" id="aaadmMeta">Loading...</p>
+          </div>
+          <svg class="section-toggle" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+        <div class="section-body">
+          <div class="filters">
+            <input id="aaadmSearch" class="filter-input" type="text" placeholder="Search AAADM doors..." />
+            <select id="aaadmStatusFilter" class="filter-select">
+              <option value="">All Status</option>
+              <option value="PASS">PASS</option>
+              <option value="FAIL">FAIL</option>
+            </select>
+          </div>
+          <div class="download-group" style="margin-bottom: 12px;">
+            <button id="downloadAaadmCSV" class="btn green">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              CSV
+            </button>
+            <button id="downloadAaadmPDF" class="btn primary">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              PDF
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Door ID</th>
+                  <th>Status</th>
+                  <th>Building</th>
+                  <th>Floor</th>
+                  <th>Location</th>
+                  <th>Deficiencies</th>
+                </tr>
+              </thead>
+              <tbody id="aaadmDoorsBody"></tbody>
             </table>
           </div>
         </div>
@@ -1418,6 +1539,10 @@
     const TASK_NOTES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=797841380&single=true&output=csv';
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxieMXC3yxR1TeJVbYPhzLpgS-IVtVd_JOfERJP76p1ZT6vzFVb4Wo2KjcHIe0_5O4WPg/exec';
 
+    // AAADM Automatic Door Inspections (separate from fire door registry)
+    const AAADM_SUMMARY_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArzV0J6ryzbQwZM0YazdgejKaosWAluff6L8NinTa5GDOB81qXmYZr9FaE6aYjjWtcUa5rHHSCyC7/pub?gid=543407032&single=true&output=csv';
+    const AAADM_DETAIL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArzV0J6ryzbQwZM0YazdgejKaosWAluff6L8NinTa5GDOB81qXmYZr9FaE6aYjjWtcUa5rHHSCyC7/pub?gid=611497857&single=true&output=csv';
+
     // Pagination - show 50 items, then "Load More"
     let taskDisplayCount = 50;
     let doorDisplayCount = 50;
@@ -1641,7 +1766,7 @@
         });
       }, { threshold: 0.3 });
 
-      ['stats', 'doors', 'openTasks', 'tasks', 'actions'].forEach(id => {
+      ['stats', 'doors', 'aaadmDoors', 'openTasks', 'tasks', 'actions'].forEach(id => {
         const el = document.getElementById(id);
         if (el) observer.observe(el);
       });
@@ -1650,6 +1775,8 @@
     // App state
     let tasks = [], doors = [];
     let openTasks = [];
+    let aaadmDoors = [];
+    let aaadmDeficiencyMap = {};
     let taskNotes = [];
     let currentUser = null;
     let currentModalTaskId = null;
@@ -1794,6 +1921,56 @@
       } catch (e) {
         console.warn('[Portal] Task notes not available:', e);
         taskNotes = [];
+      }
+
+      // Load AAADM automatic door inspection data
+      try {
+        const aaadmCSV = await loadCSV(AAADM_SUMMARY_CSV);
+        aaadmDoors = aaadmCSV.rows.map(r => ({
+          doorId: aaadmCSV.col(r, 'Door ID'),
+          status: baseStatus(aaadmCSV.col(r, 'Status')),
+          building: aaadmCSV.col(r, 'Building'),
+          floor: aaadmCSV.col(r, 'Floor'),
+          doorType: aaadmCSV.col(r, 'Door Type'),
+          location: aaadmCSV.col(r, 'Location'),
+          lastInspection: aaadmCSV.col(r, 'Last Inspection'),
+          tech: aaadmCSV.col(r, 'Technician'),
+          notes: aaadmCSV.col(r, 'Notes')
+        })).filter(d => d.doorId);
+        console.log('[Portal] AAADM doors loaded:', aaadmDoors.length);
+      } catch (e) {
+        console.warn('[Portal] AAADM summary not available:', e);
+      }
+
+      // Load AAADM deficiency detail (14 checkpoints)
+      try {
+        const defCSV = await loadCSV(AAADM_DETAIL_CSV);
+        const CHECKPOINTS = [
+          'Operator Adjustments','Emergency Breakout','Clearance','Guide Rails',
+          'Floor Mat Activation','Activating Sensors','Signage','Overhead Safety Sensors',
+          'Door Mount Safety Sensors','Threshold','Presence Sensor',
+          'Powered Opening Force','Unpowered Opening Force','General'
+        ];
+        defCSV.rows.forEach(r => {
+          const id = defCSV.col(r, 'Door ID');
+          if (!id) return;
+          const fails = [], checks = {};
+          CHECKPOINTS.forEach(cp => {
+            const val = defCSV.col(r, cp);
+            checks[cp] = val;
+            if (val === 'X') fails.push(cp);
+          });
+          aaadmDeficiencyMap[id] = {
+            building: defCSV.col(r, 'Building'),
+            floor: defCSV.col(r, 'Floor'),
+            doorType: defCSV.col(r, 'Door Type'),
+            checkpoints: checks,
+            failList: fails
+          };
+        });
+        console.log('[Portal] AAADM deficiency map:', Object.keys(aaadmDeficiencyMap).length, 'doors');
+      } catch (e) {
+        console.warn('[Portal] AAADM detail not available:', e);
       }
 
       // Debug: Log task breakdown
@@ -2025,8 +2202,116 @@
         if (openTasksJumpBtn) openTasksJumpBtn.textContent = `⏳ ${filteredOpenTasks.length} Open`;
       }
 
+      // ===== AAADM Section =====
+      renderAaadmSection();
+
       // Update copilot suggestions with real data
       updateCopilotSuggestions();
+    }
+
+    function renderAaadmSection() {
+      if (!aaadmDoors.length) return;
+
+      // Show section and stats bar
+      $('aaadmDoors').style.display = '';
+      $('aaadmStatsBar').style.display = '';
+
+      const aaadmQ = ($('aaadmSearch')?.value || '').toLowerCase().trim();
+      const aaadmStatus = ($('aaadmStatusFilter')?.value || '').toUpperCase();
+
+      const filtered = aaadmDoors.filter(d => {
+        if (aaadmStatus && d.status !== aaadmStatus) return false;
+        if (aaadmQ) {
+          const blob = `${d.doorId} ${d.building} ${d.floor} ${d.location} ${d.notes}`.toLowerCase();
+          if (!blob.includes(aaadmQ)) return false;
+        }
+        return true;
+      });
+
+      const passCount = filtered.filter(d => d.status === 'PASS').length;
+      const failCount = filtered.filter(d => d.status === 'FAIL').length;
+      const totalWithStatus = passCount + failCount;
+      const compliancePct = totalWithStatus > 0 ? Math.round((passCount / totalWithStatus) * 100) : 0;
+
+      // Update AAADM stats
+      $('statAaadmDoors').textContent = filtered.length;
+      $('statAaadmCompliance').textContent = compliancePct + '%';
+      $('statAaadmCompliance').className = 'stat-value' + (compliancePct >= 90 ? ' good' : compliancePct >= 70 ? ' warn' : ' fail');
+      $('statAaadmPass').textContent = passCount;
+      $('statAaadmFail').textContent = failCount;
+      $('statAaadmFail').className = 'stat-value' + (failCount > 0 ? ' fail' : ' good');
+
+      // Update section meta
+      $('aaadmMeta').textContent = `${filtered.length} doors \u2022 ${compliancePct}% compliant \u2022 ANSI A156.10`;
+
+      // Update jump nav button
+      const aaadmJumpBtn = document.querySelector('.jump-btn[data-section="aaadmDoors"]');
+      if (aaadmJumpBtn) aaadmJumpBtn.textContent = `\u2699 ${filtered.length} AAADM`;
+
+      // Render table
+      const tbody = $('aaadmDoorsBody');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--cp-text-muted);padding:30px;">No AAADM doors match filters</td></tr>';
+        return;
+      }
+
+      filtered.forEach(d => {
+        const def = aaadmDeficiencyMap[d.doorId];
+        const failCount = def ? def.failList.length : 0;
+        const defText = failCount > 0 ? `${failCount} deficienc${failCount === 1 ? 'y' : 'ies'}` : 'None';
+
+        const tr = document.createElement('tr');
+        tr.className = 'door-row';
+        tr.dataset.doorId = d.doorId;
+        tr.innerHTML = `
+          <td>${escapeHtml(d.doorId)}</td>
+          <td><span class="badge ${statusClass(d.status)}">${escapeHtml(d.status)}</span></td>
+          <td>${escapeHtml(d.building)}</td>
+          <td>${escapeHtml(d.floor)}</td>
+          <td>${escapeHtml(d.location)}</td>
+          <td>${failCount > 0 ? `<span style="color:var(--cp-red);">${defText}</span>` : `<span style="color:var(--cp-green);">${defText}</span>`}</td>
+        `;
+        tr.addEventListener('click', () => toggleDeficiencyRow(d.doorId));
+        tbody.appendChild(tr);
+
+        // Deficiency sub-row
+        if (def) {
+          const subTr = document.createElement('tr');
+          subTr.className = 'deficiency-row';
+          subTr.id = 'def-' + d.doorId;
+          const CHECKPOINTS = [
+            'Operator Adjustments','Emergency Breakout','Clearance','Guide Rails',
+            'Floor Mat Activation','Activating Sensors','Signage','Overhead Safety Sensors',
+            'Door Mount Safety Sensors','Threshold','Presence Sensor',
+            'Powered Opening Force','Unpowered Opening Force','General'
+          ];
+          const checkpointHtml = CHECKPOINTS.map(cp => {
+            const val = def.checkpoints[cp];
+            const isFail = val === 'X';
+            return `<div class="checkpoint ${isFail ? 'fail' : 'pass'}">${isFail ? '\u2717' : '\u2713'} ${escapeHtml(cp)}</div>`;
+          }).join('');
+
+          subTr.innerHTML = `
+            <td colspan="6">
+              <div class="deficiency-detail">
+                <div class="deficiency-meta">${escapeHtml(d.doorType || '')} \u2022 ${escapeHtml(d.building)} \u2022 Floor ${escapeHtml(d.floor)}</div>
+                <div class="deficiency-grid">${checkpointHtml}</div>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(subTr);
+        }
+      });
+    }
+
+    function toggleDeficiencyRow(doorId) {
+      const row = document.querySelector(`.door-row[data-door-id="${doorId}"]`);
+      const defRow = $('def-' + doorId);
+      if (!row || !defRow) return;
+      row.classList.toggle('expanded');
+      defRow.classList.toggle('visible');
     }
 
     function getDateRangeStr() {
@@ -2059,6 +2344,19 @@
         });
         downloadCSV(`umc-service-${getDateRangeStr()}.csv`, rows);
       };
+
+      // AAADM downloads
+      $('downloadAaadmCSV').onclick = () => {
+        const rows = [['Door ID', 'Status', 'Building', 'Floor', 'Door Type', 'Location', 'Deficiencies', 'Last Inspection', 'Technician', 'Notes']];
+        aaadmDoors.forEach(d => {
+          const def = aaadmDeficiencyMap[d.doorId];
+          const defText = def && def.failList.length > 0 ? def.failList.join('; ') : 'None';
+          rows.push([d.doorId, d.status, d.building, d.floor, d.doorType, d.location, defText, d.lastInspection, d.tech, d.notes]);
+        });
+        downloadCSV(`umc-aaadm-doors-${getDateRangeStr()}.csv`, rows);
+      };
+
+      $('downloadAaadmPDF').onclick = generateAaadmReport;
     }
 
     function generateFullReport() {
@@ -2096,6 +2394,107 @@
       );
     }
 
+    function generateAaadmReport() {
+      const aaadmQ = ($('aaadmSearch')?.value || '').toLowerCase().trim();
+      const aaadmStatus = ($('aaadmStatusFilter')?.value || '').toUpperCase();
+      const filtered = aaadmDoors.filter(d => {
+        if (aaadmStatus && d.status !== aaadmStatus) return false;
+        if (aaadmQ) {
+          const blob = `${d.doorId} ${d.building} ${d.floor} ${d.location} ${d.notes}`.toLowerCase();
+          if (!blob.includes(aaadmQ)) return false;
+        }
+        return true;
+      });
+
+      const passCount = filtered.filter(d => d.status === 'PASS').length;
+      const failCount = filtered.filter(d => d.status === 'FAIL').length;
+      const totalWithStatus = passCount + failCount;
+      const compliancePct = totalWithStatus > 0 ? Math.round((passCount / totalWithStatus) * 100) : 0;
+
+      const summary = [
+        `Customer: ${CUSTOMER_LABEL}`,
+        `Automatic Doors: ${filtered.length}  |  Passing: ${passCount}  |  Failing: ${failCount}  |  Compliance: ${compliancePct}%`,
+        `Report Date: ${new Date().toLocaleDateString()}`,
+        ``,
+        `REGULATORY STANDARDS:`,
+        `\u2022 ANSI/BHMA A156.10: Power Operated Pedestrian Doors`,
+        `  Standard for power operated swinging, sliding, and folding door systems.`,
+        `\u2022 AAADM (American Association of Automatic Door Manufacturers):`,
+        `  Certification program for inspectors of automatic door systems.`
+      ];
+
+      const headers = ['Door ID', 'Status', 'Building', 'Floor', 'Location', 'Deficiencies'];
+      const data = filtered.map(d => {
+        const def = aaadmDeficiencyMap[d.doorId];
+        const defText = def && def.failList.length > 0 ? def.failList.join(', ') : 'None';
+        return [d.doorId, d.status, d.building, d.floor, d.location, defText];
+      });
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+
+      doc.setFontSize(20);
+      doc.setTextColor(0, 80, 120);
+      doc.text('AAADM Automatic Door Inspection Report', 14, 18);
+
+      doc.setFontSize(14);
+      doc.setTextColor(60);
+      doc.text(CUSTOMER_LABEL, 14, 28);
+
+      const badgeColor = compliancePct >= 90 ? [34, 197, 94] : compliancePct >= 70 ? [245, 158, 11] : [239, 68, 68];
+      doc.setFillColor(...badgeColor);
+      doc.roundedRect(220, 12, 60, 20, 3, 3, 'F');
+      doc.setFontSize(16);
+      doc.setTextColor(255);
+      doc.text(`${compliancePct}% Compliant`, 225, 25);
+
+      doc.setFillColor(245, 247, 250);
+      doc.rect(14, 34, 268, 50, 'F');
+      doc.setDrawColor(200);
+      doc.rect(14, 34, 268, 50, 'S');
+
+      doc.setFontSize(9);
+      doc.setTextColor(50);
+      let yPos = 42;
+      summary.forEach((line) => {
+        if (line.startsWith('REGULATORY') || line.startsWith('\u2022')) {
+          doc.setFont(undefined, line.startsWith('REGULATORY') ? 'bold' : 'normal');
+        }
+        doc.text(line, 18, yPos);
+        yPos += 5;
+      });
+      doc.setFont(undefined, 'normal');
+
+      doc.autoTable({
+        startY: 90,
+        head: [headers],
+        body: data,
+        theme: 'striped',
+        headStyles: { fillColor: [0, 100, 140], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 30 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 50 },
+          5: { cellWidth: 'auto' }
+        }
+      });
+
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(120);
+        doc.text(`Automatic Access Solutions \u2022 AAADM Inspection Report \u2022 Page ${i} of ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 220, doc.internal.pageSize.height - 10);
+      }
+
+      doc.save(`umc-aaadm-report-${getDateRangeStr()}.pdf`);
+    }
+
     async function initPage(user, roles, customerId) {
       currentUser = user;
       console.log('[Portal] Init for', user?.email, 'customer:', customerId);
@@ -2118,6 +2517,8 @@
       $('toInput').addEventListener('change', render);
       $('openTaskSearch')?.addEventListener('input', render);
       $('openTaskStatusFilter')?.addEventListener('change', render);
+      $('aaadmSearch')?.addEventListener('input', render);
+      $('aaadmStatusFilter')?.addEventListener('change', render);
 
       setupDownloads();
       setupJumpNav();
