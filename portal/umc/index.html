@@ -102,33 +102,7 @@
       margin: 0 auto;
     }
 
-    /* Jump Nav - Mobile sticky nav */
-    .jump-nav {
-      position: sticky;
-      top: 70px;
-      z-index: 50;
-      background: var(--cp-surface);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--cp-border);
-      border-radius: 12px;
-      padding: 8px;
-      margin-bottom: 16px;
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .jump-nav::-webkit-scrollbar { display: none; }
-
     @media (max-width: 768px) {
-      .jump-nav {
-        position: relative;
-        top: auto;
-        z-index: 10;
-        padding: 10px;
-        margin-top: 60px;
-      }
       #floatingUser {
         top: 10px;
         right: 10px;
@@ -136,25 +110,6 @@
         font-size: 0.8rem;
         z-index: 100;
       }
-    }
-
-    .jump-btn {
-      flex-shrink: 0;
-      padding: 8px 14px;
-      background: transparent;
-      border: 1px solid var(--cp-border);
-      border-radius: 8px;
-      color: var(--cp-text-secondary);
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .jump-btn:hover, .jump-btn.active {
-      background: var(--cp-accent-bg);
-      border-color: var(--cp-accent);
-      color: var(--cp-accent);
     }
 
     /* Header */
@@ -597,10 +552,6 @@
       .header { padding-top: 0; }
     }
 
-    /* Desktop: hide jump nav, expand sections */
-    @media (min-width: 900px) {
-      .jump-nav { display: none; }
-    }
 
 
     /* Open Tasks inline Notes/Plan (mobile-safe: stays inside Task cell) */
@@ -1055,16 +1006,6 @@
 
   <div id="pageContent" class="page-content">
     <div class="portal">
-      <!-- Jump Navigation (mobile) -->
-      <nav class="jump-nav">
-        <button class="jump-btn active" data-section="stats">Overview</button>
-        <button class="jump-btn" data-section="doors">Doors</button>
-        <button class="jump-btn" data-section="aaadmDoors">AAADM</button>
-        <button class="jump-btn" data-section="openTasks">Open Tasks</button>
-        <button class="jump-btn" data-section="tasks">Service</button>
-        <button class="jump-btn" data-section="actions">Actions</button>
-      </nav>
-
       <!-- Header -->
       <header class="header" id="stats">
         <div class="header-info">
@@ -1733,44 +1674,7 @@
       doorDisplayCount = 50;
     }
 
-    // Jump navigation
-    function setupJumpNav() {
-      const buttons = document.querySelectorAll('.jump-btn');
-      buttons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const sectionId = btn.dataset.section;
-          const section = document.getElementById(sectionId);
-          if (section) {
-            // Remove collapsed state
-            if (section.classList.contains('collapsed')) {
-              section.classList.remove('collapsed');
-            }
-            // Scroll into view
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            // Update active state
-            buttons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-          }
-        });
-      });
 
-      // Intersection observer for active state
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const id = entry.target.id;
-            buttons.forEach(b => {
-              b.classList.toggle('active', b.dataset.section === id);
-            });
-          }
-        });
-      }, { threshold: 0.3 });
-
-      ['stats', 'doors', 'aaadmDoors', 'openTasks', 'tasks', 'actions'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) observer.observe(el);
-      });
-    }
 
     // App state
     let tasks = [], doors = [];
@@ -2102,9 +2006,6 @@
       }
       $('doorsMeta').textContent = `Showing ${Math.min(doorDisplayCount, filteredDoors.length)} of ${openings} Openings (${doorLeaves} Doors) • ${passCount} passing, ${failCount} failing`;
 
-      // Update jump nav doors button
-      const doorsJumpBtn = document.querySelector('.jump-btn[data-section="doors"]');
-      if (doorsJumpBtn) doorsJumpBtn.textContent = `🚪 ${openings} Openings (${doorLeaves} Doors)`;
 
       // Tasks table - with pagination
       const tasksBody = $('tasksBody');
@@ -2197,9 +2098,6 @@
         }
         $('openTasksMeta').textContent = `${filteredOpenTasks.length} open tasks`;
 
-        // Update jump nav button
-        const openTasksJumpBtn = document.querySelector('.jump-btn[data-section="openTasks"]');
-        if (openTasksJumpBtn) openTasksJumpBtn.textContent = `⏳ ${filteredOpenTasks.length} Open`;
       }
 
       // ===== AAADM Section =====
@@ -2244,9 +2142,6 @@
       // Update section meta
       $('aaadmMeta').textContent = `${filtered.length} doors \u2022 ${compliancePct}% compliant \u2022 ANSI A156.10`;
 
-      // Update jump nav button
-      const aaadmJumpBtn = document.querySelector('.jump-btn[data-section="aaadmDoors"]');
-      if (aaadmJumpBtn) aaadmJumpBtn.textContent = `\u2699 ${filtered.length} AAADM`;
 
       // Render table
       const tbody = $('aaadmDoorsBody');
@@ -2521,7 +2416,6 @@
       $('aaadmStatusFilter')?.addEventListener('change', render);
 
       setupDownloads();
-      setupJumpNav();
 
       try {
         await loadData();
