@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimate Preview - Invoice Pipeline - AAS Portal</title>
+
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--ui-bg, #0a0a0f); color: var(--ui-text, rgba(255,255,255,0.92)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access Estimate Preview</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
+    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+  </button>
+
+  <div class="nav-panel__overlay" id="navOverlay" onclick="toggleNav()"></div>
+
+  <nav class="nav-panel" id="navPanel">
+    <a href="/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>Dashboard</a>
+    <div class="nav-panel__section">Tools</div>
+    <a href="/tech/command/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Command Center</a>
+    <a href="/tech/parts/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>Parts Finder</a>
+    <a href="/tech/manuals/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>Tech Manuals</a>
+    <a href="/tech/doors/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" /></svg>Door Browser</a>
+    <a href="/tech/summary/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Work Summary</a>
+    <a href="/pipeline/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>Invoice Pipeline</a>
+    <div class="nav-panel__divider"></div>
+    <a href="https://app.limblecmms.com" target="_blank" rel="noopener" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>Open Limble</a>
+  </nav>
+
+  <div class="floating-user" id="floatingUser" style="display:none;">
+    <div class="floating-user__info">
+      <div class="floating-user__name" id="floatingUserName">User</div>
+      <div class="floating-user__role" id="floatingUserRole">-</div>
+    </div>
+    <button class="floating-user__logout" onclick="window.AASAuth?.logout()" title="Sign Out">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+    </button>
+  </div>
+
+  <div id="pageContent" class="page-content">
+    <div class="page-wrapper">
+      <header class="page-header">
+        <div class="header-left">
+          <h1 class="page-title">Estimate <span>Preview</span></h1>
+          <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
+        </div>
+        <div class="header-actions">
+          <label class="limit-label">Limit <input type="number" id="limitInput" value="50" min="1" max="500"></label>
+          <button id="runBtn" type="button">Run Dry-Run</button>
+          <button id="processBtn" type="button" class="hidden">Create Estimates (<span id="processBtnCount">0</span>)</button>
+        </div>
+      </header>
+
+      <div class="info-banner" id="infoBanner">
+        Shows tasks on HOLD with <strong>QUOTE_REQUEST_USE_ESTIMATE</strong> reason. Estimates are created directly in QuickBooks (bypasses billing_log tracking).
+      </div>
+
+      <div class="summary-bar" id="summaryBar">
+        <div class="stat-pill"><div class="dot dot-yellow"></div><span class="label">Eligible</span><span class="value" id="sumEligible">—</span></div>
+        <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">—</span></div>
+      </div>
+
+      <div class="selection-counter hidden" id="selectionCounter">
+        <span id="selectionText">0 selected</span>
+        <button class="selection-clear" id="selectionClear">Clear</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox" id="selectAll" title="Select all rows"></th>
+              <th>Task ID</th>
+              <th>Task Name</th>
+              <th>Customer</th>
+              <th>Tier</th>
+              <th>Lines</th>
+              <th class="text-right">Total</th>
+              <th>Hold Reasons</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="8" class="loading-cell">Loading dry-run results...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="process-results hidden" id="processResults">
+        <h3 class="process-results-title">Estimate Results</h3>
+        <div id="processResultsBody"></div>
+      </div>
+
+      <div class="empty-state hidden" id="emptyState">
+        <p>No estimate-eligible tasks found. Tasks must be on HOLD with a QUOTE_REQUEST_USE_ESTIMATE reason.</p>
+        <a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="confirmOverlay">
+    <div class="confirm-dialog">
+      <h3>Create Real Estimates?</h3>
+      <p>This will create <strong id="confirmCount">0</strong> estimate(s) in QuickBooks. These bypass billing_log tracking.</p>
+      <div class="confirm-tasks" id="confirmTasks"></div>
+      <div class="confirm-actions">
+        <button class="confirm-cancel" id="confirmCancel">Cancel</button>
+        <button class="confirm-go" id="confirmGo">Yes, Create Estimates</button>
+      </div>
+    </div>
+  </div>
+
+<style>
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.page-wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 32px 48px; }
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+.header-left { display: flex; flex-direction: column; gap: 4px; }
+.back-link { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none; }
+.back-link:hover { color: #00d4ff; }
+.page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-title span { color: #ffcc00; }
+
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.limit-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; }
+.limit-label input { width: 60px; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center; }
+.limit-label input:focus { outline: none; border-color: #00d4ff; }
+#runBtn { padding: 8px 18px; background: #00d4ff; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+#runBtn:hover { filter: brightness(1.1); }
+#runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Info banner */
+.info-banner { padding: 10px 16px; margin-bottom: 16px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
+.info-banner strong { color: #ffcc00; }
+
+/* Summary bar */
+.summary-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.stat-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9999px; font-size: 0.85rem; backdrop-filter: blur(20px) saturate(180%); }
+.stat-pill .label { color: rgba(255,255,255,0.6); }
+.stat-pill .value { font-weight: 600; }
+.stat-pill--amount { border-color: rgba(255,204,0,0.3); }
+.stat-pill--amount .value { color: #ffcc00; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: rgba(255,255,255,0.4); }
+.dot-yellow { background: #ffcc00; box-shadow: 0 0 6px rgba(255,204,0,0.4); }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.data-table th { text-align: left; padding: 10px 12px; color: rgba(255,255,255,0.5); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+.data-table tr.result-row { cursor: pointer; transition: background 150ms; }
+.data-table tr.result-row:hover { background: rgba(255,255,255,0.03); }
+.text-right { text-align: right; }
+.loading-cell { text-align: center; color: rgba(255,255,255,0.5); padding: 40px 12px; }
+
+/* Tier badges */
+.tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+
+/* Hold reason badges */
+.hold-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
+
+/* Detail panel (expanded row) */
+.detail-row { display: none; }
+.detail-row.open { display: table-row; }
+.detail-panel { padding: 16px 12px; background: rgba(15,15,25,0.6); border-left: 3px solid rgba(255,204,0,0.4); }
+.detail-section { margin-bottom: 14px; }
+.detail-section:last-child { margin-bottom: 0; }
+.detail-section h4 { font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); margin: 0 0 8px; letter-spacing: 0.05em; }
+.detail-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+.detail-table th { text-align: left; padding: 4px 8px; color: rgba(255,255,255,0.4); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.detail-table td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.walk-step { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+.walk-step + .walk-step::before { content: '\2192'; margin-right: 4px; color: rgba(255,255,255,0.3); }
+.walk-status { font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; }
+.walk-VERIFIED { background: rgba(0,255,136,0.1); color: #00ff88; }
+.walk-NOT_IN_MAP { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+.walk-NEEDS_REVIEW { background: rgba(255,204,0,0.1); color: #ffcc00; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 40px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+.empty-state p { color: rgba(255,255,255,0.6); margin: 0 0 20px; }
+.back-btn { color: #00d4ff; text-decoration: none; font-weight: 600; }
+.hidden { display: none; }
+
+/* Process button */
+#processBtn { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+#processBtn:hover { filter: brightness(1.1); }
+#processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Confirm overlay */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
+.confirm-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 28px; max-width: 480px; width: 90%; }
+.confirm-dialog h3 { font-size: 1.1rem; margin: 0 0 10px; color: #fff; }
+.confirm-dialog p { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin: 0 0 16px; line-height: 1.5; }
+.confirm-dialog strong { color: #ffcc00; }
+.confirm-tasks { max-height: 160px; overflow-y: auto; margin-bottom: 18px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3); }
+.confirm-task-row { padding: 4px 0; color: rgba(255,255,255,0.7); display: flex; justify-content: space-between; }
+.confirm-task-row + .confirm-task-row { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-cancel { padding: 8px 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.confirm-go { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+.confirm-go:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Process results */
+.process-results { margin-top: 24px; padding: 20px; background: rgba(20,20,30,0.9); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; }
+.process-results-title { font-size: 1rem; font-weight: 700; margin: 0 0 14px; color: #00ff88; }
+.process-result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 0.85rem; }
+.process-result-row + .process-result-row { border-top: 1px solid rgba(255,255,255,0.06); }
+.process-result-task { color: rgba(255,255,255,0.8); }
+.process-result-status { font-weight: 600; }
+.process-result-status.invoiced { color: #00ff88; }
+.process-result-status.error { color: #ff4444; }
+.process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+
+/* Checkbox column */
+.data-table th input[type="checkbox"],
+.data-table td input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #ffcc00; }
+.row-cb-cell { width: 32px; text-align: center; }
+
+/* Selection counter */
+.selection-counter { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 6px 14px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: #ffcc00; }
+.selection-clear { background: none; border: 1px solid rgba(255,204,0,0.3); color: #ffcc00; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
+.selection-clear:hover { background: rgba(255,204,0,0.1); }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .page-wrapper { padding: 16px; }
+  .page-header { flex-direction: column; }
+  .header-actions { width: 100%; }
+  .summary-bar { gap: 6px; }
+  .stat-pill { padding: 5px 10px; font-size: 0.78rem; }
+  .data-table { font-size: 0.8rem; }
+  .data-table th, .data-table td { padding: 8px 6px; }
+}
+
+/* Light theme */
+body.light-theme::before { opacity: 0; }
+body.light-theme .limit-label { color: rgba(26,26,46,0.6); }
+body.light-theme .limit-label input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
+body.light-theme .limit-label input:focus { border-color: #0077b6; }
+body.light-theme #runBtn { color: #fff; }
+body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .stat-pill .label,
+body.light-theme .back-link,
+body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
+body.light-theme .data-table th { color: rgba(26,26,46,0.5); border-bottom-color: rgba(0,0,0,0.1); }
+body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.06); }
+body.light-theme .data-table tr.result-row:hover { background: rgba(0,0,0,0.03); }
+body.light-theme .detail-panel { background: rgba(0,0,0,0.02); border-left-color: rgba(200,150,0,0.4); }
+body.light-theme .detail-section h4 { color: rgba(26,26,46,0.5); }
+body.light-theme .detail-table th { color: rgba(26,26,46,0.4); border-bottom-color: rgba(0,0,0,0.06); }
+body.light-theme .detail-table td { border-bottom-color: rgba(0,0,0,0.04); }
+body.light-theme .hold-reason { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
+body.light-theme .walk-step { color: rgba(26,26,46,0.7); }
+body.light-theme .walk-step + .walk-step::before { color: rgba(26,26,46,0.3); }
+body.light-theme .walk-VERIFIED { background: rgba(0,160,80,0.08); color: #008844; }
+body.light-theme .walk-NEEDS_REVIEW { background: rgba(200,150,0,0.1); color: #997a00; }
+body.light-theme .walk-NOT_IN_MAP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); }
+body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
+body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
+body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
+body.light-theme .info-banner strong { color: #997a00; }
+body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
+body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
+body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
+body.light-theme .confirm-dialog p { color: rgba(26,26,46,0.7); }
+body.light-theme .confirm-dialog strong { color: #997a00; }
+body.light-theme .confirm-tasks { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.light-theme .confirm-task-row { color: rgba(26,26,46,0.7); }
+body.light-theme .confirm-task-row + .confirm-task-row { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .confirm-cancel { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.8); }
+body.light-theme #processBtn { color: #fff; }
+body.light-theme .confirm-go { color: #fff; }
+body.light-theme .process-results { background: rgba(255,255,255,0.9); border-color: rgba(0,160,80,0.25); }
+body.light-theme .process-results-title { color: #008844; }
+body.light-theme .process-result-row + .process-result-row { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .process-result-task { color: rgba(26,26,46,0.8); }
+body.light-theme .process-result-status.invoiced { color: #008844; }
+body.light-theme .process-result-status.error { color: #cc2828; }
+body.light-theme .process-result-qb { color: rgba(26,26,46,0.5); }
+body.light-theme .selection-counter { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: #997a00; }
+body.light-theme .selection-clear { border-color: rgba(200,150,0,0.3); color: #997a00; }
+body.light-theme .selection-clear:hover { background: rgba(200,150,0,0.08); }
+body.light-theme .stat-pill--amount { border-color: rgba(200,150,0,0.3); }
+body.light-theme .stat-pill--amount .value { color: #997a00; }
+</style>
+
+<script>
+  function toggleNav() {
+    document.getElementById('navToggle').classList.toggle('active');
+    document.getElementById('navPanel').classList.toggle('open');
+    document.getElementById('navOverlay').classList.toggle('open');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.nav-panel__link').forEach(function(link) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+      if (href === path || (href !== '/' && path.startsWith(href))) link.classList.add('active');
+    });
+  });
+</script>
+
+<script>
+(function() {
+  'use strict';
+
+  const HOLD_REASON = 'QUOTE_REQUEST_USE_ESTIMATE';
+  const API_BASE = '/api/pipeline';
+  let eligibleResults = [];
+  let selectedTaskIds = new Set();
+
+  async function api(path, opts) {
+    var res = await fetch(API_BASE + path, opts);
+    if (!res.ok) throw new Error('API ' + res.status);
+    return res.json();
+  }
+
+  async function qbApi(path, opts) {
+    var res = await fetch('/api/qb' + path, opts);
+    if (!res.ok) throw new Error('QB API ' + res.status);
+    return res.json();
+  }
+
+  function $(id) { return document.getElementById(id); }
+  function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
+
+  function isEstimateEligible(r) {
+    return r.result === 'HOLD' && r.hold_reasons && r.hold_reasons.indexOf(HOLD_REASON) !== -1;
+  }
+
+  function renderSummary() {
+    $('sumEligible').textContent = eligibleResults.length;
+    var totalAmount = eligibleResults.reduce(function(sum, r) { return sum + (r.total || 0); }, 0);
+    $('sumAmount').textContent = money(totalAmount);
+  }
+
+  function renderTable() {
+    var tbody = $('tableBody');
+
+    if (!eligibleResults.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No estimate-eligible tasks found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = eligibleResults.map(function(r, i) {
+      var cust = r.customer || {};
+      var verifiedNode = (cust.path || []).find(function(p) { return p.status === 'VERIFIED'; });
+      var custName = cust.qbo_display_name || cust.display_name || cust.name || (verifiedNode && verifiedNode.name) || '\u2014';
+      var tier = cust.effective_tier || cust.tier || '';
+      var taskName = truncate(r.task_name, 60);
+      var taskId = r.limble_task_id;
+      var checked = selectedTaskIds.has(taskId) ? ' checked' : '';
+
+      var reasons = (r.hold_reasons || []).map(function(reason) {
+        return '<span class="hold-reason">' + reason.replace(/_/g, ' ') + '</span>';
+      }).join('');
+
+      var row = '<tr class="result-row" data-idx="' + i + '" data-task-id="' + taskId + '">' +
+        '<td class="row-cb-cell"><input type="checkbox" class="row-cb" data-task-id="' + taskId + '"' + checked + '></td>' +
+        '<td>' + (taskId || '\u2014') + '</td>' +
+        '<td>' + taskName + '</td>' +
+        '<td>' + custName + '</td>' +
+        '<td>' + (tier ? '<span class="tier-badge">' + tier + '</span>' : '\u2014') + '</td>' +
+        '<td>' + (r.line_count || 0) + '</td>' +
+        '<td class="text-right">' + (r.total ? money(r.total) : '\u2014') + '</td>' +
+        '<td>' + reasons + '</td>' +
+        '</tr>';
+
+      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="8">' + buildDetail(r) + '</td></tr>';
+      return row;
+    }).join('');
+
+    updateSelectAllState();
+  }
+
+  function buildDetail(r) {
+    var html = '<div class="detail-panel">';
+
+    if (r.lines && r.lines.length) {
+      html += '<div class="detail-section"><h4>Line Items</h4><table class="detail-table"><thead><tr><th>Description</th><th>Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th></tr></thead><tbody>';
+      r.lines.forEach(function(l) {
+        var detail = l.SalesItemLineDetail || {};
+        html += '<tr><td>' + (l.Description || '\u2014') + '</td><td>' + (detail.Qty || 1) + '</td><td class="text-right">' + money(detail.UnitPrice) + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if (r.customer && r.customer.path && r.customer.path.length) {
+      html += '<div class="detail-section"><h4>Customer Resolution Path</h4><div>';
+      r.customer.path.forEach(function(step) {
+        html += '<span class="walk-step">' + (step.name || 'Asset ' + step.asset_id) + ' <span class="walk-status walk-' + step.status + '">' + step.status.replace(/_/g, ' ') + '</span></span>';
+      });
+      html += '</div></div>';
+    }
+
+    if (r.warnings && r.warnings.length) {
+      html += '<div class="detail-section"><h4>Warnings</h4><div>';
+      r.warnings.forEach(function(w) {
+        html += '<span class="hold-reason">' + w + '</span>';
+      });
+      html += '</div></div>';
+    }
+
+    if (!r.lines || !r.lines.length) {
+      html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No line items available for this task.</p>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  async function runDryRun() {
+    var btn = $('runBtn');
+    var tbody = $('tableBody');
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+    selectedTaskIds.clear();
+    updateSelectionCounter();
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Running dry-run...</td></tr>';
+    $('emptyState').classList.add('hidden');
+    document.querySelector('.table-wrap').classList.remove('hidden');
+
+    try {
+      var limit = parseInt($('limitInput').value) || 50;
+      var data = await api('/dry-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: limit })
+      });
+
+      var allResults = data.results || [];
+      eligibleResults = allResults.filter(isEstimateEligible);
+
+      if (!eligibleResults.length) {
+        document.querySelector('.table-wrap').classList.add('hidden');
+        $('emptyState').classList.remove('hidden');
+        $('sumEligible').textContent = '0';
+        $('sumAmount').textContent = money(0);
+        return;
+      }
+
+      renderSummary();
+      renderTable();
+      updateProcessBtn();
+    } catch (e) {
+      console.error('[Estimates] Dry-run error:', e);
+      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
+      $('processBtn').classList.add('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run Dry-Run';
+    }
+  }
+
+  // Expand/collapse rows (skip checkbox clicks)
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('row-cb')) return;
+    var row = e.target.closest('.result-row');
+    if (!row) return;
+    var idx = row.getAttribute('data-idx');
+    var detail = $('detail-' + idx);
+    if (detail) detail.classList.toggle('open');
+  });
+
+  // Checkbox change on individual rows
+  document.addEventListener('change', function(e) {
+    if (!e.target.classList.contains('row-cb')) return;
+    e.stopPropagation();
+    var taskId = parseInt(e.target.getAttribute('data-task-id'));
+    if (e.target.checked) {
+      selectedTaskIds.add(taskId);
+    } else {
+      selectedTaskIds.delete(taskId);
+    }
+    updateSelectionCounter();
+    updateProcessBtn();
+    updateSelectAllState();
+  });
+
+  // Select-all checkbox
+  $('selectAll').addEventListener('change', function() {
+    var checked = this.checked;
+    eligibleResults.forEach(function(r) {
+      if (checked) {
+        selectedTaskIds.add(r.limble_task_id);
+      } else {
+        selectedTaskIds.delete(r.limble_task_id);
+      }
+    });
+    document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = checked; });
+    updateSelectionCounter();
+    updateProcessBtn();
+  });
+
+  // Clear selection button
+  $('selectionClear').addEventListener('click', function() {
+    selectedTaskIds.clear();
+    document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = false; });
+    $('selectAll').checked = false;
+    updateSelectionCounter();
+    updateProcessBtn();
+  });
+
+  function updateSelectAllState() {
+    if (!eligibleResults.length) { $('selectAll').checked = false; return; }
+    var allSelected = eligibleResults.every(function(r) { return selectedTaskIds.has(r.limble_task_id); });
+    $('selectAll').checked = allSelected;
+  }
+
+  function updateSelectionCounter() {
+    var count = selectedTaskIds.size;
+    if (count > 0) {
+      $('selectionCounter').classList.remove('hidden');
+      $('selectionText').textContent = count + ' task' + (count === 1 ? '' : 's') + ' selected';
+    } else {
+      $('selectionCounter').classList.add('hidden');
+    }
+  }
+
+  // Run button
+  $('runBtn').addEventListener('click', runDryRun);
+
+  // ---- Process Estimates ----
+
+  function getProcessableTasks() {
+    if (selectedTaskIds.size > 0) {
+      return eligibleResults.filter(function(r) { return selectedTaskIds.has(r.limble_task_id); });
+    }
+    return eligibleResults;
+  }
+
+  function updateProcessBtn() {
+    var processable = getProcessableTasks();
+    var btn = $('processBtn');
+    var hasSelection = selectedTaskIds.size > 0;
+
+    if (hasSelection) {
+      $('processBtnCount').textContent = processable.length + ' selected';
+    } else {
+      $('processBtnCount').textContent = eligibleResults.length;
+    }
+
+    if (eligibleResults.length > 0) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+    $('processResults').classList.add('hidden');
+  }
+
+  $('processBtn').addEventListener('click', function() {
+    var tasks = getProcessableTasks();
+    if (!tasks.length) return;
+
+    $('confirmCount').textContent = tasks.length;
+    $('confirmTasks').innerHTML = tasks.map(function(t) {
+      return '<div class="confirm-task-row"><span>#' + t.limble_task_id + ' ' + truncate(t.task_name, 40) + '</span><span>' + money(t.total) + '</span></div>';
+    }).join('');
+
+    $('confirmOverlay').classList.remove('hidden');
+  });
+
+  $('confirmCancel').addEventListener('click', function() {
+    $('confirmOverlay').classList.add('hidden');
+  });
+
+  $('confirmOverlay').addEventListener('click', function(e) {
+    if (e.target === this) $('confirmOverlay').classList.add('hidden');
+  });
+
+  $('confirmGo').addEventListener('click', async function() {
+    var tasks = getProcessableTasks();
+    if (!tasks.length) return;
+
+    var goBtn = $('confirmGo');
+    var cancelBtn = $('confirmCancel');
+    goBtn.disabled = true;
+    goBtn.textContent = 'Processing...';
+    cancelBtn.style.display = 'none';
+
+    var results = [];
+    var body = $('processResultsBody');
+
+    try {
+      // Create estimates one at a time via QB proxy
+      for (var idx = 0; idx < tasks.length; idx++) {
+        var t = tasks[idx];
+        try {
+          var token = await window.AASAuth.getToken();
+          var estData = await qbApi('/estimate/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+              limble_task_id: t.limble_task_id,
+              customer: t.customer,
+              lines: t.lines,
+              total: t.total
+            })
+          });
+          results.push({
+            limble_task_id: t.limble_task_id,
+            task_name: t.task_name,
+            result: 'CREATED',
+            qb_estimate_id: estData.Id || estData.estimate_id || '',
+            qb_doc_number: estData.DocNumber || estData.doc_number || ''
+          });
+        } catch (err) {
+          results.push({
+            limble_task_id: t.limble_task_id,
+            task_name: t.task_name,
+            result: 'ERROR',
+            error: err.message
+          });
+        }
+      }
+
+      $('confirmOverlay').classList.add('hidden');
+
+      if (!results.length) {
+        body.innerHTML = '<p style="color:rgba(255,255,255,0.5);">No results returned.</p>';
+      } else {
+        body.innerHTML = results.map(function(r) {
+          var isOk = r.result === 'CREATED';
+          var qbInfo = '';
+          if (r.qb_estimate_id) qbInfo = 'QB Est #' + r.qb_estimate_id;
+          if (r.qb_doc_number) qbInfo += (qbInfo ? ' \u2014 ' : '') + 'Doc ' + r.qb_doc_number;
+          if (r.error) qbInfo = r.error;
+          return '<div class="process-result-row">' +
+            '<div><span class="process-result-task">#' + (r.limble_task_id || '\u2014') + ' ' + truncate(r.task_name || '', 40) + '</span>' +
+            (qbInfo ? '<div class="process-result-qb">' + qbInfo + '</div>' : '') +
+            '</div>' +
+            '<span class="process-result-status ' + (isOk ? 'invoiced' : 'error') + '">' + r.result + '</span>' +
+            '</div>';
+        }).join('');
+      }
+
+      $('processResults').classList.remove('hidden');
+      $('processBtn').classList.add('hidden');
+      selectedTaskIds.clear();
+      updateSelectionCounter();
+    } catch (e) {
+      console.error('[Estimates] Process error:', e);
+      $('confirmOverlay').classList.add('hidden');
+      body.innerHTML = '<p style="color:#ff4444;">Estimate creation failed: ' + e.message + '</p>';
+      $('processResults').classList.remove('hidden');
+    } finally {
+      goBtn.disabled = false;
+      goBtn.textContent = 'Yes, Create Estimates';
+      cancelBtn.style.display = '';
+    }
+  });
+
+  window.onPageReady = function(user, roles) {
+    runDryRun();
+  };
+})();
+</script>
+
+</body>
+</html>

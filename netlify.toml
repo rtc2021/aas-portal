@@ -188,6 +188,11 @@
   to = "/pipeline/rates/index.html"
   status = 200
 
+[[redirects]]
+  from = "/pipeline/estimates"
+  to = "/pipeline/estimates/index.html"
+  status = 200
+
 # ============================================================================
 # CORS HEADERS FOR API
 # ============================================================================

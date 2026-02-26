@@ -61,6 +61,8 @@ const PAGE_ACCESS = {
   '/pipeline/log/': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/pipeline/rates': { roles: ['Admin'], redirect: '/tech/parts/' },
   '/pipeline/rates/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/estimates': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/pipeline/estimates/': { roles: ['Admin'], redirect: '/tech/parts/' },
 };
 
 let auth0Client = null;

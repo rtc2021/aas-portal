@@ -80,7 +80,7 @@ function requiresInternalKey(dropletPath: string): boolean {
 }
 
 function requiresAdmin(dropletPath: string, method: string): boolean {
-  return method === "POST" && dropletPath === "/qb/invoice/create";
+  return method === "POST" && (dropletPath === "/qb/invoice/create" || dropletPath === "/qb/estimate/create");
 }
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
