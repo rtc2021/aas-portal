@@ -360,8 +360,11 @@ body.light-theme .process-result-qb { color: rgba(26,26,46,0.5); }
     }
 
     tbody.innerHTML = filtered.map((r, i) => {
-      const custName = r.customer?.qbo_display_name || '—';
-      const tier = r.customer?.effective_tier || r.customer?.tier || '';
+      const cust = r.customer || {};
+      const verifiedNode = (cust.path || []).find(p => p.status === 'VERIFIED');
+      const custName = cust.qbo_display_name || cust.display_name || cust.name || (verifiedNode && verifiedNode.name) || '—';
+      if (!cust.qbo_display_name) console.warn('[Preview] Task', r.limble_task_id, 'missing qbo_display_name, fell back to:', custName);
+      const tier = cust.effective_tier || cust.tier || '';
       const taskName = truncate(r.task_name, 60);
 
       let row = '<tr class="result-row" data-idx="' + i + '">' +
