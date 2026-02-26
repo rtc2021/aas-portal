@@ -530,8 +530,14 @@
       #openTasksBody td:nth-child(6)::before { content: "Actions"; }
 
       /* AAADM deficiency sub-rows in mobile */
+      .deficiency-row { display: none !important; }
       .deficiency-row.visible { display: block !important; }
       .deficiency-row.visible td { border: 0 !important; padding: 0 !important; }
+      .deficiency-row td::before { display: none !important; }
+
+      /* Deficiency cards shouldn't look like data cards */
+      .deficiency-row { margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; }
+      .deficiency-grid { grid-template-columns: 1fr !important; }
 
       /* Scroll and layout fixes */
       .filters { flex-direction: column; }
