@@ -1716,6 +1716,8 @@
         status: baseStatus(taskCSV.col(r, 'Status & type')),
         summary: stripHtml(taskCSV.col(r, 'Summary')),
         taskName: taskCSV.col(r, 'Task Name') || taskCSV.col(r, 'Location Name'),
+        doorId: taskCSV.col(r, 'Door ID'),
+        locationName: taskCSV.col(r, 'Location Name'),
         woLink: taskCSV.col(r, 'WO Link')
       })).filter(t => t.taskId || t.dateStr || t.summary);
 
@@ -2792,6 +2794,21 @@
             }).join('\n')
           : '  None';
 
+        // Format completed service history (from UMC tasks CSV — already filtered to asset 70)
+        const completedTasks = tasks
+          .filter(t => !t.isOpen)
+          .sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0))
+          .slice(0, 20);
+        const totalCompleted = tasks.filter(t => !t.isOpen).length;
+        const serviceHistoryDetails = completedTasks.length > 0
+          ? completedTasks.map(t => {
+              const door = t.doorId ? ` | Door: ${t.doorId}` : '';
+              const loc = t.locationName ? ` | Location: ${t.locationName}` : '';
+              const desc = t.summary || t.taskName || 'Service completed';
+              return `  - ${t.dateStr || 'No date'}: ${desc}${door}${loc}`;
+            }).join('\n')
+          : '  No completed service records available';
+
         // Build context string
         const contextPrefix = `
 CUSTOMER PORTAL DATA:
@@ -2809,6 +2826,9 @@ AAADM AUTOMATIC DOOR INSPECTIONS (ANSI A156.10):
 
 OPEN SERVICE TASKS (${openTasksList.length} total):
 ${openTaskDetails}
+
+COMPLETED SERVICE HISTORY (last ${completedTasks.length} of ${totalCompleted} total):
+${serviceHistoryDetails}
 
 FIRE DOORS CURRENTLY FAILING (${failCount} total):
 ${failingDoorDetails}
