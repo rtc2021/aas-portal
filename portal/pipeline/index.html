@@ -121,15 +121,15 @@
       <div class="actions-section">
         <h2 class="section-title">Pipeline Actions</h2>
         <div class="actions-grid">
-          <div class="action-card disabled">
+          <div class="action-card" onclick="location.href='/pipeline/preview'">
             <div class="action-card-title">Dry Run</div>
             <div class="action-card-desc">Process tasks without creating invoices. Review what would be billed.</div>
-            <div class="action-card-badge">Phase 2</div>
+            <div class="action-card-arrow">&rarr;</div>
           </div>
-          <div class="action-card disabled">
+          <div class="action-card" onclick="location.href='/pipeline/preview'">
             <div class="action-card-title">Process Batch</div>
-            <div class="action-card-desc">Create invoices for all ready tasks (Scenario 1 only).</div>
-            <div class="action-card-badge">Phase 2</div>
+            <div class="action-card-desc">Create invoices for all ready tasks. Select individually or process all.</div>
+            <div class="action-card-arrow">&rarr;</div>
           </div>
           <div class="action-card" onclick="location.href='/pipeline/preview'">
             <div class="action-card-title">Invoice Preview</div>
