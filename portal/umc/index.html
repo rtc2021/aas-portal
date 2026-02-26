@@ -1417,10 +1417,10 @@
         <h4>🤖 Compliance Assistant</h4>
         <p>Click the blue chat button (bottom right) to get help understanding:</p>
         <ul>
-          <li>Your compliance percentage and what it means</li>
-          <li>NFPA 80 fire door requirements</li>
-          <li>What inspection findings mean</li>
-          <li>Fire door compliance questions</li>
+          <li>NFPA 80 fire door compliance requirements</li>
+          <li>ANSI A156.10 automatic door inspection standards</li>
+          <li>AAADM checkpoint deficiencies and what they mean</li>
+          <li>Your service history and open tasks</li>
         </ul>
 
         <h4>📞 Contact AAS</h4>
@@ -1454,10 +1454,10 @@
     <div class="copilot-messages" id="copilotMessages">
       <div class="copilot-msg assistant">
         Hi! I'm your Compliance Assistant. I can help you understand:<br>
-        • Your fire door inspection results<br>
-        • NFPA 80 compliance requirements<br>
-        • What inspection findings mean<br><br>
-        What compliance questions do you have?
+        • Fire door inspections &amp; NFPA 80 compliance<br>
+        • Automatic door inspections &amp; ANSI A156.10<br>
+        • Your service history and open tasks<br><br>
+        What can I help you with?
       </div>
     </div>
 
@@ -2630,32 +2630,50 @@
       const totalInspected = failCount + passCount;
       const compliancePct = totalInspected > 0 ? Math.round((passCount / totalInspected) * 100) : 0;
 
+      const aaadmFail = aaadmDoors.filter(d => d.status === 'FAIL').length;
+      const aaadmPass = aaadmDoors.filter(d => d.status === 'PASS').length;
+      const aaadmTotal = aaadmFail + aaadmPass;
+
       let suggestions = [];
 
-      // Compliance percentage
+      // AAADM if data loaded
+      if (aaadmTotal > 0) {
+        if (aaadmFail > 0) {
+          suggestions.push({
+            text: `${aaadmFail} AAADM deficiencies`,
+            query: `${aaadmFail} of my ${aaadmTotal} automatic doors have AAADM deficiencies. What do the ANSI A156.10 checkpoint failures mean and what should I know?`
+          });
+        } else {
+          suggestions.push({
+            text: 'ANSI A156.10 standards',
+            query: 'What are the ANSI A156.10 requirements for automatic door inspections at my facility?'
+          });
+        }
+      }
+
+      // Service history
       suggestions.push({
-        text: `My compliance: ${compliancePct}%`,
-        query: `What does my ${compliancePct}% compliance rate mean? What should I know about maintaining fire door compliance?`
+        text: 'Recent service history',
+        query: 'What service work has been completed at my facility recently? Show me the recent service history.'
       });
 
-      // NFPA 80 help - always show
-      suggestions.push({
-        text: 'NFPA 80 requirements',
-        query: 'What are the key NFPA 80 fire door inspection requirements I should understand for my facility?'
-      });
-
-      // Failing doors if any - compliance focused
+      // Fire door compliance
       if (failCount > 0) {
         suggestions.push({
-          text: `${failCount} doors need attention`,
-          query: `${failCount} of my doors are not in compliance. What inspection issues were found and what do they mean?`
+          text: `${failCount} fire doors failing`,
+          query: `${failCount} of my fire doors are not in NFPA 80 compliance. What inspection issues were found?`
+        });
+      } else {
+        suggestions.push({
+          text: 'NFPA 80 requirements',
+          query: 'What are the key NFPA 80 fire door inspection requirements I should understand?'
         });
       }
 
-      // Inspection questions
+      // Overall compliance
       suggestions.push({
-        text: 'Inspection requirements',
-        query: 'How often do fire doors need to be inspected and what does an inspection involve?'
+        text: `Compliance: ${compliancePct}%`,
+        query: `What does my ${compliancePct}% fire door compliance rate mean? What should I know?`
       });
 
       // Limit to 4 max
@@ -2679,7 +2697,7 @@
       searchingDiv.innerHTML = `
         <div class="searching-indicator">
           <div class="searching-spinner"></div>
-          <span>Searching NFPA codes for accurate compliance information...</span>
+          <span>Searching compliance standards and service records...</span>
         </div>
       `;
       msgContainer.appendChild(searchingDiv);
@@ -2758,20 +2776,45 @@
             ).join('\n')
           : '  None';
 
+        // AAADM stats for context
+        const aaadmPassCount = aaadmDoors.filter(d => d.status === 'PASS').length;
+        const aaadmFailCount = aaadmDoors.filter(d => d.status === 'FAIL').length;
+        const aaadmTotal = aaadmPassCount + aaadmFailCount;
+        const aaadmCompliancePct = aaadmTotal > 0 ? Math.round((aaadmPassCount / aaadmTotal) * 100) : 0;
+
+        // Format AAADM failing doors
+        const aaadmFailingDoors = aaadmDoors.filter(d => d.status === 'FAIL');
+        const aaadmFailingDetails = aaadmFailingDoors.length > 0
+          ? aaadmFailingDoors.slice(0, 10).map(d => {
+              const def = aaadmDeficiencyMap[d.doorId];
+              const defects = def && def.failList.length > 0 ? def.failList.join(', ') : 'See report';
+              return `  - ${d.doorId}: ${d.building} Floor ${d.floor} - ${d.location} - Deficiencies: ${defects}`;
+            }).join('\n')
+          : '  None';
+
         // Build context string
         const contextPrefix = `
 CUSTOMER PORTAL DATA:
 - Facility: ${CUSTOMER_LABEL}
-- Total doors monitored: ${filteredDoors.length}
-- Doors passing inspection: ${passCount}
-- Doors failing inspection: ${failCount}
-- Current compliance rate: ${compliancePct}%
+
+FIRE DOOR INSPECTIONS (NFPA 80):
+- Total fire doors: ${filteredDoors.length}
+- Passing: ${passCount}  |  Failing: ${failCount}
+- Compliance rate: ${compliancePct}%
+
+AAADM AUTOMATIC DOOR INSPECTIONS (ANSI A156.10):
+- Total automatic doors: ${aaadmTotal}
+- Passing: ${aaadmPassCount}  |  Failing: ${aaadmFailCount}
+- Compliance rate: ${aaadmCompliancePct}%
 
 OPEN SERVICE TASKS (${openTasksList.length} total):
 ${openTaskDetails}
 
-DOORS CURRENTLY FAILING (${failCount} total):
+FIRE DOORS CURRENTLY FAILING (${failCount} total):
 ${failingDoorDetails}
+
+AAADM DOORS WITH DEFICIENCIES (${aaadmFailCount} total):
+${aaadmFailingDetails}
 
 ---
 CUSTOMER QUESTION: `;
@@ -2809,7 +2852,11 @@ CUSTOMER QUESTION: `;
               passingDoors: passCount,
               failingDoors: failCount,
               compliancePercent: compliancePct,
-              openTasks: openTasksList.length
+              openTasks: openTasksList.length,
+              aaadmDoors: aaadmTotal,
+              aaadmPassing: aaadmPassCount,
+              aaadmFailing: aaadmFailCount,
+              aaadmCompliancePercent: aaadmCompliancePct
             }
           })
         });
