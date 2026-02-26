@@ -43,7 +43,7 @@ async function afterLoop(
 //   - Fix #5: Customer system prompt now has ## Tool Routing (STRICT) section
 //   - Fix #6: detectManufacturer expanded: +record, +tormax, +dormakaba
 // ANSI update (Feb 2026): search_ansi156_10, search_ansi156_19, search_ansi156_38
-// Tool count: 15 (admin), 14 (tech), 11 (customer)
+// Tool count: 18 (admin), 14 (tech), 11 (customer)
 // Models: Admin/Tech → claude-opus-4-6 | Customer → claude-sonnet-4-5-20250929
 // Droplet endpoints /search-ansi156-{10,19,38} are LIVE (3 Qdrant collections, 357 total points)
 // Dependency: @netlify/blobs ^8.0.0 + ./memory/ (7 files, 811 lines)
@@ -357,12 +357,49 @@ const TOOLS: Anthropic.Tool[] = [
       },
       required: ["query"]
     }
+  },
+  // Orchestrator tools (admin-only) — Feb 2026
+  {
+    name: "check_facility_health",
+    description: "Get facility health snapshot: KPIs, risk flags, repeat callbacks, billing queue status. Use when admin asks about a facility's overall status, health score, or operational metrics.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        facility: { type: "string", description: "Facility name or key (e.g. 'manning', 'westbank', 'umc')" },
+        customer: { type: "string", description: "Customer name if different from facility" }
+      },
+      required: ["facility"]
+    }
+  },
+  {
+    name: "search_predictions",
+    description: "Search AI-generated predictions: upcoming failures, maintenance windows, parts demand forecasts. Use when admin asks 'what's likely to fail', 'upcoming issues', or 'predictions for [facility]'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        facility: { type: "string", description: "Facility name or key" },
+        prediction_type: { type: "string", enum: ["failure", "maintenance", "parts_demand", "all"], description: "Type of prediction to retrieve (default: all)" },
+        limit: { type: "number", description: "Number of predictions (default 5, max 20)" }
+      },
+      required: ["facility"]
+    }
+  },
+  {
+    name: "get_dispatch_brief",
+    description: "Get today's dispatch briefing: scheduled tasks, priority rankings, tech assignments, route optimization notes. Use when admin asks 'what's on the schedule', 'dispatch today', or 'who goes where'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        date: { type: "string", description: "Date in YYYY-MM-DD format (default: today)" },
+        facility: { type: "string", description: "Optional facility filter" }
+      }
+    }
   }
 ];
 
-// Tech tools - same as TOOLS but without get_technicians
+// Tech tools - same as TOOLS but without get_technicians and orchestrator tools (admin-only)
 const TECH_TOOLS: Anthropic.Tool[] = TOOLS.filter(tool =>
-  tool.name !== 'get_technicians'
+  !['get_technicians', 'check_facility_health', 'search_predictions', 'get_dispatch_brief'].includes(tool.name)
 );
 
 // Customer tools - NFPA codes, ANSI standards, door info, manuals, assets (11 tools)
@@ -1285,6 +1322,62 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         return JSON.stringify({ count: users.length, showing: summary.length, technicians: summary });
       }
 
+      // Orchestrator tools (admin-only)
+      case "check_facility_health": {
+        const facility = input.facility as string;
+        const customer = input.customer as string | undefined;
+        try {
+          const response = await fetch(`${DROPLET_URL}/search-facility-health`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ facility, customer })
+          });
+          if (!response.ok) {
+            return JSON.stringify({ error: "Facility health data unavailable", status: response.status });
+          }
+          return await response.text();
+        } catch (error) {
+          return JSON.stringify({ error: `Facility health check failed: ${error instanceof Error ? error.message : "Unknown"}` });
+        }
+      }
+
+      case "search_predictions": {
+        const facility = input.facility as string;
+        const prediction_type = (input.prediction_type as string) || "all";
+        const limit = Math.min((input.limit as number) || 5, 20);
+        try {
+          const response = await fetch(`${DROPLET_URL}/search-predictions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ facility, prediction_type, limit })
+          });
+          if (!response.ok) {
+            return JSON.stringify({ error: "Predictions unavailable", status: response.status });
+          }
+          return await response.text();
+        } catch (error) {
+          return JSON.stringify({ error: `Prediction search failed: ${error instanceof Error ? error.message : "Unknown"}` });
+        }
+      }
+
+      case "get_dispatch_brief": {
+        const date = (input.date as string) || new Date().toISOString().split("T")[0];
+        const facility = input.facility as string | undefined;
+        try {
+          const response = await fetch(`${DROPLET_URL}/search-briefs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date, facility })
+          });
+          if (!response.ok) {
+            return JSON.stringify({ error: "Dispatch brief unavailable", status: response.status });
+          }
+          return await response.text();
+        } catch (error) {
+          return JSON.stringify({ error: `Dispatch brief failed: ${error instanceof Error ? error.message : "Unknown"}` });
+        }
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
@@ -1339,6 +1432,9 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - **ANSI A156.38 / low energy slider / low energy folding door** → search_ansi156_38
 - **"What does ANSI say" / "BHMA standard" / "door operator standard"** → pick the right A156 standard based on door type (sliding=A156.10 or A156.38, swing=A156.19)
 - **AAADM certification questions / inspector test prep** → search relevant ANSI A156 standard(s)
+- **Facility health / KPIs / risk flags / operational status** → check_facility_health (admin only)
+- **Predictions / upcoming failures / maintenance forecast / parts demand** → search_predictions (admin only)
+- **Dispatch / schedule / who goes where / today's route** → get_dispatch_brief (admin only)
 
 ## PARTS SEARCH TRIGGERS (USE search_parts FOR THESE)
 Always use search_parts when user mentions:
@@ -1510,6 +1606,9 @@ Low energy sliding doors, low energy folding doors, low energy bi-fold, activati
 13. **search_ansi156_10** - ANSI/BHMA A156.10 (2024) Power Operated Pedestrian Doors. 259 sections. Sensors, entrapment, egress.
 14. **search_ansi156_19** - ANSI/BHMA A156.19 (2019) Power Assist & Low Energy Swing Doors. 50 sections. ADA openers, force limits.
 15. **search_ansi156_38** - ANSI/BHMA A156.38 (2019) Low Energy Sliding & Folding Doors. 48 sections. Low energy sliders, activation.
+16. **check_facility_health** - Facility health snapshot: KPIs, risk flags, repeat callbacks, billing queue. Admin only.
+17. **search_predictions** - AI predictions: upcoming failures, maintenance windows, parts demand forecasts. Admin only.
+18. **get_dispatch_brief** - Daily dispatch briefing: scheduled tasks, priority rankings, tech assignments. Admin only.
 
 ## search_manuals_rag V3 RESPONSE FORMAT
 This tool returns TWO result types:
