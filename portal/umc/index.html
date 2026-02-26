@@ -1716,6 +1716,8 @@
         status: baseStatus(taskCSV.col(r, 'Status & type')),
         summary: stripHtml(taskCSV.col(r, 'Summary')),
         taskName: taskCSV.col(r, 'Task Name') || taskCSV.col(r, 'Location Name'),
+        doorId: taskCSV.col(r, 'Door ID'),
+        locationName: taskCSV.col(r, 'Location Name'),
         woLink: taskCSV.col(r, 'WO Link')
       })).filter(t => t.taskId || t.dateStr || t.summary);
 
