@@ -463,7 +463,7 @@
       .data-table thead { display: none !important; }
 
       /* Convert table elements to block layout — exclude deficiency sub-rows */
-      .data-table, .data-table tbody, .data-table tr:not(.deficiency-row), .data-table td:not(.deficiency-row td) {
+      .data-table, .data-table tbody, .data-table tr:not(.deficiency-row), .data-table td {
         display: block !important;
         width: 100% !important;
       }
@@ -529,7 +529,8 @@
       #openTasksBody td:nth-child(5)::before { content: "Created"; }
       #openTasksBody td:nth-child(6)::before { content: "Actions"; }
 
-      /* Deficiency sub-rows on mobile: single-column checkpoint grid */
+      /* Deficiency sub-rows on mobile */
+      .deficiency-row.visible { display: block !important; }
       .deficiency-grid { grid-template-columns: 1fr !important; }
 
       /* Scroll and layout fixes */
