@@ -1397,15 +1397,15 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         return JSON.stringify({ count: users.length, showing: summary.length, technicians: summary });
       }
 
-      // Orchestrator tools (admin-only)
+      // Orchestrator tools (admin-only) — droplet expects { query } on all 3
       case "check_facility_health": {
         const facility = input.facility as string;
-        const customer = input.customer as string | undefined;
+        const query = input.customer ? `${facility} ${input.customer}` : facility;
         try {
           const response = await fetch(`${DROPLET_URL}/search-facility-health`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ facility, customer })
+            body: JSON.stringify({ query })
           });
           if (!response.ok) {
             return JSON.stringify({ error: "Facility health data unavailable", status: response.status });
@@ -1419,12 +1419,13 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       case "search_predictions": {
         const facility = input.facility as string;
         const prediction_type = (input.prediction_type as string) || "all";
+        const query = prediction_type !== "all" ? `${facility} ${prediction_type}` : facility;
         const limit = Math.min((input.limit as number) || 5, 20);
         try {
           const response = await fetch(`${DROPLET_URL}/search-predictions`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ facility, prediction_type, limit })
+            body: JSON.stringify({ query, limit })
           });
           if (!response.ok) {
             return JSON.stringify({ error: "Predictions unavailable", status: response.status });
@@ -1437,12 +1438,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       case "get_dispatch_brief": {
         const date = (input.date as string) || new Date().toISOString().split("T")[0];
-        const facility = input.facility as string | undefined;
+        const query = input.facility ? `${input.facility} ${date}` : `dispatch ${date}`;
         try {
           const response = await fetch(`${DROPLET_URL}/search-briefs`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ date, facility })
+            body: JSON.stringify({ query })
           });
           if (!response.ok) {
             return JSON.stringify({ error: "Dispatch brief unavailable", status: response.status });
