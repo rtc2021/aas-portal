@@ -531,7 +531,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
   }
 
   async function runDryRun(options) {
-    var preserveProcessResults = !!(options && options.preserveProcessResults);
+    const preserveProcessResults = !!(options && options.preserveProcessResults);
     const btn = $('runBtn');
     const tbody = $('tableBody');
     btn.disabled = true;
@@ -740,7 +740,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       var data = await api('/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_ids: taskIds })
+        body: JSON.stringify({ mode: 'INVOICE', task_ids: Array.from(new Set(taskIds)) })
       });
 
       $('confirmOverlay').classList.add('hidden');
@@ -751,7 +751,8 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
         body.innerHTML = '<p style="color:rgba(255,255,255,0.5);">No results returned from process endpoint.</p>';
       } else {
         body.innerHTML = results.map(function(r) {
-          var isOk = r.result === 'INVOICED' || r.result === 'SUCCESS';
+          var resultStatus = String(r.result || '').toUpperCase();
+          var isOk = resultStatus === 'INVOICED' || resultStatus === 'SUCCESS' || resultStatus === 'ALREADY_PROCESSED';
           var statusText = r.result || 'UNKNOWN';
           var qbInfo = '';
           if (r.qb_invoice_id || r.qb_txn_id) qbInfo = 'QB #' + (r.qb_invoice_id || r.qb_txn_id);
@@ -769,6 +770,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       $('processBtn').classList.add('hidden');
       selectedTaskIds.clear();
       updateSelectionCounter();
+      await runDryRun();
     } catch (e) {
       console.error('[Preview] Process error:', e);
       $('confirmOverlay').classList.add('hidden');
