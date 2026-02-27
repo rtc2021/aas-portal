@@ -706,7 +706,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       $('processBtn').classList.add('hidden');
       selectedTaskIds.clear();
       updateSelectionCounter();
-      await runDryRun({ preserveProcessResults: true });
+      await runDryRun();
     } catch (e) {
       console.error('[Preview] Process error:', e);
       $('confirmOverlay').classList.add('hidden');
