@@ -78,7 +78,7 @@
       </header>
 
       <div class="info-banner" id="infoBanner">
-        Shows tasks on HOLD with <strong>QUOTE_REQUEST_USE_ESTIMATE</strong> reason. Estimates are created directly in QuickBooks (bypasses billing_log tracking).
+        Shows tasks classified as <strong>Quote Requests (Scenario 12)</strong>. Estimates are created directly in QuickBooks (bypasses billing_log tracking).
       </div>
 
       <div class="summary-bar" id="summaryBar">
@@ -102,7 +102,7 @@
               <th>Tier</th>
               <th>Lines</th>
               <th class="text-right">Total</th>
-              <th>Hold Reasons</th>
+              <th>Reason</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -117,7 +117,7 @@
       </div>
 
       <div class="empty-state hidden" id="emptyState">
-        <p>No estimate-eligible tasks found. Tasks must be on HOLD with a QUOTE_REQUEST_USE_ESTIMATE reason.</p>
+        <p>No estimate-eligible tasks found. Tasks need a quote request priority, tag, or language.</p>
         <a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a>
       </div>
     </div>
@@ -330,7 +330,6 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
 (function() {
   'use strict';
 
-  const HOLD_REASON = 'QUOTE_REQUEST_USE_ESTIMATE';
   const API_BASE = '/api/pipeline';
   let eligibleResults = [];
   let selectedTaskIds = new Set();
@@ -352,7 +351,7 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
   function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
 
   function isEstimateEligible(r) {
-    return r.result === 'HOLD' && r.hold_reasons && r.hold_reasons.indexOf(HOLD_REASON) !== -1;
+    return r.result === 'ESTIMATE';
   }
 
   function renderSummary() {
@@ -378,9 +377,8 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
       var taskId = r.limble_task_id;
       var checked = selectedTaskIds.has(taskId) ? ' checked' : '';
 
-      var reasons = (r.hold_reasons || []).map(function(reason) {
-        return '<span class="hold-reason">' + reason.replace(/_/g, ' ') + '</span>';
-      }).join('');
+      var reasonText = r.estimate_reason || (r.hold_reasons && r.hold_reasons.length ? r.hold_reasons.join(', ').replace(/_/g, ' ') : 'Quote Request');
+      var reasons = '<span class="hold-reason">' + reasonText + '</span>';
 
       var row = '<tr class="result-row" data-idx="' + i + '" data-task-id="' + taskId + '">' +
         '<td class="row-cb-cell"><input type="checkbox" class="row-cb" data-task-id="' + taskId + '"' + checked + '></td>' +
