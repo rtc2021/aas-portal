@@ -231,7 +231,9 @@ body.light-theme .action-card-badge { background: rgba(255,180,0,0.15); }
   const API_BASE = '/api/pipeline';
 
   async function api(path) {
-    const res = await fetch(`${API_BASE}${path}`);
+    const token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(`${API_BASE}${path}`, { headers });
     if (!res.ok) throw new Error(`API ${res.status}`);
     return res.json();
   }

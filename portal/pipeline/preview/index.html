@@ -356,8 +356,15 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
   let cachedResults = [];
   let selectedTaskIds = new Set();
 
-  async function api(path, opts) {
-    const res = await fetch(API_BASE + path, opts);
+  async function api(path, opts = {}) {
+    const token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
+    const res = await fetch(API_BASE + path, {
+      ...opts,
+      headers: {
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...((opts && opts.headers) || {})
+      }
+    });
     if (!res.ok) throw new Error('API ' + res.status);
     return res.json();
   }
@@ -463,13 +470,16 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     return html;
   }
 
-  async function runDryRun() {
+  async function runDryRun(options) {
+    const preserveProcessResults = !!(options && options.preserveProcessResults);
     const btn = $('runBtn');
     const tbody = $('tableBody');
     btn.disabled = true;
     btn.textContent = 'Running...';
-    selectedTaskIds.clear();
-    updateSelectionCounter();
+    if (!preserveProcessResults) {
+      selectedTaskIds.clear();
+      updateSelectionCounter();
+    }
     tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Running dry-run...</td></tr>';
     $('emptyState').classList.add('hidden');
     document.querySelector('.table-wrap').classList.remove('hidden');
@@ -492,7 +502,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       }
 
       renderTable(cachedResults);
-      updateProcessBtn();
+      updateProcessBtn({ preserveProcessResults: preserveProcessResults });
     } catch (e) {
       console.error('[Preview] Dry-run error:', e);
       tbody.innerHTML = '<tr><td colspan="8" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
@@ -610,7 +620,8 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     return getSuccessTasks();
   }
 
-  function updateProcessBtn() {
+  function updateProcessBtn(options) {
+    var preserveProcessResults = !!(options && options.preserveProcessResults);
     var processable = getProcessableTasks();
     var successCount = getSuccessTasks().length;
     var btn = $('processBtn');
@@ -627,7 +638,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     } else {
       btn.classList.add('hidden');
     }
-    $('processResults').classList.add('hidden');
+    if (!preserveProcessResults) $('processResults').classList.add('hidden');
   }
 
   $('processBtn').addEventListener('click', function() {
