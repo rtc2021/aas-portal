@@ -157,6 +157,81 @@ function verifyCustomerToken(authHeader: string | null): { valid: boolean; email
   }
 }
 
+const customerAliases: Record<string, string[]> = {
+  'westbank': ['westbank', 'ochsner_westbank'],
+  'ochsner_westbank': ['westbank', 'ochsner_westbank'],
+  'mannings': ['mannings', 'manning'],
+  'manning': ['mannings', 'manning'],
+  'umc': ['umc']
+};
+
+function hasCustomerAccess(tokenCustomerId?: string, requestedCustomer?: string): boolean {
+  const allowedIds = customerAliases[tokenCustomerId || ''] || [tokenCustomerId];
+  return !tokenCustomerId || !requestedCustomer || allowedIds.includes(requestedCustomer);
+}
+
+async function getCompletedWorkOrdersForCustomer(params: {
+  assetId: string;
+  days?: number;
+  maxItems?: number;
+}): Promise<{ generatedAt: string; days: number; totalCompleted: number; count: number; history: any[] }> {
+  const COMPLETED_STATUS_IDS = [2, 3100];
+  const days = Math.max(1, Math.min(730, Number(params.days || 365)));
+  const maxItems = Math.max(1, Math.min(50, Number(params.maxItems || 20)));
+  const startDateUnix = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+
+  let allTasks: any[] = [];
+  let page = 1;
+  const maxPages = 10;
+
+  while (page <= maxPages) {
+    const url = `${LIMBLE_BASE_URL}/tasks?assets=${params.assetId}&limit=100&page=${page}`;
+    const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tasks (${response.status})`);
+    }
+
+    const data = await response.json();
+    const tasks = Array.isArray(data) ? data : (data.data || data.tasks || []);
+    if (tasks.length === 0) break;
+
+    allTasks = allTasks.concat(tasks);
+    if (tasks.length < 100) break;
+    page++;
+  }
+
+  const completed = allTasks
+    .filter((t: any) => COMPLETED_STATUS_IDS.includes(t.statusID) && t.dateCompleted && t.dateCompleted >= startDateUnix)
+    .sort((a: any, b: any) => (b.dateCompleted || 0) - (a.dateCompleted || 0));
+
+  const formatDate = (unix: number) => {
+    if (!unix || unix === 0) return null;
+    return new Date(unix * 1000).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago'
+    });
+  };
+
+  const history = completed.slice(0, maxItems).map((t: any) => ({
+    taskID: t.taskID,
+    name: t.name,
+    description: t.description,
+    assetID: t.assetID,
+    locationID: t.locationID,
+    dateCompleted: formatDate(t.dateCompleted),
+    dateCompletedUnix: t.dateCompleted || null,
+    completedByUser: t.completedByUser,
+    completionNotes: t.completionNotes ? String(t.completionNotes).substring(0, 300) : null
+  }));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    days,
+    totalCompleted: completed.length,
+    count: history.length,
+    history
+  };
+}
+
 // =============================================================================
 // TOOL DEFINITIONS — ADMIN MODE (15 tools)
 // =============================================================================
@@ -1795,9 +1870,74 @@ export default async function handler(req: Request, context: Context): Promise<R
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": "https://aas-portal.netlify.app",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
+    });
+  }
+
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const endpoint = (url.searchParams.get("endpoint") || "").toLowerCase();
+
+    if (endpoint === "completed_history") {
+      const authHeader = req.headers.get('Authorization');
+      const authResult = verifyCustomerToken(authHeader);
+      if (!authResult.valid) {
+        return new Response(
+          JSON.stringify({ error: authResult.error || 'Unauthorized' }),
+          { status: 401, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
+        );
+      }
+
+      const requestedCustomer = (url.searchParams.get("customer") || "").toLowerCase() || undefined;
+      if (!hasCustomerAccess(authResult.customerId, requestedCustomer)) {
+        return new Response(
+          JSON.stringify({ error: 'Access denied to this customer portal' }),
+          { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" } }
+        );
+      }
+
+      try {
+        const days = Number(url.searchParams.get("days") || 365);
+        const customer = requestedCustomer || authResult.customerId || 'umc';
+        const assetId = customer === 'umc' ? (url.searchParams.get("asset_id") || '70') : (url.searchParams.get("asset_id") || '');
+
+        if (!assetId) {
+          return new Response(JSON.stringify({ error: 'asset_id is required for this customer' }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" }
+          });
+        }
+
+        const data = await getCompletedWorkOrdersForCustomer({ assetId, days, maxItems: 20 });
+        return new Response(JSON.stringify({
+          customer,
+          assetId,
+          generatedAt: data.generatedAt,
+          metadata: {
+            days: data.days,
+            totalCompleted: data.totalCompleted,
+            count: data.count
+          },
+          history: data.history
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: 'Failed to fetch completed history',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://aas-portal.netlify.app" }
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ error: "Unknown endpoint" }), {
+      status: 404, headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -1833,18 +1973,9 @@ export default async function handler(req: Request, context: Context): Promise<R
         );
       }
 
-      const customerAliases: Record<string, string[]> = {
-        'westbank': ['westbank', 'ochsner_westbank'],
-        'ochsner_westbank': ['westbank', 'ochsner_westbank'],
-        'mannings': ['mannings', 'manning'],
-        'manning': ['mannings', 'manning'],
-        'umc': ['umc']
-      };
-
       const requestedCustomer = body.customerContext?.customer || body.customer;
       const tokenCustomerId = authResult.customerId;
-      const allowedIds = customerAliases[tokenCustomerId || ''] || [tokenCustomerId];
-      const hasAccess = !tokenCustomerId || !requestedCustomer || allowedIds.includes(requestedCustomer);
+      const hasAccess = hasCustomerAccess(tokenCustomerId, requestedCustomer);
 
       if (!hasAccess) {
         console.log(`[Copilot] Access denied: token customer_id=${tokenCustomerId}, requested=${requestedCustomer}`);
