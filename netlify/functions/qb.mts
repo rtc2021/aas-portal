@@ -59,6 +59,8 @@ function getDropletPath(pathname: string): string | null {
     "products/search",
     "invoice/create",
     "estimate/create",
+    "terms",
+    "taxcodes",
   ]);
 
   if (allowedExact.has(normalized)) {
@@ -66,9 +68,20 @@ function getDropletPath(pathname: string): string | null {
   }
 
   if (normalized.startsWith("invoice/")) {
-    const invoiceId = normalized.replace(/^invoice\//, "");
-    if (invoiceId && !invoiceId.includes("/")) {
-      return `/qb/invoice/${invoiceId}`;
+    const rest = normalized.replace(/^invoice\//, "");
+    if (rest && !rest.includes("/")) {
+      return `/qb/invoice/${rest}`;
+    }
+    const subMatch = rest.match(/^([^/]+)\/(void|send)$/);
+    if (subMatch) {
+      return `/qb/invoice/${subMatch[1]}/${subMatch[2]}`;
+    }
+  }
+
+  if (normalized.startsWith("estimate/")) {
+    const rest = normalized.replace(/^estimate\//, "");
+    if (rest && !rest.includes("/")) {
+      return `/qb/estimate/${rest}`;
     }
   }
 
@@ -80,7 +93,11 @@ function requiresInternalKey(dropletPath: string): boolean {
 }
 
 function requiresAdmin(dropletPath: string, method: string): boolean {
-  return method === "POST" && (dropletPath === "/qb/invoice/create" || dropletPath === "/qb/estimate/create");
+  if (method === "POST" && dropletPath === "/qb/invoice/create") return true;
+  if (method === "POST" && dropletPath === "/qb/estimate/create") return true;
+  if (method === "POST" && dropletPath.includes("/void")) return true;
+  if (method === "POST" && dropletPath.includes("/send")) return true;
+  return false;
 }
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
