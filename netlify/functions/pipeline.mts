@@ -30,9 +30,19 @@ function getRolesFromToken(authHeader: string | null): string[] {
   } catch { return []; }
 }
 
-function getDropletPath(pathname: string): string | null {
-  const match = pathname.match(/^\/api(\/pipeline\/.+)$/);
-  return match ? match[1] : null;
+function getDropletPath(pathname: string, originalPathname?: string | null): string | null {
+  const directMatch = pathname.match(/^\/api(\/pipeline(?:\/.+)?)$/);
+  if (directMatch) return directMatch[1];
+
+  if (originalPathname) {
+    const rawOriginalPath = originalPathname.startsWith("http")
+      ? new URL(originalPathname).pathname
+      : originalPathname.split("?")[0];
+    const originalMatch = rawOriginalPath.match(/^\/api(\/pipeline(?:\/.+)?)$/);
+    if (originalMatch) return originalMatch[1];
+  }
+
+  return null;
 }
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
@@ -41,7 +51,8 @@ export default async function handler(req: Request, context: Context): Promise<R
   }
 
   const requestUrl = new URL(req.url);
-  const dropletPath = getDropletPath(requestUrl.pathname);
+  const originalPath = req.headers.get("x-original-url") || req.headers.get("x-nf-original-pathname") || req.headers.get("x-nf-original-path");
+  const dropletPath = getDropletPath(requestUrl.pathname, originalPath);
   if (!dropletPath) {
     return new Response(JSON.stringify({ error: "Unknown pipeline route" }), {
       status: 404, headers: baseHeaders(),

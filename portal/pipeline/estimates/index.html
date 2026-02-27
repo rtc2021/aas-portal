@@ -71,7 +71,7 @@
           <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
         </div>
         <div class="header-actions">
-          <label class="limit-label">Limit <input type="number" id="limitInput" value="50" min="1" max="500"></label>
+          <label class="limit-label">Limit <input type="number" id="limitInput" value="250" min="1" max="500"></label>
           <button id="runBtn" type="button">Run Dry-Run</button>
           <button id="processBtn" type="button" class="hidden">Create Estimates (<span id="processBtnCount">0</span>)</button>
         </div>
@@ -334,8 +334,15 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
   let eligibleResults = [];
   let selectedTaskIds = new Set();
 
-  async function api(path, opts) {
-    var res = await fetch(API_BASE + path, opts);
+  async function api(path, opts = {}) {
+    var token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
+    var res = await fetch(API_BASE + path, {
+      ...opts,
+      headers: {
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...((opts && opts.headers) || {})
+      }
+    });
     if (!res.ok) throw new Error('API ' + res.status);
     return res.json();
   }
@@ -350,8 +357,24 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
   function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
 
+  function getResult(r) {
+    return String(r?.result || '').trim().toUpperCase();
+  }
+
+  function normalizeDryRunResults(payload) {
+    var results = Array.isArray(payload)
+      ? payload
+      : (payload?.results || payload?.items || payload?.data?.results || payload?.data?.items || payload?.data || []);
+    return Array.isArray(results) ? results : [];
+  }
+
+  function isAlreadyProcessed(r) {
+    var state = String(r.processing_state || r.result || '').toUpperCase();
+    return state === 'ALREADY_PROCESSED' || state === 'INVOICED' || state === 'ESTIMATED' || state === 'CREATED';
+  }
+
   function isEstimateEligible(r) {
-    return r.result === 'ESTIMATE';
+    return getResult(r) === 'ESTIMATE' && !isAlreadyProcessed(r);
   }
 
   function renderSummary() {
@@ -377,7 +400,7 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
       var taskId = r.limble_task_id;
       var checked = selectedTaskIds.has(taskId) ? ' checked' : '';
 
-      var reasonText = r.estimate_reason || (r.hold_reasons && r.hold_reasons.length ? r.hold_reasons.join(', ').replace(/_/g, ' ') : 'Quote Request');
+      var reasonText = r.estimate_reason || (r.estimate_signals && r.estimate_signals.length ? r.estimate_signals.join(', ') : (r.hold_reasons && r.hold_reasons.length ? r.hold_reasons.join(', ').replace(/_/g, ' ') : 'Quote Request'));
       var reasons = '<span class="hold-reason">' + reasonText + '</span>';
 
       var row = '<tr class="result-row" data-idx="' + i + '" data-task-id="' + taskId + '">' +
@@ -426,6 +449,20 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
       html += '</div></div>';
     }
 
+    if (r.estimate_signals && r.estimate_signals.length) {
+      html += '<div class="detail-section"><h4>Estimate Signals</h4><div>';
+      r.estimate_signals.forEach(function(signal) {
+        html += '<span class="hold-reason">' + String(signal).replace(/_/g, ' ') + '</span>';
+      });
+      html += '</div></div>';
+    }
+
+    if (r.qb_estimate_preview || r.qb_invoice_preview) {
+      var qbPayload = r.qb_estimate_preview || r.qb_invoice_preview;
+      html += '<div class="detail-section"><h4>QB Estimate Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.75);font-size:0.75rem;">' +
+        JSON.stringify(qbPayload, null, 2) + '</pre></div>';
+    }
+
     if (!r.lines || !r.lines.length) {
       html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No line items available for this task.</p>';
     }
@@ -434,26 +471,29 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
     return html;
   }
 
-  async function runDryRun() {
+  async function runDryRun(options) {
+    var preserveProcessResults = !!(options && options.preserveProcessResults);
     var btn = $('runBtn');
     var tbody = $('tableBody');
     btn.disabled = true;
     btn.textContent = 'Running...';
-    selectedTaskIds.clear();
-    updateSelectionCounter();
+    if (!preserveProcessResults) {
+      selectedTaskIds.clear();
+      updateSelectionCounter();
+    }
     tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Running dry-run...</td></tr>';
     $('emptyState').classList.add('hidden');
     document.querySelector('.table-wrap').classList.remove('hidden');
 
     try {
-      var limit = parseInt($('limitInput').value) || 50;
+      var limit = parseInt($('limitInput').value) || 250;
       var data = await api('/dry-run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limit: limit })
       });
 
-      var allResults = data.results || [];
+      var allResults = normalizeDryRunResults(data);
       eligibleResults = allResults.filter(isEstimateEligible);
 
       if (!eligibleResults.length) {
@@ -466,7 +506,7 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
 
       renderSummary();
       renderTable();
-      updateProcessBtn();
+      updateProcessBtn({ preserveProcessResults: preserveProcessResults });
     } catch (e) {
       console.error('[Estimates] Dry-run error:', e);
       tbody.innerHTML = '<tr><td colspan="8" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
@@ -554,7 +594,8 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
     return eligibleResults;
   }
 
-  function updateProcessBtn() {
+  function updateProcessBtn(options) {
+    var preserveProcessResults = !!(options && options.preserveProcessResults);
     var processable = getProcessableTasks();
     var btn = $('processBtn');
     var hasSelection = selectedTaskIds.size > 0;
@@ -570,7 +611,7 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
     } else {
       btn.classList.add('hidden');
     }
-    $('processResults').classList.add('hidden');
+    if (!preserveProcessResults) $('processResults').classList.add('hidden');
   }
 
   $('processBtn').addEventListener('click', function() {
