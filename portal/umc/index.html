@@ -1684,6 +1684,8 @@
     let taskNotes = [];
     let currentUser = null;
     let currentModalTaskId = null;
+    let completedHistoryApi = null;
+    let completedHistoryApiError = null;
 
     async function loadData() {
       $('doorsMeta').textContent = 'Loading doors...';
@@ -2420,6 +2422,14 @@
       setupDownloads();
 
       try {
+        const client = await window.AASAuth?.initAuth();
+        const token = client ? await client.getTokenSilently() : null;
+        await loadCompletedHistoryFromApi(token);
+      } catch (e) {
+        console.warn('[Portal] Completed history prefetch skipped:', e);
+      }
+
+      try {
         await loadData();
         render();
       } catch (e) {
@@ -2732,6 +2742,85 @@
       sendCopilotMessage();
     }
 
+    function formatCentralTimestamp(isoString) {
+      if (!isoString) return 'unknown time';
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) return 'unknown time';
+      return d.toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      }).replace(',', '') + ' CT';
+    }
+
+    async function loadCompletedHistoryFromApi(authToken, force = false) {
+      if (!authToken) return null;
+      if (!force && completedHistoryApi) return completedHistoryApi;
+
+      try {
+        const response = await fetch('/api/copilot?endpoint=completed_history&customer=umc&asset_id=70&days=365', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (!response.ok) throw new Error(`completed history fetch failed (${response.status})`);
+
+        const data = await response.json();
+        completedHistoryApi = data;
+        completedHistoryApiError = null;
+        return data;
+      } catch (e) {
+        completedHistoryApiError = e;
+        console.warn('[Copilot] Completed history API unavailable, falling back to CSV:', e);
+        return null;
+      }
+    }
+
+    function buildCompletedHistoryFromCsv() {
+      const completedTasks = tasks
+        .filter(t => !t.isOpen)
+        .sort((a, b) => (b.dateObj?.sortKey || 0) - (a.dateObj?.sortKey || 0))
+        .slice(0, 20);
+      const totalCompleted = tasks.filter(t => !t.isOpen).length;
+
+      const details = completedTasks.length > 0
+        ? completedTasks.map(t => {
+            const door = t.doorId ? ` | Door: ${t.doorId}` : '';
+            const loc = t.locationName ? ` | Location: ${t.locationName}` : '';
+            const desc = t.summary || t.taskName || 'Service completed';
+            return `  - ${t.dateStr || 'No date'}: ${desc}${door}${loc}`;
+          }).join('\n')
+        : '  No completed service records available';
+
+      return {
+        title: `COMPLETED SERVICE HISTORY (CSV fallback, last ${completedTasks.length} of ${totalCompleted} total):`,
+        details
+      };
+    }
+
+    async function buildCompletedHistoryBlock(authToken) {
+      const apiData = await loadCompletedHistoryFromApi(authToken);
+      if (apiData && Array.isArray(apiData.history)) {
+        const generatedAt = formatCentralTimestamp(apiData.generatedAt);
+        const totalCompleted = Number(apiData?.metadata?.totalCompleted || apiData.history.length || 0);
+        const details = apiData.history.length > 0
+          ? apiData.history.map(t => {
+              const dateText = t.dateCompleted || 'No date';
+              const desc = t.completionNotes || t.description || t.name || 'Service completed';
+              const asset = t.assetID ? ` | Asset: ${t.assetID}` : '';
+              const loc = t.locationID ? ` | Location ID: ${t.locationID}` : '';
+              return `  - ${dateText}: ${desc}${asset}${loc}`;
+            }).join('\n')
+          : '  No completed service records available';
+
+        return {
+          title: `COMPLETED SERVICE HISTORY (API, last ${apiData.history.length} of ${totalCompleted} total; as of ${generatedAt}):`,
+          details
+        };
+      }
+
+      return buildCompletedHistoryFromCsv();
+    }
+
     async function sendCopilotMessage() {
       const input = $('copilotInput');
       const message = input.value.trim();
@@ -2794,20 +2883,8 @@
             }).join('\n')
           : '  None';
 
-        // Format completed service history (from UMC tasks CSV — already filtered to asset 70)
-        const completedTasks = tasks
-          .filter(t => !t.isOpen)
-          .sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0))
-          .slice(0, 20);
-        const totalCompleted = tasks.filter(t => !t.isOpen).length;
-        const serviceHistoryDetails = completedTasks.length > 0
-          ? completedTasks.map(t => {
-              const door = t.doorId ? ` | Door: ${t.doorId}` : '';
-              const loc = t.locationName ? ` | Location: ${t.locationName}` : '';
-              const desc = t.summary || t.taskName || 'Service completed';
-              return `  - ${t.dateStr || 'No date'}: ${desc}${door}${loc}`;
-            }).join('\n')
-          : '  No completed service records available';
+        // Prefer server-backed completed service history; fallback to CSV only on API failure
+        const completedHistoryBlock = await buildCompletedHistoryBlock(authToken);
 
         // Build context string
         const contextPrefix = `
@@ -2827,8 +2904,8 @@ AAADM AUTOMATIC DOOR INSPECTIONS (ANSI A156.10):
 OPEN SERVICE TASKS (${openTasksList.length} total):
 ${openTaskDetails}
 
-COMPLETED SERVICE HISTORY (last ${completedTasks.length} of ${totalCompleted} total):
-${serviceHistoryDetails}
+${completedHistoryBlock.title}
+${completedHistoryBlock.details}
 
 FIRE DOORS CURRENTLY FAILING (${failCount} total):
 ${failingDoorDetails}
