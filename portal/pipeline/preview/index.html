@@ -78,6 +78,7 @@
             <option value="HOLD">Hold</option>
             <option value="SKIP">Skip</option>
             <option value="ERROR">Error</option>
+            <option value="ESTIMATE">Estimate</option>
           </select>
           <button id="runBtn" type="button">Run Dry-Run</button>
           <button id="processBtn" type="button" class="hidden">Create Invoices (<span id="processBtnCount">0</span>)</button>
@@ -90,6 +91,7 @@
         <div class="stat-pill"><div class="dot dot-yellow"></div><span class="label">Hold</span><span class="value" id="sumHold">—</span></div>
         <div class="stat-pill"><div class="dot dot-gray"></div><span class="label">Skip</span><span class="value" id="sumSkip">—</span></div>
         <div class="stat-pill"><div class="dot dot-red"></div><span class="label">Error</span><span class="value" id="sumError">—</span></div>
+        <div class="stat-pill"><div class="dot dot-blue"></div><span class="label">Estimate</span><span class="value" id="sumEstimate">—</span></div>
         <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">—</span></div>
       </div>
 
@@ -174,6 +176,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .dot-yellow { background: #ffcc00; box-shadow: 0 0 6px rgba(255,204,0,0.4); }
 .dot-red { background: #ff4444; box-shadow: 0 0 6px rgba(255,68,68,0.4); }
 .dot-gray { background: rgba(255,255,255,0.35); }
+.dot-blue { background: #0096ff; box-shadow: 0 0 6px rgba(0,150,255,0.4); }
 
 /* Table */
 .table-wrap { overflow-x: auto; }
@@ -191,6 +194,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .result-HOLD { background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
 .result-SKIP { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); }
 .result-ERROR { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
+.result-ESTIMATE { background: rgba(0,150,255,0.1); color: #0096ff; border: 1px solid rgba(0,150,255,0.2); }
 
 /* Tier badges */
 .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
@@ -299,10 +303,12 @@ body.light-theme .result-SUCCESS { background: rgba(0,160,80,0.08); color: #0088
 body.light-theme .result-HOLD { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
 body.light-theme .result-SKIP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); border-color: rgba(0,0,0,0.08); }
 body.light-theme .result-ERROR { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
+body.light-theme .result-ESTIMATE { background: rgba(0,120,200,0.08); color: #0070b8; border-color: rgba(0,120,200,0.2); }
 body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
 body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
 body.light-theme .dot-gray { background: rgba(0,0,0,0.25); }
+body.light-theme .dot-blue { background: #0070b8; box-shadow: 0 0 6px rgba(0,112,184,0.3); }
 body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
 body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
 body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
@@ -366,6 +372,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     $('sumHold').textContent = summary.hold || 0;
     $('sumSkip').textContent = summary.skip || 0;
     $('sumError').textContent = summary.error || 0;
+    $('sumEstimate').textContent = summary.estimate || 0;
     $('sumAmount').textContent = money(summary.total_amount);
   }
 
@@ -574,6 +581,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       hold: filtered.filter(function(r) { return r.result === 'HOLD'; }).length,
       skip: filtered.filter(function(r) { return r.result === 'SKIP'; }).length,
       error: filtered.filter(function(r) { return r.result === 'ERROR'; }).length,
+      estimate: filtered.filter(function(r) { return r.result === 'ESTIMATE'; }).length,
       total_amount: filtered.reduce(function(sum, r) { return sum + (r.total || 0); }, 0)
     };
     renderSummary(summary);
