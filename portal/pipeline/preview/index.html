@@ -71,7 +71,7 @@
           <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
         </div>
         <div class="header-actions">
-          <label class="limit-label">Limit <input type="number" id="limitInput" value="20" min="1" max="200"></label>
+          <label class="limit-label">Limit <input type="number" id="limitInput" value="200" min="1" max="500"></label>
           <select id="filterSelect">
             <option value="">All Results</option>
             <option value="SUCCESS">Success</option>
@@ -80,6 +80,8 @@
             <option value="ERROR">Error</option>
             <option value="ESTIMATE">Estimate</option>
           </select>
+          <label class="limit-label">From <input type="date" id="dateFrom"></label>
+          <label class="limit-label">To <input type="date" id="dateTo"></label>
           <button id="runBtn" type="button">Run Dry-Run</button>
           <button id="processBtn" type="button" class="hidden">Create Invoices (<span id="processBtnCount">0</span>)</button>
         </div>
@@ -107,6 +109,7 @@
               <th style="width:32px"><input type="checkbox" id="selectAll" title="Select all SUCCESS rows"></th>
               <th>Task ID</th>
               <th>Task Name</th>
+              <th>Date</th>
               <th>Customer</th>
               <th>Tier</th>
               <th>Lines</th>
@@ -115,7 +118,7 @@
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="8" class="loading-cell">Loading dry-run results...</td></tr>
+            <tr><td colspan="9" class="loading-cell">Loading dry-run results...</td></tr>
           </tbody>
         </table>
       </div>
@@ -158,6 +161,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .limit-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; }
 .limit-label input { width: 60px; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center; }
 .limit-label input:focus { outline: none; border-color: #00d4ff; }
+.limit-label input[type="date"] { width: 130px; color-scheme: dark; }
 #filterSelect { padding: 7px 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.8rem; }
 #filterSelect:focus { outline: none; border-color: #00d4ff; }
 #runBtn { padding: 8px 18px; background: #00d4ff; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
@@ -281,6 +285,7 @@ body.light-theme .limit-label input,
 body.light-theme #filterSelect { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
 body.light-theme .limit-label input:focus,
 body.light-theme #filterSelect:focus { border-color: #0077b6; }
+body.light-theme .limit-label input[type="date"] { color-scheme: light; }
 body.light-theme #runBtn { color: #fff; }
 body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .stat-pill .label,
@@ -372,6 +377,29 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
   function $(id) { return document.getElementById(id); }
   function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '—'); }
+  function getTaskDate(r) { return r.completed_date || r.completedDate || r.task_date || r.date || r.dateCompleted || ''; }
+  function formatDate(d) { if (!d) return '—'; var dt = new Date(d); return isNaN(dt) ? '—' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  function getResult(r) { return String(r?.result || '').trim().toUpperCase(); }
+
+  function normalizeDryRunPayload(payload) {
+    var results = Array.isArray(payload)
+      ? payload
+      : (payload?.results || payload?.items || payload?.data?.results || payload?.data?.items || payload?.data || []);
+    var safeResults = Array.isArray(results) ? results : [];
+    var fallbackSummary = {
+      total: safeResults.length,
+      success: safeResults.filter(function(r) { return getResult(r) === 'SUCCESS'; }).length,
+      hold: safeResults.filter(function(r) { return getResult(r) === 'HOLD'; }).length,
+      skip: safeResults.filter(function(r) { return getResult(r) === 'SKIP'; }).length,
+      error: safeResults.filter(function(r) { return getResult(r) === 'ERROR'; }).length,
+      estimate: safeResults.filter(function(r) { return getResult(r) === 'ESTIMATE'; }).length,
+      total_amount: safeResults.reduce(function(sum, r) { return sum + (r.total || 0); }, 0)
+    };
+    return {
+      results: safeResults,
+      summary: payload?.summary || payload?.data?.summary || fallbackSummary
+    };
+  }
 
   function renderSummary(summary) {
     $('sumTotal').textContent = summary.total || 0;
@@ -383,13 +411,28 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     $('sumAmount').textContent = money(summary.total_amount);
   }
 
+  function applyFilters(results) {
+    var filter = $('filterSelect').value;
+    var from = $('dateFrom').value;
+    var to = $('dateTo').value;
+    return results.filter(function(r) {
+      if (filter && getResult(r) !== filter) return false;
+      var d = getTaskDate(r);
+      if (d && (from || to)) {
+        var ds = d.slice(0, 10);
+        if (from && ds < from) return false;
+        if (to && ds > to) return false;
+      }
+      return true;
+    });
+  }
+
   function renderTable(results) {
     const tbody = $('tableBody');
-    const filter = $('filterSelect').value;
-    const filtered = filter ? results.filter(r => r.result === filter) : results;
+    const filtered = applyFilters(results);
 
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No ' + (filter || '') + ' results found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No matching results found.</td></tr>';
       return;
     }
 
@@ -400,22 +443,25 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       if (!cust.qbo_display_name) console.warn('[Preview] Task', r.limble_task_id, 'missing qbo_display_name, fell back to:', custName);
       const tier = cust.effective_tier || cust.tier || '';
       const taskName = truncate(r.task_name, 60);
-      const isSuccess = r.result === 'SUCCESS';
+      const result = getResult(r);
+      const isSuccess = result === 'SUCCESS';
       const taskId = r.limble_task_id;
       const checked = selectedTaskIds.has(taskId) ? ' checked' : '';
 
+      var taskDate = formatDate(getTaskDate(r));
       let row = '<tr class="result-row" data-idx="' + i + '" data-task-id="' + taskId + '">' +
         '<td class="row-cb-cell">' + (isSuccess ? '<input type="checkbox" class="row-cb" data-task-id="' + taskId + '"' + checked + '>' : '') + '</td>' +
         '<td>' + (taskId || '—') + '</td>' +
         '<td>' + taskName + '</td>' +
+        '<td>' + taskDate + '</td>' +
         '<td>' + custName + '</td>' +
         '<td>' + (tier ? '<span class="tier-badge">' + tier + '</span>' : '—') + '</td>' +
         '<td>' + (r.line_count || 0) + '</td>' +
         '<td class="text-right">' + (r.total ? money(r.total) : '—') + '</td>' +
-        '<td><span class="result-badge result-' + r.result + '">' + r.result + '</span></td>' +
+        '<td><span class="result-badge result-' + result + '">' + result + '</span></td>' +
         '</tr>';
 
-      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="8">' + buildDetail(r) + '</td></tr>';
+      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="9">' + buildDetail(r) + '</td></tr>';
       return row;
     }).join('');
 
@@ -462,7 +508,21 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       html += '</div></div>';
     }
 
-    if (!r.lines?.length && !r.hold_reasons?.length && !r.customer?.path?.length) {
+    if (r.estimate_signals && r.estimate_signals.length) {
+      html += '<div class="detail-section"><h4>Estimate Signals</h4><div>';
+      r.estimate_signals.forEach(function(signal) {
+        html += '<span class="hold-reason">' + String(signal).replace(/_/g, ' ') + '</span>';
+      });
+      html += '</div></div>';
+    }
+
+    if (r.qb_invoice_preview || r.qb_estimate_preview) {
+      var qbPayload = r.qb_invoice_preview || r.qb_estimate_preview;
+      html += '<div class="detail-section"><h4>QB Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.75);font-size:0.75rem;">' +
+        JSON.stringify(qbPayload, null, 2) + '</pre></div>';
+    }
+
+    if (!r.lines?.length && !r.hold_reasons?.length && !r.customer?.path?.length && !r.warnings?.length && !r.estimate_signals?.length && !r.qb_invoice_preview && !r.qb_estimate_preview) {
       html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No additional details available.</p>';
     }
 
@@ -480,20 +540,21 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       selectedTaskIds.clear();
       updateSelectionCounter();
     }
-    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Running dry-run...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Running dry-run...</td></tr>';
     $('emptyState').classList.add('hidden');
     document.querySelector('.table-wrap').classList.remove('hidden');
 
     try {
-      const limit = parseInt($('limitInput').value) || 20;
+      const limit = parseInt($('limitInput').value) || 200;
       const data = await api('/dry-run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limit: limit })
       });
 
-      cachedResults = data.results || [];
-      renderSummary(data.summary || {});
+      var normalized = normalizeDryRunPayload(data);
+      cachedResults = normalized.results;
+      renderSummary(normalized.summary);
 
       if (!cachedResults.length) {
         document.querySelector('.table-wrap').classList.add('hidden');
@@ -505,7 +566,7 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
       updateProcessBtn({ preserveProcessResults: preserveProcessResults });
     } catch (e) {
       console.error('[Preview] Dry-run error:', e);
-      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
       $('processBtn').classList.add('hidden');
     } finally {
       btn.disabled = false;
@@ -580,24 +641,27 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     }
   }
 
-  // Filter change — update summary + table
-  $('filterSelect').addEventListener('change', function() {
+  function refilter() {
     if (!cachedResults.length) return;
-    var filter = this.value;
-    var filtered = filter ? cachedResults.filter(function(r) { return r.result === filter; }) : cachedResults;
+    var filtered = applyFilters(cachedResults);
     var summary = {
       total: filtered.length,
-      success: filtered.filter(function(r) { return r.result === 'SUCCESS'; }).length,
-      hold: filtered.filter(function(r) { return r.result === 'HOLD'; }).length,
-      skip: filtered.filter(function(r) { return r.result === 'SKIP'; }).length,
-      error: filtered.filter(function(r) { return r.result === 'ERROR'; }).length,
-      estimate: filtered.filter(function(r) { return r.result === 'ESTIMATE'; }).length,
+      success: filtered.filter(function(r) { return getResult(r) === 'SUCCESS'; }).length,
+      hold: filtered.filter(function(r) { return getResult(r) === 'HOLD'; }).length,
+      skip: filtered.filter(function(r) { return getResult(r) === 'SKIP'; }).length,
+      error: filtered.filter(function(r) { return getResult(r) === 'ERROR'; }).length,
+      estimate: filtered.filter(function(r) { return getResult(r) === 'ESTIMATE'; }).length,
       total_amount: filtered.reduce(function(sum, r) { return sum + (r.total || 0); }, 0)
     };
     renderSummary(summary);
     renderTable(cachedResults);
     updateProcessBtn();
-  });
+  }
+
+  // Filter change — update summary + table
+  $('filterSelect').addEventListener('change', refilter);
+  $('dateFrom').addEventListener('change', refilter);
+  $('dateTo').addEventListener('change', refilter);
 
   // Run button
   $('runBtn').addEventListener('click', runDryRun);
@@ -610,12 +674,12 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
   }
 
   function getSuccessTasks() {
-    return cachedResults.filter(function(r) { return r.result === 'SUCCESS' && !isAlreadyProcessed(r); });
+    return cachedResults.filter(function(r) { return getResult(r) === 'SUCCESS' && !isAlreadyProcessed(r); });
   }
 
   function getProcessableTasks() {
     if (selectedTaskIds.size > 0) {
-      return cachedResults.filter(function(r) { return r.result === 'SUCCESS' && !isAlreadyProcessed(r) && selectedTaskIds.has(r.limble_task_id); });
+      return cachedResults.filter(function(r) { return getResult(r) === 'SUCCESS' && !isAlreadyProcessed(r) && selectedTaskIds.has(r.limble_task_id); });
     }
     return getSuccessTasks();
   }
