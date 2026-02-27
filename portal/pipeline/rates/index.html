@@ -197,7 +197,15 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
   let ratesData = [];
 
   async function api(path, options = {}) {
-    const res = await fetch(`${API_BASE}${path}`, { headers: { 'Content-Type': 'application/json', ...options.headers }, ...options });
+    const token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {})
+      }
+    });
     if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
     return res.json();
   }
