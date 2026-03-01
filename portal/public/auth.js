@@ -305,10 +305,7 @@ async function getToken() {
   const client = await initAuth();
   if (!client) return null;
   try {
-    const token = await client.getTokenSilently();
-    console.log('[Auth DEBUG] token type:', token?.split('.').length === 3 ? 'JWT' : 'opaque');
-    console.log('[Auth DEBUG] raw token:', token);
-    return token;
+    return await client.getTokenSilently();
   } catch { return null; }
 }
 
