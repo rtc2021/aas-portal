@@ -30,16 +30,57 @@ function getRolesFromToken(authHeader: string | null): string[] {
   } catch { return []; }
 }
 
-function getDropletPath(pathname: string, originalPathname?: string | null): string | null {
-  const directMatch = pathname.match(/^\/api(\/pipeline(?:\/.+)?)$/);
-  if (directMatch) return directMatch[1];
+function extractPathname(value: string): string {
+  if (!value) return "";
+  try {
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      return new URL(value).pathname;
+    }
+  } catch {
+    // Fall through to raw parsing.
+  }
+  const rawPath = value.split("?")[0];
+  try {
+    return decodeURIComponent(rawPath);
+  } catch {
+    return rawPath;
+  }
+}
+
+function extractPipelineRoute(pathname: string): string | null {
+  const apiMatch = pathname.match(/^\/api(\/pipeline(?:\/.+)?)$/);
+  if (apiMatch) return apiMatch[1];
+
+  // Support direct function invocation forms used by some Netlify rewrite flows.
+  const fnMatch = pathname.match(/^\/.netlify\/functions\/pipeline(\/.+)?$/);
+  if (fnMatch) return `/pipeline${fnMatch[1] || ""}`;
+
+  const rawPipelineMatch = pathname.match(/^(\/pipeline(?:\/.+)?)$/);
+  if (rawPipelineMatch) return rawPipelineMatch[1];
+
+  return null;
+}
+
+function getDropletPath(pathname: string, originalPathname?: string | null, search?: string): string | null {
+  const directMatch = extractPipelineRoute(pathname);
+  if (directMatch) return directMatch;
 
   if (originalPathname) {
-    const rawOriginalPath = originalPathname.startsWith("http")
-      ? new URL(originalPathname).pathname
-      : originalPathname.split("?")[0];
-    const originalMatch = rawOriginalPath.match(/^\/api(\/pipeline(?:\/.+)?)$/);
-    if (originalMatch) return originalMatch[1];
+    const rawOriginalPath = extractPathname(originalPathname);
+    const originalMatch = extractPipelineRoute(rawOriginalPath);
+    if (originalMatch) return originalMatch;
+  }
+
+  // Netlify rewrites can invoke the function URL directly while preserving
+  // the original route in a query string key such as `path`.
+  if (search) {
+    const params = new URLSearchParams(search);
+    const pathQuery = params.get("path") || params.get("pathname") || params.get("route");
+    if (pathQuery) {
+      const queryPath = extractPathname(pathQuery);
+      const queryMatch = extractPipelineRoute(queryPath);
+      if (queryMatch) return queryMatch;
+    }
   }
 
   return null;
@@ -51,8 +92,12 @@ export default async function handler(req: Request, context: Context): Promise<R
   }
 
   const requestUrl = new URL(req.url);
-  const originalPath = req.headers.get("x-original-url") || req.headers.get("x-nf-original-pathname") || req.headers.get("x-nf-original-path");
-  const dropletPath = getDropletPath(requestUrl.pathname, originalPath);
+  const originalPath = req.headers.get("x-original-url")
+    || req.headers.get("x-nf-original-pathname")
+    || req.headers.get("x-nf-original-path")
+    || req.headers.get("x-nf-request-uri")
+    || req.headers.get("x-forwarded-uri");
+  const dropletPath = getDropletPath(requestUrl.pathname, originalPath, requestUrl.search);
   if (!dropletPath) {
     return new Response(JSON.stringify({ error: "Unknown pipeline route" }), {
       status: 404, headers: baseHeaders(),
@@ -79,7 +124,12 @@ export default async function handler(req: Request, context: Context): Promise<R
   }
 
   try {
-    const upstreamUrl = `${DROPLET_URL}${dropletPath}${requestUrl.search}`;
+    const upstreamSearchParams = new URLSearchParams(requestUrl.search);
+    upstreamSearchParams.delete("path");
+    upstreamSearchParams.delete("pathname");
+    upstreamSearchParams.delete("route");
+    const upstreamQuery = upstreamSearchParams.toString();
+    const upstreamUrl = `${DROPLET_URL}${dropletPath}${upstreamQuery ? `?${upstreamQuery}` : ""}`;
     const upstreamHeaders: Record<string, string> = {
       Accept: "application/json",
       "x-internal-key": DROPLET_INTERNAL_KEY,

@@ -358,7 +358,7 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
   function normalizeDryRunResults(payload) {
     var results = Array.isArray(payload)
       ? payload
-      : (payload?.results || payload?.items || payload?.data?.results || payload?.data?.items || payload?.data || []);
+      : (payload?.results || payload?.items || payload?.tasks || payload?.data?.results || payload?.data?.items || payload?.data?.tasks || payload?.data || []);
     return Array.isArray(results) ? results : [];
   }
 
@@ -368,7 +368,21 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
   }
 
   function isEstimateEligible(r) {
-    return getResult(r) === 'ESTIMATE' && !isAlreadyProcessed(r);
+    if (isAlreadyProcessed(r)) return false;
+    var result = getResult(r);
+    if (result === 'ESTIMATE') return true;
+    if (result !== 'HOLD') return false;
+    if (r.estimate_reason) return true;
+
+    var signals = Array.isArray(r.estimate_signals) ? r.estimate_signals : [];
+    var holdReasons = Array.isArray(r.hold_reasons) ? r.hold_reasons : [];
+    var combined = signals.concat(holdReasons).map(function(v) {
+      return String(v || '').toUpperCase();
+    });
+
+    return combined.some(function(v) {
+      return v.includes('ESTIMATE') || v.includes('QUOTE_REQUEST') || v.includes('QUOTE REQUEST');
+    });
   }
 
   function renderSummary() {
