@@ -1,6 +1,6 @@
 import type { Context } from "@netlify/functions";
 
-const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://134.199.203.192:8000";
+const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://45.55.116.90:8000";
 const DROPLET_INTERNAL_KEY = Netlify.env.get("DROPLET_INTERNAL_KEY") || "";
 
 const CORS_HEADERS = {
