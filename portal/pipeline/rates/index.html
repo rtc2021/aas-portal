@@ -259,12 +259,12 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
     grid.innerHTML = rates.map(r => {
       const tier = r.tier || 'unknown';
       const badge = TIER_BADGES[tier] || tier.toUpperCase();
-      const labor = fmtPrice(r.labor_rate, '/hr');
-      const travel = fmtPrice(r.travel_rate, ' flat');
+      const labor = fmtPrice(r.labor_rate_hr, '/hr');
+      const minHrs = r.labor_minimum_hrs != null ? r.labor_minimum_hrs : '—';
+      const otMult = r.overtime_multiplier != null ? r.overtime_multiplier + 'x' : '—';
       const laborQB = r.qb_labor_item_id ? `#${r.qb_labor_item_id}` : '';
-      const travelQB = r.qb_travel_item_id ? `#${r.qb_travel_item_id}` : '';
       const laborName = r.qb_labor_item_name || 'Service Labor';
-      const travelName = r.qb_travel_item_name || 'Travel';
+      const notes = r.notes || '';
 
       return `<div class="rate-card tier-${esc(tier)}" data-tier="${esc(tier)}">
         <div class="rate-card-header">
@@ -273,18 +273,20 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
         </div>
         <div class="rate-row">
           <div>
-            <div class="rate-label">Labor</div>
+            <div class="rate-label">Labor Rate</div>
             <div class="rate-item-name">${esc(laborName)} <span class="rate-qb-id">${esc(laborQB)}</span></div>
           </div>
           <div class="rate-value ${labor.cls}">${labor.text}<span style="font-size:0.7rem;opacity:0.6">${labor.unit}</span></div>
         </div>
         <div class="rate-row">
-          <div>
-            <div class="rate-label">Travel</div>
-            <div class="rate-item-name">${esc(travelName)} <span class="rate-qb-id">${esc(travelQB)}</span></div>
-          </div>
-          <div class="rate-value ${travel.cls}">${travel.text}<span style="font-size:0.7rem;opacity:0.6">${travel.unit}</span></div>
+          <div><div class="rate-label">Minimum Hours</div></div>
+          <div class="rate-value">${esc(minHrs)}<span style="font-size:0.7rem;opacity:0.6"> hrs</span></div>
         </div>
+        <div class="rate-row">
+          <div><div class="rate-label">Overtime Multiplier</div></div>
+          <div class="rate-value">${esc(otMult)}</div>
+        </div>
+        ${notes ? `<div class="rate-row"><div class="rate-label" style="font-size:0.8rem;opacity:0.7">${esc(notes)}</div></div>` : ''}
         <div class="rate-card-actions">
           <button class="btn-edit-rate" onclick="editRate('${esc(tier)}')">Edit</button>
         </div>
@@ -298,8 +300,9 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
     const card = document.querySelector(`.rate-card[data-tier="${tier}"]`);
     if (!card) return;
 
-    const laborVal = rate.labor_rate || 0;
-    const travelVal = rate.travel_rate || 0;
+    const laborVal = rate.labor_rate_hr || 0;
+    const minVal = rate.labor_minimum_hrs != null ? rate.labor_minimum_hrs : 2.5;
+    const otVal = rate.overtime_multiplier != null ? rate.overtime_multiplier : 1.5;
 
     card.innerHTML = `
       <div class="rate-card-header">
@@ -307,14 +310,19 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
         <span class="rate-card-tier-badge">EDITING</span>
       </div>
       <div class="rate-row rate-edit-row">
-        <div class="rate-label" style="min-width:60px">Labor</div>
+        <div class="rate-label" style="min-width:90px">Labor Rate</div>
         <input type="number" class="rate-edit-input" id="edit-labor-${tier}" value="${laborVal}" step="0.50" min="0">
         <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">/hr</span>
       </div>
       <div class="rate-row rate-edit-row">
-        <div class="rate-label" style="min-width:60px">Travel</div>
-        <input type="number" class="rate-edit-input" id="edit-travel-${tier}" value="${travelVal}" step="0.50" min="0">
-        <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">flat</span>
+        <div class="rate-label" style="min-width:90px">Min Hours</div>
+        <input type="number" class="rate-edit-input" id="edit-min-${tier}" value="${minVal}" step="0.5" min="0">
+        <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">hrs</span>
+      </div>
+      <div class="rate-row rate-edit-row">
+        <div class="rate-label" style="min-width:90px">OT Multiplier</div>
+        <input type="number" class="rate-edit-input" id="edit-ot-${tier}" value="${otVal}" step="0.1" min="1">
+        <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">x</span>
       </div>
       <div class="rate-edit-actions">
         <button class="btn-rate-cancel" onclick="loadRates()">Cancel</button>
@@ -324,13 +332,14 @@ body.light-theme .toast-error { background: rgba(220,40,40,0.12); color: #cc2828
   };
 
   window.saveRate = async function(tier) {
-    const labor = parseFloat(document.getElementById(`edit-labor-${tier}`).value);
-    const travel = parseFloat(document.getElementById(`edit-travel-${tier}`).value);
+    const labor_rate_hr = parseFloat(document.getElementById(`edit-labor-${tier}`).value);
+    const labor_minimum_hrs = parseFloat(document.getElementById(`edit-min-${tier}`).value);
+    const overtime_multiplier = parseFloat(document.getElementById(`edit-ot-${tier}`).value);
 
     try {
       await api(`/rates/${encodeURIComponent(tier)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ labor_rate: labor, travel_rate: travel })
+        body: JSON.stringify({ labor_rate_hr, labor_minimum_hrs, overtime_multiplier })
       });
       toast(`${tier} rates updated`);
       loadRates();

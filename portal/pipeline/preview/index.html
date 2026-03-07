@@ -73,58 +73,67 @@
           <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
         </div>
         <div class="header-actions">
-          <label class="limit-label">Limit <input type="number" id="limitInput" value="200" min="1" max="500"></label>
-          <select id="filterSelect">
-            <option value="">All Results</option>
-            <option value="SUCCESS">Success</option>
-            <option value="HOLD">Hold</option>
-            <option value="SKIP">Skip</option>
-            <option value="ERROR">Error</option>
-            <option value="ESTIMATE">Estimate</option>
-          </select>
-          <label class="limit-label">From <input type="date" id="dateFrom"></label>
-          <label class="limit-label">To <input type="date" id="dateTo"></label>
+          <button id="syncBtn" type="button">Sync Tasks</button>
           <button id="runBtn" type="button">Run Dry-Run</button>
-          <button id="processBtn" type="button" class="hidden">Create Invoices (<span id="processBtnCount">0</span>)</button>
+          <button id="processBtn" type="button" class="hidden">Create Invoices</button>
         </div>
       </header>
 
-      <div class="info-banner">Simulates invoice generation without creating anything in QuickBooks. Use this to <strong>preview line items, totals, and catch issues</strong> before processing.</div>
+      <div id="syncResult" class="sync-result hidden"></div>
+
+      <div class="info-banner">V2 Pipeline &mdash; <strong>Sync</strong> tasks from Limble, <strong>preview</strong> visit-grouped invoices, then <strong>create</strong> in QuickBooks.</div>
 
       <div class="summary-bar" id="summaryBar">
-        <div class="stat-pill"><div class="dot"></div><span class="label">Total</span><span class="value" id="sumTotal">—</span></div>
-        <div class="stat-pill"><div class="dot dot-green"></div><span class="label">Success</span><span class="value" id="sumSuccess">—</span></div>
-        <div class="stat-pill"><div class="dot dot-yellow"></div><span class="label">Hold</span><span class="value" id="sumHold">—</span></div>
-        <div class="stat-pill"><div class="dot dot-gray"></div><span class="label">Skip</span><span class="value" id="sumSkip">—</span></div>
-        <div class="stat-pill"><div class="dot dot-red"></div><span class="label">Error</span><span class="value" id="sumError">—</span></div>
-        <div class="stat-pill"><div class="dot dot-blue"></div><span class="label">Estimate</span><span class="value" id="sumEstimate">—</span></div>
-        <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">—</span></div>
+        <div class="stat-pill"><div class="dot"></div><span class="label">Total</span><span class="value" id="sumTotal">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-green"></div><span class="label">Invoices</span><span class="value" id="sumInvoices">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-blue"></div><span class="label">Estimates</span><span class="value" id="sumEstimates">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-yellow"></div><span class="label">Holds</span><span class="value" id="sumHolds">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-gray"></div><span class="label">Skips</span><span class="value" id="sumSkips">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-purple"></div><span class="label">Visits</span><span class="value" id="sumVisits">&mdash;</span></div>
+        <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">&mdash;</span></div>
       </div>
 
-      <div class="selection-counter hidden" id="selectionCounter">
-        <span id="selectionText">0 selected</span>
-        <button class="selection-clear" id="selectionClear">Clear</button>
+      <div class="tab-nav" id="tabNav">
+        <button class="tab-btn active" data-tab="invoices">Invoices <span id="tabCountInvoices"></span></button>
+        <button class="tab-btn" data-tab="estimates">Estimates <span id="tabCountEstimates"></span></button>
+        <button class="tab-btn" data-tab="holds">Holds <span id="tabCountHolds"></span></button>
+        <button class="tab-btn" data-tab="skips">Skips <span id="tabCountSkips"></span></button>
       </div>
 
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width:32px"><input type="checkbox" id="selectAll" title="Select all SUCCESS rows"></th>
-              <th>Task ID</th>
-              <th>Task Name</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Tier</th>
-              <th>Lines</th>
-              <th class="text-right">Total</th>
-              <th>Result</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <tr><td colspan="9" class="loading-cell">Loading dry-run results...</td></tr>
-          </tbody>
-        </table>
+      <div class="tab-content active" id="tab-invoices">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Customer</th><th>Tier</th><th>Visits</th><th>Tasks</th><th class="text-right">Billed Hrs</th><th class="text-right">Total</th></tr></thead>
+            <tbody id="invoiceBody"><tr><td colspan="6" class="loading-cell">Run dry-run to preview invoices</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-estimates">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Task ID</th><th>Task Name</th><th>Customer</th><th>Signals</th></tr></thead>
+            <tbody id="estimateBody"><tr><td colspan="4" class="loading-cell">Run dry-run to see estimate routing</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-holds">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Task ID</th><th>Reason</th><th>Customer</th></tr></thead>
+            <tbody id="holdBody"><tr><td colspan="3" class="loading-cell">Run dry-run to see held tasks</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-skips">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Task ID</th><th>Reason</th></tr></thead>
+            <tbody id="skipBody"><tr><td colspan="2" class="loading-cell">Run dry-run to see skipped tasks</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="process-results hidden" id="processResults">
@@ -132,8 +141,21 @@
         <div id="processResultsBody"></div>
       </div>
 
+      <div class="recent-docs" id="recentDocs">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="font-size:1rem;font-weight:700;margin:0;color:rgba(255,255,255,0.9);">Recent Documents</h3>
+          <a href="/pipeline/log/" class="view-all-link">View All &rarr;</a>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Doc #</th><th>Customer</th><th>Type</th><th>Status</th><th class="text-right">Amount</th><th>Date</th></tr></thead>
+            <tbody id="docsBody"><tr><td colspan="6" class="loading-cell">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="empty-state hidden" id="emptyState">
-        <p>No unbilled tasks found. All tasks may already be billed or no completed tasks are available.</p>
+        <p>No unbilled tasks found in cache. Try syncing tasks first.</p>
         <a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a>
       </div>
     </div>
@@ -142,7 +164,7 @@
   <div class="confirm-overlay hidden" id="confirmOverlay">
     <div class="confirm-dialog">
       <h3>Create Real Invoices?</h3>
-      <p>This will create <strong id="confirmCount">0</strong> invoice(s) in QuickBooks and tag the tasks as @Billed in Limble. This action cannot be undone.</p>
+      <p>This will create <strong id="confirmCount">0</strong> invoice(s) totaling <strong id="confirmTotal">$0</strong> in QuickBooks and tag tasks as @Billed in Limble. This action cannot be undone.</p>
       <div class="confirm-tasks" id="confirmTasks"></div>
       <div class="confirm-actions">
         <button class="confirm-cancel" id="confirmCancel">Cancel</button>
@@ -160,18 +182,28 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .back-link:hover { color: #00d4ff; }
 .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
 .page-title span { color: #00d4ff; }
-
 .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.limit-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; }
-.limit-label input { width: 60px; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center; }
-.limit-label input:focus { outline: none; border-color: #00d4ff; }
-.limit-label input[type="date"] { width: 130px; color-scheme: dark; }
-#filterSelect { padding: 7px 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.8rem; }
-#filterSelect:focus { outline: none; border-color: #00d4ff; }
-#filterSelect option { background: #1a1a2e; }
+.hidden { display: none; }
+
+/* Sync button */
+#syncBtn { padding: 8px 18px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+#syncBtn:hover { background: rgba(255,255,255,0.12); }
+#syncBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Run button */
 #runBtn { padding: 8px 18px; background: #00d4ff; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
 #runBtn:hover { filter: brightness(1.1); }
 #runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Process button */
+#processBtn { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+#processBtn:hover { filter: brightness(1.1); }
+#processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Sync result toast */
+.sync-result { padding: 10px 16px; margin-bottom: 16px; border-radius: 8px; font-size: 0.82rem; line-height: 1.5; }
+.sync-success { background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); color: rgba(255,255,255,0.8); }
+.sync-error { background: rgba(255,68,68,0.06); border: 1px solid rgba(255,68,68,0.2); color: #ff4444; }
 
 /* Info banner */
 .info-banner { padding: 10px 16px; margin-bottom: 16px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
@@ -190,6 +222,16 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .dot-red { background: #ff4444; box-shadow: 0 0 6px rgba(255,68,68,0.4); }
 .dot-gray { background: rgba(255,255,255,0.35); }
 .dot-blue { background: #0096ff; box-shadow: 0 0 6px rgba(0,150,255,0.4); }
+.dot-purple { background: #a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.4); }
+
+/* Tabs */
+.tab-nav { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0; }
+.tab-btn { padding: 10px 20px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: color 150ms, border-color 150ms; }
+.tab-btn:hover { color: rgba(255,255,255,0.8); }
+.tab-btn.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+.tab-btn span { font-weight: 400; font-size: 0.78rem; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
 /* Table */
 .table-wrap { overflow-x: auto; }
@@ -201,16 +243,15 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .text-right { text-align: right; }
 .loading-cell { text-align: center; color: rgba(255,255,255,0.5); padding: 40px 12px; }
 
-/* Result badges */
-.result-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
-.result-SUCCESS { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
-.result-HOLD { background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
-.result-SKIP { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); }
-.result-ERROR { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
-.result-ESTIMATE { background: rgba(0,150,255,0.1); color: #0096ff; border: 1px solid rgba(0,150,255,0.2); }
-
 /* Tier badges */
 .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+
+/* Status badges */
+.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.status-created { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
+.status-voided { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
+.status-sent { background: rgba(0,150,255,0.1); color: #0096ff; border: 1px solid rgba(0,150,255,0.2); }
+.status-paid { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
 
 /* Detail panel (expanded row) */
 .detail-row { display: none; }
@@ -222,24 +263,24 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .detail-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
 .detail-table th { text-align: left; padding: 4px 8px; color: rgba(255,255,255,0.4); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .detail-table td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+/* Visit blocks in invoice detail */
+.visit-block { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.visit-block:last-child { margin-bottom: 0; border-bottom: none; }
+.visit-header { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 0.82rem; color: rgba(255,255,255,0.8); flex-wrap: wrap; }
+.visit-date { font-weight: 600; }
+.visit-hours { font-size: 0.78rem; color: rgba(255,255,255,0.5); }
+.min-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
+.line-desc-only td { color: rgba(255,255,255,0.4); font-style: italic; }
+.line-subtotal td { font-weight: 700; border-top: 1px solid rgba(255,255,255,0.1); }
+
+/* Signal / hold reason tags */
 .hold-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
-.walk-step { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: rgba(255,255,255,0.7); }
-.walk-step + .walk-step::before { content: '→'; margin-right: 4px; color: rgba(255,255,255,0.3); }
-.walk-status { font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; }
-.walk-VERIFIED { background: rgba(0,255,136,0.1); color: #00ff88; }
-.walk-NOT_IN_MAP { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
-.walk-NEEDS_REVIEW { background: rgba(255,204,0,0.1); color: #ffcc00; }
 
 /* Empty state */
 .empty-state { text-align: center; padding: 60px 40px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
 .empty-state p { color: rgba(255,255,255,0.6); margin: 0 0 20px; }
 .back-btn { color: #00d4ff; text-decoration: none; font-weight: 600; }
-.hidden { display: none; }
-
-/* Process button */
-#processBtn { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-#processBtn:hover { filter: brightness(1.1); }
-#processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Confirm overlay */
 .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
@@ -247,7 +288,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .confirm-dialog h3 { font-size: 1.1rem; margin: 0 0 10px; color: #fff; }
 .confirm-dialog p { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin: 0 0 16px; line-height: 1.5; }
 .confirm-dialog strong { color: #00ff88; }
-.confirm-tasks { max-height: 160px; overflow-y: auto; margin-bottom: 18px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3); }
+.confirm-tasks { max-height: 200px; overflow-y: auto; margin-bottom: 18px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3); }
 .confirm-task-row { padding: 4px 0; color: rgba(255,255,255,0.7); display: flex; justify-content: space-between; }
 .confirm-task-row + .confirm-task-row { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px; }
 .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -266,15 +307,10 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .process-result-status.error { color: #ff4444; }
 .process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
 
-/* Checkbox column */
-.data-table th input[type="checkbox"],
-.data-table td input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #00d4ff; }
-.row-cb-cell { width: 32px; text-align: center; }
-
-/* Selection counter */
-.selection-counter { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 6px 14px; background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.2); border-radius: 8px; font-size: 0.82rem; color: #00d4ff; }
-.selection-clear { background: none; border: 1px solid rgba(0,212,255,0.3); color: #00d4ff; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
-.selection-clear:hover { background: rgba(0,212,255,0.1); }
+/* Recent docs */
+.recent-docs { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); }
+.view-all-link { font-size: 0.82rem; color: #00d4ff; text-decoration: none; }
+.view-all-link:hover { text-decoration: underline; }
 
 /* Mobile */
 @media (max-width: 768px) {
@@ -283,49 +319,49 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   .header-actions { width: 100%; }
   .summary-bar { gap: 6px; }
   .stat-pill { padding: 5px 10px; font-size: 0.78rem; }
+  .tab-btn { padding: 8px 12px; font-size: 0.78rem; }
   .data-table { font-size: 0.8rem; }
   .data-table th, .data-table td { padding: 8px 6px; }
+  .visit-header { gap: 8px; font-size: 0.78rem; }
 }
 
 /* Light theme */
 body.light-theme::before { opacity: 0; }
-body.light-theme .limit-label { color: rgba(26,26,46,0.6); }
-body.light-theme .limit-label input,
-body.light-theme #filterSelect { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
-body.light-theme .limit-label input:focus,
-body.light-theme #filterSelect:focus { border-color: #0077b6; }
-body.light-theme .limit-label input[type="date"] { color-scheme: light; }
-body.light-theme #filterSelect option { background: #fff; color: rgba(26,26,46,0.92); }
+body.light-theme .back-link,
+body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
 body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
 body.light-theme .info-banner strong { color: #997a00; }
 body.light-theme #runBtn { color: #fff; }
+body.light-theme #processBtn { color: #fff; }
+body.light-theme .confirm-go { color: #fff; }
+body.light-theme #syncBtn { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.8); border-color: rgba(0,0,0,0.15); }
 body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
-body.light-theme .stat-pill .label,
-body.light-theme .back-link,
-body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
+body.light-theme .stat-pill .label { color: rgba(26,26,46,0.6); }
 body.light-theme .data-table th { color: rgba(26,26,46,0.5); border-bottom-color: rgba(0,0,0,0.1); }
 body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .data-table tr.result-row:hover { background: rgba(0,0,0,0.03); }
+body.light-theme .tab-nav { border-bottom-color: rgba(0,0,0,0.1); }
+body.light-theme .tab-btn { color: rgba(26,26,46,0.5); }
+body.light-theme .tab-btn:hover { color: rgba(26,26,46,0.8); }
+body.light-theme .tab-btn.active { color: #0077b6; border-bottom-color: #0077b6; }
+body.light-theme .sync-success { background: rgba(0,160,80,0.06); border-color: rgba(0,160,80,0.2); color: rgba(26,26,46,0.8); }
+body.light-theme .sync-error { background: rgba(200,40,40,0.06); border-color: rgba(200,40,40,0.2); color: #cc2828; }
 body.light-theme .detail-panel { background: rgba(0,0,0,0.02); border-left-color: rgba(0,102,170,0.4); }
 body.light-theme .detail-section h4 { color: rgba(26,26,46,0.5); }
 body.light-theme .detail-table th { color: rgba(26,26,46,0.4); border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .detail-table td { border-bottom-color: rgba(0,0,0,0.04); }
+body.light-theme .visit-header { color: rgba(26,26,46,0.8); }
+body.light-theme .visit-hours { color: rgba(26,26,46,0.5); }
+body.light-theme .min-badge { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
+body.light-theme .line-desc-only td { color: rgba(26,26,46,0.4); }
+body.light-theme .line-subtotal td { border-top-color: rgba(0,0,0,0.1); }
 body.light-theme .hold-reason { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
-body.light-theme .walk-step { color: rgba(26,26,46,0.7); }
-body.light-theme .walk-step + .walk-step::before { color: rgba(26,26,46,0.3); }
-body.light-theme .walk-VERIFIED { background: rgba(0,160,80,0.08); color: #008844; }
-body.light-theme .walk-NEEDS_REVIEW { background: rgba(200,150,0,0.1); color: #997a00; }
-body.light-theme .walk-NOT_IN_MAP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); }
-body.light-theme .result-SUCCESS { background: rgba(0,160,80,0.08); color: #008844; border-color: rgba(0,160,80,0.2); }
-body.light-theme .result-HOLD { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
-body.light-theme .result-SKIP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); border-color: rgba(0,0,0,0.08); }
-body.light-theme .result-ERROR { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
-body.light-theme .result-ESTIMATE { background: rgba(0,120,200,0.08); color: #0070b8; border-color: rgba(0,120,200,0.2); }
 body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
 body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
 body.light-theme .dot-gray { background: rgba(0,0,0,0.25); }
 body.light-theme .dot-blue { background: #0070b8; box-shadow: 0 0 6px rgba(0,112,184,0.3); }
+body.light-theme .dot-purple { background: #7c3aed; box-shadow: 0 0 6px rgba(124,58,237,0.3); }
 body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
 body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
 body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
@@ -335,8 +371,6 @@ body.light-theme .confirm-tasks { background: rgba(0,0,0,0.03); border-color: rg
 body.light-theme .confirm-task-row { color: rgba(26,26,46,0.7); }
 body.light-theme .confirm-task-row + .confirm-task-row { border-top-color: rgba(0,0,0,0.06); }
 body.light-theme .confirm-cancel { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.8); }
-body.light-theme #processBtn { color: #fff; }
-body.light-theme .confirm-go { color: #fff; }
 body.light-theme .process-results { background: rgba(255,255,255,0.9); border-color: rgba(0,160,80,0.25); }
 body.light-theme .process-results-title { color: #008844; }
 body.light-theme .process-result-row + .process-result-row { border-top-color: rgba(0,0,0,0.06); }
@@ -344,9 +378,12 @@ body.light-theme .process-result-task { color: rgba(26,26,46,0.8); }
 body.light-theme .process-result-status.invoiced { color: #008844; }
 body.light-theme .process-result-status.error { color: #cc2828; }
 body.light-theme .process-result-qb { color: rgba(26,26,46,0.5); }
-body.light-theme .selection-counter { background: rgba(0,102,170,0.06); border-color: rgba(0,102,170,0.2); color: #0077b6; }
-body.light-theme .selection-clear { border-color: rgba(0,102,170,0.3); color: #0077b6; }
-body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
+body.light-theme .view-all-link { color: #0077b6; }
+body.light-theme .recent-docs { border-top-color: rgba(0,0,0,0.1); }
+body.light-theme .status-created { background: rgba(0,160,80,0.08); color: #008844; border-color: rgba(0,160,80,0.2); }
+body.light-theme .status-voided { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
+body.light-theme .status-sent { background: rgba(0,120,200,0.08); color: #0070b8; border-color: rgba(0,120,200,0.2); }
+body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844; border-color: rgba(0,160,80,0.3); }
 </style>
 
 <script>
@@ -369,364 +406,327 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
 (function() {
   'use strict';
 
-  const API_BASE = '/api/pipeline';
-  let cachedResults = [];
-  let selectedTaskIds = new Set();
+  var API_BASE = '/api/pipeline';
+  var cachedDryRun = null;
 
-  async function api(path, opts = {}) {
-    const token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
-    const res = await fetch(API_BASE + path, {
-      ...opts,
-      headers: {
-        ...(token ? { Authorization: 'Bearer ' + token } : {}),
-        ...((opts && opts.headers) || {})
-      }
+  function api(path, opts) {
+    opts = opts || {};
+    return Promise.resolve(window.AASAuth && window.AASAuth.getToken ? window.AASAuth.getToken() : null).then(function(token) {
+      return fetch(API_BASE + path, {
+        method: opts.method || 'GET',
+        headers: Object.assign(
+          {},
+          token ? { Authorization: 'Bearer ' + token } : {},
+          opts.headers || {}
+        ),
+        body: opts.body || undefined
+      });
+    }).then(function(res) {
+      if (!res.ok) throw new Error('API ' + res.status);
+      return res.json();
     });
-    if (!res.ok) throw new Error('API ' + res.status);
-    return res.json();
   }
 
   function $(id) { return document.getElementById(id); }
   function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '—'); }
-  function getTaskDate(r) { return r.completed_date || r.completedDate || r.task_date || r.date || r.dateCompleted || ''; }
-  function formatDate(d) { if (!d) return '—'; var dt = new Date(d); return isNaN(dt) ? '—' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
-  function getResult(r) { return String(r?.result || '').trim().toUpperCase(); }
-
-  function normalizeDryRunPayload(payload) {
-    var results = Array.isArray(payload)
-      ? payload
-      : (payload?.results || payload?.items || payload?.data?.results || payload?.data?.items || payload?.data || []);
-    var safeResults = Array.isArray(results) ? results : [];
-    var fallbackSummary = {
-      total: safeResults.length,
-      success: safeResults.filter(function(r) { return getResult(r) === 'SUCCESS'; }).length,
-      hold: safeResults.filter(function(r) { return getResult(r) === 'HOLD'; }).length,
-      skip: safeResults.filter(function(r) { return getResult(r) === 'SKIP'; }).length,
-      error: safeResults.filter(function(r) { return getResult(r) === 'ERROR'; }).length,
-      estimate: safeResults.filter(function(r) { return getResult(r) === 'ESTIMATE'; }).length,
-      total_amount: safeResults.reduce(function(sum, r) { return sum + (r.total || 0); }, 0)
-    };
-    return {
-      results: safeResults,
-      summary: payload?.summary || payload?.data?.summary || fallbackSummary
-    };
+  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
+  function formatDate(d) {
+    if (!d) return '\u2014';
+    var dt = new Date(d);
+    return isNaN(dt) ? '\u2014' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  function renderSummary(summary) {
-    $('sumTotal').textContent = summary.total || 0;
-    $('sumSuccess').textContent = summary.success || 0;
-    $('sumHold').textContent = summary.hold || 0;
-    $('sumSkip').textContent = summary.skip || 0;
-    $('sumError').textContent = summary.error || 0;
-    $('sumEstimate').textContent = summary.estimate || 0;
-    $('sumAmount').textContent = money(summary.total_amount);
-  }
+  // ---- Tab switching ----
+  document.addEventListener('click', function(e) {
+    var tabBtn = e.target.closest('.tab-btn');
+    if (!tabBtn) return;
+    var tab = tabBtn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    tabBtn.classList.add('active');
+    $('tab-' + tab).classList.add('active');
+  });
 
-  function applyFilters(results) {
-    var filter = $('filterSelect').value;
-    var from = $('dateFrom').value;
-    var to = $('dateTo').value;
-    return results.filter(function(r) {
-      if (filter && getResult(r) !== filter) return false;
-      var d = getTaskDate(r);
-      if (d && (from || to)) {
-        var ds = d.slice(0, 10);
-        if (from && ds < from) return false;
-        if (to && ds > to) return false;
-      }
-      return true;
+  // ---- Expand/collapse rows ----
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.tab-btn')) return;
+    var row = e.target.closest('.result-row');
+    if (!row) return;
+    var idx = row.getAttribute('data-idx');
+    var detail = $('detail-' + idx);
+    if (detail) detail.classList.toggle('open');
+  });
+
+  // ---- Sync ----
+  function syncTasks() {
+    var btn = $('syncBtn');
+    var result = $('syncResult');
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+    result.classList.add('hidden');
+
+    api('/v2/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 14 })
+    }).then(function(data) {
+      result.className = 'sync-result sync-success';
+      result.innerHTML = 'Sync complete \u2014 <strong>' + (data.tasks_fetched || 0) + '</strong> fetched, <strong>' + (data.tasks_new || 0) + '</strong> new, <strong>' + (data.tasks_skipped || 0) + '</strong> skipped' +
+        (data.errors && data.errors.length ? ', <span style="color:#ff4444">' + data.errors.length + ' errors</span>' : '');
+    }).catch(function(e) {
+      result.className = 'sync-result sync-error';
+      result.textContent = 'Sync failed: ' + e.message;
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Sync Tasks';
     });
   }
 
-  function renderTable(results) {
-    const tbody = $('tableBody');
-    const filtered = applyFilters(results);
+  // ---- Dry-Run ----
+  function runDryRun() {
+    var btn = $('runBtn');
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+    $('processBtn').classList.add('hidden');
+    $('processResults').classList.add('hidden');
+    $('emptyState').classList.add('hidden');
 
-    if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No matching results found.</td></tr>';
+    $('invoiceBody').innerHTML = '<tr><td colspan="6" class="loading-cell">Running dry-run...</td></tr>';
+    $('estimateBody').innerHTML = '<tr><td colspan="4" class="loading-cell">Running...</td></tr>';
+    $('holdBody').innerHTML = '<tr><td colspan="3" class="loading-cell">Running...</td></tr>';
+    $('skipBody').innerHTML = '<tr><td colspan="2" class="loading-cell">Running...</td></tr>';
+
+    api('/v2/dry-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 14 })
+    }).then(function(data) {
+      cachedDryRun = data;
+      var s = data.summary || {};
+
+      $('sumTotal').textContent = s.total_tasks || 0;
+      $('sumInvoices').textContent = s.invoice_tasks || 0;
+      $('sumEstimates').textContent = s.estimate_tasks || 0;
+      $('sumHolds').textContent = s.hold_tasks || 0;
+      $('sumSkips').textContent = s.skip_tasks || 0;
+      $('sumVisits').textContent = s.visits_grouped || 0;
+      $('sumAmount').textContent = money(s.total_invoice_amount);
+
+      var invoices = data.invoices || [];
+      var estimates = data.estimates || [];
+      var holds = data.holds || [];
+      var skips = data.skips || [];
+
+      $('tabCountInvoices').textContent = '(' + invoices.length + ')';
+      $('tabCountEstimates').textContent = '(' + estimates.length + ')';
+      $('tabCountHolds').textContent = '(' + holds.length + ')';
+      $('tabCountSkips').textContent = '(' + skips.length + ')';
+
+      renderInvoices(invoices);
+      renderEstimates(estimates);
+      renderHolds(holds);
+      renderSkips(skips);
+
+      if (invoices.length > 0) {
+        $('processBtn').textContent = 'Create Invoices (' + invoices.length + ')';
+        $('processBtn').classList.remove('hidden');
+      }
+
+      if (!s.total_tasks) {
+        $('emptyState').classList.remove('hidden');
+      }
+    }).catch(function(e) {
+      console.error('[Preview] Dry-run error:', e);
+      $('invoiceBody').innerHTML = '<tr><td colspan="6" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Run Dry-Run';
+    });
+  }
+
+  // ---- Render Invoices ----
+  function renderInvoices(invoices) {
+    var tbody = $('invoiceBody');
+    if (!invoices.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No invoices to create.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = filtered.map((r, i) => {
-      const cust = r.customer || {};
-      const verifiedNode = (cust.path || []).find(p => p.status === 'VERIFIED');
-      const custName = cust.qbo_display_name || cust.display_name || cust.name || (verifiedNode && verifiedNode.name) || '—';
-      if (!cust.qbo_display_name) console.warn('[Preview] Task', r.limble_task_id, 'missing qbo_display_name, fell back to:', custName);
-      const tier = cust.effective_tier || cust.tier || '';
-      const taskName = truncate(r.task_name, 60);
-      const result = getResult(r);
-      const isSuccess = result === 'SUCCESS';
-      const taskId = r.limble_task_id;
-      const checked = selectedTaskIds.has(taskId) ? ' checked' : '';
-
-      var taskDate = formatDate(getTaskDate(r));
-      let row = '<tr class="result-row" data-idx="' + i + '" data-task-id="' + taskId + '">' +
-        '<td class="row-cb-cell">' + (isSuccess ? '<input type="checkbox" class="row-cb" data-task-id="' + taskId + '"' + checked + '>' : '') + '</td>' +
-        '<td>' + (taskId || '—') + '</td>' +
-        '<td>' + taskName + '</td>' +
-        '<td>' + taskDate + '</td>' +
-        '<td>' + custName + '</td>' +
-        '<td>' + (tier ? '<span class="tier-badge">' + tier + '</span>' : '—') + '</td>' +
-        '<td>' + (r.line_count || 0) + '</td>' +
-        '<td class="text-right">' + (r.total ? money(r.total) : '—') + '</td>' +
-        '<td><span class="result-badge result-' + result + '">' + result + '</span></td>' +
+    tbody.innerHTML = invoices.map(function(inv, i) {
+      var billedHrs = (inv.visits || []).reduce(function(sum, v) { return sum + (v.billed_hours || 0); }, 0);
+      var row = '<tr class="result-row" data-idx="inv-' + i + '">' +
+        '<td>' + (inv.customer_name || '\u2014') + '</td>' +
+        '<td>' + (inv.tier ? '<span class="tier-badge">' + inv.tier + '</span>' : '\u2014') + '</td>' +
+        '<td>' + (inv.visits || []).length + '</td>' +
+        '<td>' + (inv.all_task_ids || []).length + '</td>' +
+        '<td class="text-right">' + billedHrs.toFixed(1) + '</td>' +
+        '<td class="text-right">' + money(inv.total) + '</td>' +
         '</tr>';
-
-      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="9">' + buildDetail(r) + '</td></tr>';
+      row += '<tr class="detail-row" id="detail-inv-' + i + '"><td colspan="6">' + buildInvoiceDetail(inv) + '</td></tr>';
       return row;
     }).join('');
-
-    updateSelectAllState();
   }
 
-  function buildDetail(r) {
-    let html = '<div class="detail-panel">';
+  function buildInvoiceDetail(inv) {
+    var html = '<div class="detail-panel">';
 
-    // Line items
-    if (r.lines && r.lines.length) {
-      html += '<div class="detail-section"><h4>Line Items</h4><table class="detail-table"><thead><tr><th>Description</th><th>Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th></tr></thead><tbody>';
-      r.lines.forEach(function(l) {
-        const detail = l.SalesItemLineDetail || {};
-        html += '<tr><td>' + (l.Description || '—') + '</td><td>' + (detail.Qty || 1) + '</td><td class="text-right">' + money(detail.UnitPrice) + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
-      });
-      html += '</tbody></table></div>';
+    if (inv._customer_memo) {
+      html += '<div class="detail-section"><h4>Customer Memo</h4><p style="margin:0;font-size:0.82rem;color:rgba(255,255,255,0.7);">' + inv._customer_memo + '</p></div>';
     }
 
-    // Customer path (walk-up)
-    if (r.customer?.path && r.customer.path.length) {
-      html += '<div class="detail-section"><h4>Customer Resolution Path</h4><div>';
-      r.customer.path.forEach(function(step) {
-        html += '<span class="walk-step">' + (step.name || 'Asset ' + step.asset_id) + ' <span class="walk-status walk-' + step.status + '">' + step.status.replace(/_/g, ' ') + '</span></span>';
-      });
-      html += '</div></div>';
-    }
+    (inv.visits || []).forEach(function(visit) {
+      html += '<div class="visit-block">';
+      html += '<div class="visit-header">';
+      html += '<span class="visit-date">' + formatDate(visit.visit_date) + '</span>';
+      html += '<span>' + (visit.tech_names || []).join(', ') + '</span>';
+      html += '<span class="visit-hours">' + (visit.actual_hours || 0).toFixed(1) + 'h actual \u2192 ' + (visit.billed_hours || 0).toFixed(1) + 'h billed</span>';
+      if (visit.minimum_applied) {
+        html += '<span class="min-badge">2.5h minimum</span>';
+      }
+      html += '</div>';
 
-    // Hold reasons
-    if (r.hold_reasons && r.hold_reasons.length) {
-      html += '<div class="detail-section"><h4>Hold Reasons</h4><div>';
-      r.hold_reasons.forEach(function(reason) {
-        html += '<span class="hold-reason">' + reason.replace(/_/g, ' ') + '</span>';
-      });
-      html += '</div></div>';
-    }
+      if (visit._task_names && visit._task_names.length) {
+        html += '<div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin:4px 0 8px;padding-left:4px;">';
+        html += visit._task_names.join(' \u2022 ');
+        html += '</div>';
+      }
 
-    // Warnings
-    if (r.warnings && r.warnings.length) {
-      html += '<div class="detail-section"><h4>Warnings</h4><div>';
-      r.warnings.forEach(function(w) {
-        html += '<span class="hold-reason">' + w + '</span>';
-      });
-      html += '</div></div>';
-    }
+      if (visit.lines && visit.lines.length) {
+        html += '<table class="detail-table"><thead><tr><th>Description</th><th>Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th></tr></thead><tbody>';
+        visit.lines.forEach(function(l) {
+          if (l.DetailType === 'DescriptionOnly') {
+            html += '<tr class="line-desc-only"><td colspan="4">' + (l.Description || '') + '</td></tr>';
+          } else if (l.DetailType === 'SubTotalLineDetail') {
+            html += '<tr class="line-subtotal"><td colspan="3">Subtotal</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+          } else {
+            var detail = l.SalesItemLineDetail || {};
+            html += '<tr><td>' + (l.Description || '\u2014') + '</td><td>' + (detail.Qty || '') + '</td><td class="text-right">' + (detail.UnitPrice ? money(detail.UnitPrice) : '') + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+          }
+        });
+        html += '</tbody></table>';
+      }
 
-    if (r.estimate_signals && r.estimate_signals.length) {
-      html += '<div class="detail-section"><h4>Estimate Signals</h4><div>';
-      r.estimate_signals.forEach(function(signal) {
-        html += '<span class="hold-reason">' + String(signal).replace(/_/g, ' ') + '</span>';
-      });
-      html += '</div></div>';
-    }
+      html += '</div>';
+    });
 
-    if (r.qb_invoice_preview || r.qb_estimate_preview) {
-      var qbPayload = r.qb_invoice_preview || r.qb_estimate_preview;
-      html += '<div class="detail-section"><h4>QB Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.75);font-size:0.75rem;">' +
-        JSON.stringify(qbPayload, null, 2) + '</pre></div>';
-    }
-
-    if (!r.lines?.length && !r.hold_reasons?.length && !r.customer?.path?.length && !r.warnings?.length && !r.estimate_signals?.length && !r.qb_invoice_preview && !r.qb_estimate_preview) {
-      html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No additional details available.</p>';
+    if (inv.qb_invoice_preview) {
+      html += '<div class="detail-section"><h4>QB Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.6);font-size:0.72rem;max-height:300px;overflow-y:auto;">' +
+        JSON.stringify(inv.qb_invoice_preview, null, 2) + '</pre></div>';
     }
 
     html += '</div>';
     return html;
   }
 
-  async function runDryRun(options) {
-    const preserveProcessResults = !!(options && options.preserveProcessResults);
-    const btn = $('runBtn');
-    const tbody = $('tableBody');
-    btn.disabled = true;
-    btn.textContent = 'Running...';
-    if (!preserveProcessResults) {
-      selectedTaskIds.clear();
-      updateSelectionCounter();
-    }
-    tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Running dry-run...</td></tr>';
-    $('emptyState').classList.add('hidden');
-    document.querySelector('.table-wrap').classList.remove('hidden');
-
-    try {
-      const limit = parseInt($('limitInput').value) || 200;
-      const data = await api('/dry-run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: limit })
-      });
-
-      var normalized = normalizeDryRunPayload(data);
-      cachedResults = normalized.results;
-      renderSummary(normalized.summary);
-
-      if (!cachedResults.length) {
-        document.querySelector('.table-wrap').classList.add('hidden');
-        $('emptyState').classList.remove('hidden');
-        return;
-      }
-
-      renderTable(cachedResults);
-      updateProcessBtn({ preserveProcessResults: preserveProcessResults });
-    } catch (e) {
-      console.error('[Preview] Dry-run error:', e);
-      tbody.innerHTML = '<tr><td colspan="9" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
-      $('processBtn').classList.add('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Run Dry-Run';
-    }
-  }
-
-  // Expand/collapse rows (skip if clicking checkbox)
-  document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('row-cb')) return;
-    const row = e.target.closest('.result-row');
-    if (!row) return;
-    const idx = row.getAttribute('data-idx');
-    const detail = $('detail-' + idx);
-    if (detail) detail.classList.toggle('open');
-  });
-
-  // Checkbox change on individual rows
-  document.addEventListener('change', function(e) {
-    if (!e.target.classList.contains('row-cb')) return;
-    e.stopPropagation();
-    var taskId = parseInt(e.target.getAttribute('data-task-id'));
-    if (e.target.checked) {
-      selectedTaskIds.add(taskId);
-    } else {
-      selectedTaskIds.delete(taskId);
-    }
-    updateSelectionCounter();
-    updateProcessBtn();
-    updateSelectAllState();
-  });
-
-  // Select-all checkbox
-  $('selectAll').addEventListener('change', function() {
-    var checked = this.checked;
-    var successTasks = getSuccessTasks();
-    successTasks.forEach(function(r) {
-      if (checked) {
-        selectedTaskIds.add(r.limble_task_id);
-      } else {
-        selectedTaskIds.delete(r.limble_task_id);
-      }
-    });
-    document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = checked; });
-    updateSelectionCounter();
-    updateProcessBtn();
-  });
-
-  // Clear selection button
-  $('selectionClear').addEventListener('click', function() {
-    selectedTaskIds.clear();
-    document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = false; });
-    $('selectAll').checked = false;
-    updateSelectionCounter();
-    updateProcessBtn();
-  });
-
-  function updateSelectAllState() {
-    var successTasks = getSuccessTasks();
-    if (!successTasks.length) { $('selectAll').checked = false; return; }
-    var allSelected = successTasks.every(function(r) { return selectedTaskIds.has(r.limble_task_id); });
-    $('selectAll').checked = allSelected;
-  }
-
-  function updateSelectionCounter() {
-    var count = selectedTaskIds.size;
-    if (count > 0) {
-      $('selectionCounter').classList.remove('hidden');
-      $('selectionText').textContent = count + ' task' + (count === 1 ? '' : 's') + ' selected';
-    } else {
-      $('selectionCounter').classList.add('hidden');
-    }
-  }
-
-  function refilter() {
-    if (!cachedResults.length) return;
-    var filtered = applyFilters(cachedResults);
-    var summary = {
-      total: filtered.length,
-      success: filtered.filter(function(r) { return getResult(r) === 'SUCCESS'; }).length,
-      hold: filtered.filter(function(r) { return getResult(r) === 'HOLD'; }).length,
-      skip: filtered.filter(function(r) { return getResult(r) === 'SKIP'; }).length,
-      error: filtered.filter(function(r) { return getResult(r) === 'ERROR'; }).length,
-      estimate: filtered.filter(function(r) { return getResult(r) === 'ESTIMATE'; }).length,
-      total_amount: filtered.reduce(function(sum, r) { return sum + (r.total || 0); }, 0)
-    };
-    renderSummary(summary);
-    renderTable(cachedResults);
-    updateProcessBtn();
-  }
-
-  // Filter change — update summary + table
-  $('filterSelect').addEventListener('change', refilter);
-  $('dateFrom').addEventListener('change', refilter);
-  $('dateTo').addEventListener('change', refilter);
-
-  // Run button
-  $('runBtn').addEventListener('click', runDryRun);
-
-  // ---- Process Invoices ----
-
-  function isAlreadyProcessed(r) {
-    var state = String(r.processing_state || r.result || '').toUpperCase();
-    return state === 'ALREADY_PROCESSED' || state === 'INVOICED' || state === 'ESTIMATED';
-  }
-
-  function getSuccessTasks() {
-    return cachedResults.filter(function(r) { return getResult(r) === 'SUCCESS' && !isAlreadyProcessed(r); });
-  }
-
-  function getProcessableTasks() {
-    if (selectedTaskIds.size > 0) {
-      return cachedResults.filter(function(r) { return getResult(r) === 'SUCCESS' && !isAlreadyProcessed(r) && selectedTaskIds.has(r.limble_task_id); });
-    }
-    return getSuccessTasks();
-  }
-
-  function updateProcessBtn(options) {
-    var preserveProcessResults = !!(options && options.preserveProcessResults);
-    var processable = getProcessableTasks();
-    var successCount = getSuccessTasks().length;
-    var btn = $('processBtn');
-    var hasSelection = selectedTaskIds.size > 0;
-
-    if (hasSelection) {
-      $('processBtnCount').textContent = processable.length + ' selected';
-    } else {
-      $('processBtnCount').textContent = successCount;
+  // ---- Render Estimates ----
+  function renderEstimates(estimates) {
+    var tbody = $('estimateBody');
+    if (!estimates.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="loading-cell">No tasks routed to estimates.</td></tr>';
+      return;
     }
 
-    if (successCount > 0) {
-      btn.classList.remove('hidden');
-    } else {
-      btn.classList.add('hidden');
-    }
-    if (!preserveProcessResults) $('processResults').classList.add('hidden');
-  }
-
-  $('processBtn').addEventListener('click', function() {
-    var tasks = getProcessableTasks();
-    if (!tasks.length) return;
-
-    $('confirmCount').textContent = tasks.length;
-    $('confirmTasks').innerHTML = tasks.map(function(t) {
-      return '<div class="confirm-task-row"><span>#' + t.limble_task_id + ' ' + truncate(t.task_name, 40) + '</span><span>' + money(t.total) + '</span></div>';
+    tbody.innerHTML = estimates.map(function(est, i) {
+      var signals = (est.estimate_signals || []).map(function(s) { return s.replace(/_/g, ' '); }).join(', ');
+      var row = '<tr class="result-row" data-idx="est-' + i + '">' +
+        '<td>' + (est.limble_task_id || '\u2014') + '</td>' +
+        '<td>' + truncate(est.task_name, 60) + '</td>' +
+        '<td>' + (est.customer_name || '\u2014') + '</td>' +
+        '<td>' + signals + '</td>' +
+        '</tr>';
+      row += '<tr class="detail-row" id="detail-est-' + i + '"><td colspan="4">' + buildEstimateDetail(est) + '</td></tr>';
+      return row;
     }).join('');
+  }
 
-    $('confirmOverlay').classList.remove('hidden');
+  function buildEstimateDetail(est) {
+    var html = '<div class="detail-panel">';
+
+    if (est.labor_entries && est.labor_entries.length) {
+      html += '<div class="detail-section"><h4>Labor Entries</h4><table class="detail-table"><thead><tr><th>User ID</th><th>Time (hrs)</th></tr></thead><tbody>';
+      est.labor_entries.forEach(function(le) {
+        html += '<tr><td>' + (le.userID || '\u2014') + '</td><td>' + ((le.timeSpent || 0) / 3600).toFixed(1) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if (est.parts_usage && est.parts_usage.length) {
+      html += '<div class="detail-section"><h4>Parts Usage</h4><table class="detail-table"><thead><tr><th>Part</th><th>Qty</th></tr></thead><tbody>';
+      est.parts_usage.forEach(function(p) {
+        html += '<tr><td>' + (p.name || 'Part ' + p.partID) + '</td><td>' + (p.usedCount || 0) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if ((!est.labor_entries || !est.labor_entries.length) && (!est.parts_usage || !est.parts_usage.length)) {
+      html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No additional details.</p>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  // ---- Render Holds ----
+  function renderHolds(holds) {
+    var tbody = $('holdBody');
+    if (!holds.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="loading-cell">No tasks on hold.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = holds.map(function(h) {
+      return '<tr>' +
+        '<td>' + (h.limble_task_id || '\u2014') + '</td>' +
+        '<td><span class="hold-reason">' + (h.reason || '\u2014').replace(/_/g, ' ') + '</span></td>' +
+        '<td>' + (h.customer_name || '\u2014') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ---- Render Skips ----
+  function renderSkips(skips) {
+    var tbody = $('skipBody');
+    if (!skips.length) {
+      tbody.innerHTML = '<tr><td colspan="2" class="loading-cell">No tasks skipped.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = skips.map(function(s) {
+      return '<tr>' +
+        '<td>' + (s.limble_task_id || '\u2014') + '</td>' +
+        '<td><span class="hold-reason">' + (s.reason || '\u2014').replace(/_/g, ' ') + '</span></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ---- Process ----
+  $('processBtn').addEventListener('click', function() {
+    var btn = $('processBtn');
+    btn.disabled = true;
+    var origText = btn.textContent;
+    btn.textContent = 'Checking...';
+
+    api('/v2/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 14 })
+    }).then(function(preview) {
+      var invoices = preview.invoices || (cachedDryRun ? cachedDryRun.invoices : []) || [];
+      var totalAmount = (preview.summary ? preview.summary.total_invoice_amount : null) ||
+        (cachedDryRun && cachedDryRun.summary ? cachedDryRun.summary.total_invoice_amount : 0);
+
+      $('confirmCount').textContent = invoices.length;
+      $('confirmTotal').textContent = money(totalAmount);
+      $('confirmTasks').innerHTML = invoices.map(function(inv) {
+        return '<div class="confirm-task-row"><span>' + (inv.customer_name || '\u2014') + '</span><span>' + money(inv.total) + '</span></div>';
+      }).join('');
+
+      $('confirmOverlay').classList.remove('hidden');
+    }).catch(function(e) {
+      console.error('[Preview] Process preview error:', e);
+      alert('Process preview failed: ' + e.message);
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = origText;
+    });
   });
 
   $('confirmCancel').addEventListener('click', function() {
@@ -737,72 +737,95 @@ body.light-theme .selection-clear:hover { background: rgba(0,102,170,0.08); }
     if (e.target === this) $('confirmOverlay').classList.add('hidden');
   });
 
-  $('confirmGo').addEventListener('click', async function() {
-    var tasks = getProcessableTasks();
-    if (!tasks.length) return;
-
+  $('confirmGo').addEventListener('click', function() {
     var goBtn = $('confirmGo');
     var cancelBtn = $('confirmCancel');
     goBtn.disabled = true;
     goBtn.textContent = 'Processing...';
     cancelBtn.style.display = 'none';
 
-    try {
-      var taskIds = tasks.map(function(t) { return t.limble_task_id; });
-      var data = await api('/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'INVOICE', task_ids: Array.from(new Set(taskIds)) })
-      });
-
+    api('/v2/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 14, confirm: true })
+    }).then(function(data) {
       $('confirmOverlay').classList.add('hidden');
 
-      var results = data.results || [];
       var body = $('processResultsBody');
-      if (!results.length) {
-        body.innerHTML = '<p style="color:rgba(255,255,255,0.5);">No results returned from process endpoint.</p>';
+      var created = data.created_invoices || [];
+      var summary = data.summary || {};
+
+      var summaryHtml = '<div style="display:flex;gap:16px;margin-bottom:14px;font-size:0.85rem;flex-wrap:wrap;">' +
+        '<span>Created: <strong>' + (summary.invoices_created || 0) + '</strong></span>' +
+        '<span>Amount: <strong>' + money(summary.total_amount) + '</strong></span>' +
+        '<span>Tasks Tagged: <strong>' + (summary.tasks_tagged_billed || 0) + '</strong></span>' +
+        (summary.errors ? '<span style="color:#ff4444;">Errors: <strong>' + summary.errors + '</strong></span>' : '') +
+        '</div>';
+
+      if (!created.length) {
+        body.innerHTML = summaryHtml + '<p style="color:rgba(255,255,255,0.5);">No invoices returned.</p>';
       } else {
-        body.innerHTML = results.map(function(r) {
-          var resultStatus = String(r.result || '').toUpperCase();
-          var isOk = resultStatus === 'INVOICED' || resultStatus === 'SUCCESS' || resultStatus === 'ALREADY_PROCESSED';
-          var statusText = r.result || 'UNKNOWN';
-          var qbInfo = '';
-          if (r.qb_invoice_id || r.qb_txn_id) qbInfo = 'QB #' + (r.qb_invoice_id || r.qb_txn_id);
-          if (r.qb_doc_number) qbInfo += (qbInfo ? ' — ' : '') + 'Doc ' + r.qb_doc_number;
+        body.innerHTML = summaryHtml + created.map(function(inv) {
+          var tagOk = (inv.tag_results || []).every(function(t) { return t.status === 200; });
           return '<div class="process-result-row">' +
-            '<div><span class="process-result-task">#' + (r.limble_task_id || '—') + ' ' + truncate(r.task_name || '', 40) + '</span>' +
-            (qbInfo ? '<div class="process-result-qb">' + qbInfo + '</div>' : '') +
+            '<div>' +
+            '<span class="process-result-task">' + (inv.customer_name || '\u2014') + '</span>' +
+            '<div class="process-result-qb">Doc #' + (inv.qb_doc_number || '\u2014') + ' \u2014 QB TxnId ' + (inv.qb_txn_id || '\u2014') + ' \u2014 ' + money(inv.qb_total) + '</div>' +
             '</div>' +
-            '<span class="process-result-status ' + (isOk ? 'invoiced' : 'error') + '">' + statusText + '</span>' +
+            '<span class="process-result-status invoiced">' + (tagOk ? 'CREATED' : 'CREATED (tag issues)') + '</span>' +
             '</div>';
         }).join('');
       }
 
       $('processResults').classList.remove('hidden');
       $('processBtn').classList.add('hidden');
-      selectedTaskIds.clear();
-      updateSelectionCounter();
-      await runDryRun({ preserveProcessResults: true });
-    } catch (e) {
+
+      runDryRun();
+      loadDocuments();
+    }).catch(function(e) {
       console.error('[Preview] Process error:', e);
       $('confirmOverlay').classList.add('hidden');
-      var body = $('processResultsBody');
-      body.innerHTML = '<p style="color:#ff4444;">Process failed: ' + e.message + '</p>';
+      $('processResultsBody').innerHTML = '<p style="color:#ff4444;">Process failed: ' + e.message + '</p>';
       $('processResults').classList.remove('hidden');
-    } finally {
+    }).finally(function() {
       goBtn.disabled = false;
       goBtn.textContent = 'Yes, Create Invoices';
       cancelBtn.style.display = '';
-    }
+    });
   });
 
-  window.onPageReady = function(user, roles) {
-    var today = new Date();
-    var twoWeeksAgo = new Date(today);
-    twoWeeksAgo.setDate(today.getDate() - 14);
-    $('dateTo').value = today.toISOString().slice(0, 10);
-    $('dateFrom').value = twoWeeksAgo.toISOString().slice(0, 10);
+  // ---- Recent Documents ----
+  function loadDocuments() {
+    var tbody = $('docsBody');
+    api('/v2/documents?limit=10').then(function(data) {
+      var docs = data.data || [];
+      if (!docs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No documents yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = docs.map(function(d) {
+        return '<tr>' +
+          '<td>' + (d.qb_doc_number || '\u2014') + '</td>' +
+          '<td>' + (d.customer_name || '\u2014') + '</td>' +
+          '<td>' + (d.doc_type || '\u2014') + '</td>' +
+          '<td><span class="status-badge status-' + (d.status || 'created') + '">' + (d.status || '\u2014') + '</span></td>' +
+          '<td class="text-right">' + money(d.qb_total) + '</td>' +
+          '<td>' + formatDate(d.created_at) + '</td>' +
+          '</tr>';
+      }).join('');
+    }).catch(function() {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading-cell" style="color:#ff4444;">Failed to load documents</td></tr>';
+    });
+  }
+
+  // ---- Event listeners ----
+  $('syncBtn').addEventListener('click', syncTasks);
+  $('runBtn').addEventListener('click', runDryRun);
+
+  // ---- Page Ready ----
+  window.onPageReady = function() {
     runDryRun();
+    loadDocuments();
   };
 })();
 </script>
