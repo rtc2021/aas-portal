@@ -115,7 +115,18 @@
           </div>
           <div class="stat-card-body">
             <div class="stat-card-value" id="stat-invoices">-</div>
-            <div class="stat-card-label">Invoices Created</div>
+            <div class="stat-card-label">Documents</div>
+          </div>
+          <div class="stat-card-arrow">&rarr;</div>
+        </div>
+
+        <div class="stat-card" onclick="location.href='/pipeline/status'">
+          <div class="stat-card-icon" style="background:rgba(138,43,226,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#9966ff" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value" id="stat-cache">-</div>
+            <div class="stat-card-label">Task Cache (pending / total)</div>
           </div>
           <div class="stat-card-arrow">&rarr;</div>
         </div>
@@ -249,10 +260,18 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
   async function loadDashboard() {
     try {
       const stats = await api('/stats');
-      document.getElementById('stat-customers').textContent = (stats.customer_map?.NEEDS_REVIEW || 0).toLocaleString();
+      const unmapped = (stats.customer_map?.UNMAPPED || 0) + (stats.customer_map?.NEEDS_REVIEW || 0);
+      document.getElementById('stat-customers').textContent = unmapped.toLocaleString();
       document.getElementById('stat-parts').textContent = (stats.part_map?.UNMAPPED || 0).toLocaleString();
       document.getElementById('stat-tiers').textContent = (stats.rate_card?.active_tiers || 0).toLocaleString();
-      document.getElementById('stat-invoices').textContent = (stats.billing_log?.total || 0).toLocaleString();
+      document.getElementById('stat-invoices').textContent = (stats.documents?.total || 0).toLocaleString();
+      // Update task cache if element exists
+      var cacheEl = document.getElementById('stat-cache');
+      if (cacheEl) {
+        var unproc = stats.task_cache?.unprocessed || 0;
+        var total = stats.task_cache?.total || 0;
+        cacheEl.textContent = unproc + ' / ' + total;
+      }
     } catch (e) {
       console.error('Dashboard stats failed:', e);
     }

@@ -72,17 +72,36 @@
         <h1 class="page-title">Billing <span>Review</span></h1>
       </header>
 
-      <div class="info-banner">Admin review queue for matched tasks awaiting approval before QuickBooks invoice creation.</div>
+      <div class="info-banner">Admin review queue — Sync from Limble, preview invoice grouping, then approve to create in QuickBooks.</div>
+
+      <!-- Action Buttons -->
+      <div class="action-row">
+        <button class="action-btn action-btn--sync" id="btnSync">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Sync from Limble
+        </button>
+        <button class="action-btn action-btn--dryrun" id="btnDryRun" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview Invoices
+        </button>
+        <button class="action-btn action-btn--process" id="btnProcess" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Create in QuickBooks
+        </button>
+      </div>
+
+      <!-- Sync Result Banner -->
+      <div class="sync-result hidden" id="syncResult"></div>
 
       <!-- Summary Bar -->
-      <div class="stats-grid">
+      <div class="stats-grid" id="statsGrid" style="display:none;">
         <div class="stat-card">
           <div class="stat-card-icon" style="background:rgba(0,255,136,0.12)">
             <svg viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-ready">0</div>
-            <div class="stat-card-label">Ready to Invoice</div>
+            <div class="stat-card-value" id="stat-invoices">0</div>
+            <div class="stat-card-label">Invoices (<span id="stat-invoice-tasks">0</span> tasks)</div>
           </div>
         </div>
 
@@ -92,7 +111,7 @@
           </div>
           <div class="stat-card-body">
             <div class="stat-card-value" id="stat-value">$0</div>
-            <div class="stat-card-label">Estimated Value</div>
+            <div class="stat-card-label">Invoice Total</div>
           </div>
         </div>
 
@@ -101,62 +120,127 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-attention">0</div>
-            <div class="stat-card-label">Needs Attention</div>
+            <div class="stat-card-value" id="stat-estimates">0</div>
+            <div class="stat-card-label">Estimates</div>
           </div>
         </div>
 
         <div class="stat-card">
           <div class="stat-card-icon" style="background:rgba(255,255,255,0.06)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-hold">0</div>
-            <div class="stat-card-label">On Hold</div>
+            <div class="stat-card-value" id="stat-other">0</div>
+            <div class="stat-card-label">Holds + Skips</div>
           </div>
         </div>
       </div>
 
-      <!-- Review Table -->
-      <div class="table-section">
-        <div class="table-header-row">
-          <h2 class="section-title">Tasks for Review</h2>
-          <div class="table-actions">
-            <label class="select-all-label"><input type="checkbox" id="selectAll"> Select All</label>
+      <!-- Tabs -->
+      <div class="tabs-container" id="tabsContainer" style="display:none;">
+        <div class="tab-bar">
+          <button class="tab active" data-tab="invoices">Invoices <span class="tab-count" id="tab-count-invoices">0</span></button>
+          <button class="tab" data-tab="estimates">Estimates <span class="tab-count" id="tab-count-estimates">0</span></button>
+          <button class="tab" data-tab="holds">Holds <span class="tab-count" id="tab-count-holds">0</span></button>
+          <button class="tab" data-tab="skips">Skips <span class="tab-count" id="tab-count-skips">0</span></button>
+        </div>
+
+        <!-- Invoices Tab -->
+        <div class="tab-panel active" id="panel-invoices">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:30px"></th>
+                  <th>Customer</th>
+                  <th>Tier</th>
+                  <th>Visits</th>
+                  <th>Tasks</th>
+                  <th>Billed Hours</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody id="invoiceBody">
+                <tr class="empty-row"><td colspan="7">Run a dry-run to see invoice previews</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="table-wrapper">
-          <table class="data-table" id="reviewTable">
-            <thead>
-              <tr>
-                <th style="width:40px"><input type="checkbox" id="selectAllHead" disabled></th>
-                <th>Customer</th>
-                <th>Task</th>
-                <th>Date</th>
-                <th>Labor</th>
-                <th>Parts</th>
-                <th>Total</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="reviewBody">
-              <tr class="empty-row"><td colspan="8">No tasks pending review</td></tr>
-            </tbody>
-          </table>
+
+        <!-- Estimates Tab -->
+        <div class="tab-panel" id="panel-estimates">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Task ID</th>
+                  <th>Task Name</th>
+                  <th>Customer</th>
+                  <th>Signals</th>
+                </tr>
+              </thead>
+              <tbody id="estimateBody">
+                <tr class="empty-row"><td colspan="4">No estimates</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Holds Tab -->
+        <div class="tab-panel" id="panel-holds">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Task ID</th>
+                  <th>Reason</th>
+                  <th>Customer</th>
+                </tr>
+              </thead>
+              <tbody id="holdBody">
+                <tr class="empty-row"><td colspan="3">No holds</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Skips Tab -->
+        <div class="tab-panel" id="panel-skips">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Task ID</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="skipBody">
+                <tr class="empty-row"><td colspan="2">No skips</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- Action Bar -->
-      <div class="action-bar">
-        <div class="action-bar-info">
-          <span id="selectedCount">0</span> selected
-        </div>
-        <div class="action-bar-buttons">
-          <button class="btn btn-skip" id="btnSkip" disabled>Skip Selected</button>
-          <button class="btn btn-approve" id="btnApprove" disabled>Approve Selected</button>
-        </div>
+      <!-- Process Results -->
+      <div class="process-results hidden" id="processResults">
+        <h3 class="process-results-title">QuickBooks Results</h3>
+        <div id="processResultsBody"></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Confirm Overlay -->
+  <div class="confirm-overlay hidden" id="confirmOverlay">
+    <div class="confirm-card">
+      <h3>Create Invoices in QuickBooks?</h3>
+      <p class="confirm-summary" id="confirmSummary"></p>
+      <div class="confirm-list" id="confirmList"></div>
+      <div class="confirm-buttons">
+        <button class="btn btn-skip" id="confirmCancel">Cancel</button>
+        <button class="btn btn-approve" id="confirmGo">Yes, Create Invoices</button>
+      </div>
     </div>
   </div>
 
@@ -168,10 +252,30 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .page-title span { color: #00d4ff; }
 
 /* Info banner */
-.info-banner { padding: 10px 16px; margin-bottom: 16px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
+.info-banner { padding: 10px 16px; margin-bottom: 20px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
+
+/* Action Row */
+.action-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.action-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); transition: all 200ms; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
+.action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.action-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+.action-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.action-btn--sync { border-color: rgba(0,212,255,0.3); }
+.action-btn--sync:hover:not(:disabled) { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.5); }
+.action-btn--dryrun { border-color: rgba(255,204,0,0.3); }
+.action-btn--dryrun:hover:not(:disabled) { background: rgba(255,204,0,0.08); border-color: rgba(255,204,0,0.5); }
+.action-btn--process { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.06); }
+.action-btn--process:hover:not(:disabled) { background: rgba(0,255,136,0.12); border-color: rgba(0,255,136,0.5); }
+.action-btn.loading { pointer-events: none; opacity: 0.7; }
+
+/* Sync result banner */
+.sync-result { padding: 12px 16px; margin-bottom: 20px; border-radius: 8px; font-size: 0.82rem; line-height: 1.5; }
+.sync-result.success { background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); color: rgba(0,255,136,0.9); }
+.sync-result.error { background: rgba(255,68,68,0.06); border: 1px solid rgba(255,68,68,0.2); color: rgba(255,68,68,0.9); }
+.hidden { display: none !important; }
 
 /* Stats Grid */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
 .stat-card {
   display: flex; align-items: center; gap: 16px; padding: 20px;
   background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
@@ -183,45 +287,83 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .stat-card-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
 .stat-card-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
 
+/* Tabs */
+.tabs-container { margin-bottom: 24px; }
+.tab-bar { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0; }
+.tab { padding: 10px 18px; border: none; background: none; color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 150ms; }
+.tab:hover { color: rgba(255,255,255,0.75); }
+.tab.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+.tab-count { display: inline-block; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: rgba(255,255,255,0.08); font-size: 0.7rem; font-weight: 700; text-align: center; margin-left: 4px; }
+.tab.active .tab-count { background: rgba(0,212,255,0.15); color: #00d4ff; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
 /* Tables */
-.table-section { margin-bottom: 24px; }
-.table-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.section-title { font-size: 1.1rem; font-weight: 600; margin: 0; color: rgba(255,255,255,0.8); }
-.table-actions { display: flex; gap: 12px; align-items: center; }
-.select-all-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .table-wrapper { background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .data-table th { text-align: left; padding: 12px 16px; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .data-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .data-table tbody tr:hover { background: rgba(0,212,255,0.04); }
+.text-right { text-align: right; }
 .empty-row td { text-align: center; color: rgba(255,255,255,0.4); padding: 32px 16px; font-style: italic; }
 
-.status-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-.status-badge.ready { background: rgba(0,255,136,0.12); color: #00ff88; }
-.status-badge.attention { background: rgba(255,204,0,0.12); color: #ffcc00; }
-.status-badge.hold { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+/* Expandable invoice rows */
+.invoice-row { cursor: pointer; }
+.invoice-row td:first-child { width: 30px; text-align: center; color: rgba(255,255,255,0.3); font-size: 0.75rem; transition: transform 150ms; }
+.invoice-row.expanded td:first-child { transform: rotate(90deg); }
+.visit-detail { display: none; }
+.visit-detail.open { display: table-row; }
+.visit-detail td { padding: 0; background: rgba(0,212,255,0.02); }
+.visit-detail-inner { padding: 16px 20px 20px 46px; }
+.visit-block { margin-bottom: 16px; }
+.visit-block:last-child { margin-bottom: 0; }
+.visit-header { font-size: 0.78rem; font-weight: 600; color: rgba(0,212,255,0.8); margin-bottom: 8px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.visit-meta { font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 400; }
+.visit-badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+.visit-badge.minimum { background: rgba(255,204,0,0.12); color: #ffcc00; }
+.line-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 6px; }
+.line-table th { padding: 6px 10px; text-align: left; color: rgba(255,255,255,0.4); font-weight: 600; font-size: 0.7rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.line-table td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.line-table .line-desc { color: rgba(255,255,255,0.75); }
+.line-table .line-header { color: rgba(0,212,255,0.6); font-style: italic; }
+.line-table .line-subtotal { font-weight: 700; color: rgba(255,255,255,0.9); border-top: 1px solid rgba(255,255,255,0.1); }
 
-/* Action Bar */
-.action-bar {
-  display: flex; align-items: center; justify-content: space-between; padding: 16px 20px;
-  background: rgba(20,20,30,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-  position: sticky; bottom: 16px;
-}
-.action-bar-info { font-size: 0.85rem; color: rgba(255,255,255,0.6); }
-.action-bar-buttons { display: flex; gap: 12px; }
+/* Signal badges */
+.signal-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; margin: 1px 4px 1px 0; }
+.reason-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); margin: 1px 4px 1px 0; }
+
+/* Confirm overlay */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+.confirm-card { background: rgba(20,20,30,0.98); border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 32px; max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.confirm-card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+.confirm-summary { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin: 0 0 16px; }
+.confirm-list { margin-bottom: 20px; max-height: 300px; overflow-y: auto; }
+.confirm-row { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; }
+.confirm-row:last-child { border-bottom: none; }
+.confirm-buttons { display: flex; gap: 12px; justify-content: flex-end; }
 .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: none; transition: all 200ms; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-skip { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
-.btn-skip:hover:not(:disabled) { background: rgba(255,255,255,0.14); }
+.btn-skip:hover { background: rgba(255,255,255,0.14); }
 .btn-approve { background: linear-gradient(135deg, #00ff88, #00cc6a); color: #0a0a0f; }
 .btn-approve:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(0,255,136,0.3); }
+
+/* Process results */
+.process-results { margin-bottom: 24px; }
+.process-results-title { font-size: 1rem; font-weight: 600; margin: 0 0 12px; color: rgba(255,255,255,0.8); }
+.process-result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 6px; font-size: 0.82rem; }
+.process-result-customer { font-weight: 600; }
+.process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.process-result-status { padding: 2px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.process-result-status.success { background: rgba(0,255,136,0.12); color: #00ff88; }
+.process-result-status.error { background: rgba(255,68,68,0.12); color: #ff4444; }
 
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
+  .action-row { flex-direction: column; }
   .data-table { font-size: 0.8rem; }
   .data-table th, .data-table td { padding: 10px 12px; }
-  .action-bar { flex-direction: column; gap: 12px; }
 }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
@@ -232,15 +374,22 @@ body.light-theme::before { opacity: 0; }
 body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
 body.light-theme .stat-card,
 body.light-theme .table-wrapper,
-body.light-theme .action-bar { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .confirm-card { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .data-table th { background: rgba(0,0,0,0.03); color: rgba(26,26,46,0.6); }
 body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.05); }
 body.light-theme .data-table tbody tr:hover { background: rgba(0,102,170,0.04); }
-body.light-theme .stat-card-label,
-body.light-theme .section-title,
-body.light-theme .action-bar-info { color: rgba(26,26,46,0.6); }
+body.light-theme .stat-card-label { color: rgba(26,26,46,0.6); }
 body.light-theme .empty-row td { color: rgba(26,26,46,0.4); }
+body.light-theme .action-btn { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); color: rgba(26,26,46,0.85); }
+body.light-theme .action-btn:hover:not(:disabled) { background: rgba(0,0,0,0.06); }
+body.light-theme .tab { color: rgba(26,26,46,0.5); }
+body.light-theme .tab:hover { color: rgba(26,26,46,0.75); }
+body.light-theme .tab-count { background: rgba(0,0,0,0.06); }
 body.light-theme .btn-skip { background: rgba(0,0,0,0.06); color: rgba(26,26,46,0.8); }
+body.light-theme .sync-result.success { background: rgba(0,180,80,0.06); border-color: rgba(0,180,80,0.2); color: rgba(0,120,60,0.9); }
+body.light-theme .sync-result.error { background: rgba(200,40,40,0.06); border-color: rgba(200,40,40,0.2); color: rgba(180,30,30,0.9); }
+body.light-theme .visit-detail td { background: rgba(0,102,170,0.02); }
+body.light-theme .process-result-row { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.08); }
 </style>
 
 <script>
@@ -263,21 +412,349 @@ body.light-theme .btn-skip { background: rgba(0,0,0,0.06); color: rgba(26,26,46,
 (function() {
   'use strict';
 
-  const API_BASE = '/api/pipeline';
+  var API_BASE = '/api/pipeline';
+  var cachedDryRun = null;
 
-  async function api(path) {
-    const token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await fetch(`${API_BASE}${path}`, { headers });
-    if (!res.ok) throw new Error(`API ${res.status}`);
+  function $(id) { return document.getElementById(id); }
+
+  function money(v) {
+    var n = parseFloat(v) || 0;
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function truncate(s, max) {
+    if (!s) return '';
+    return s.length > max ? s.slice(0, max) + '...' : s;
+  }
+
+  async function api(path, opts) {
+    var token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    if (opts && opts.headers) {
+      for (var k in opts.headers) headers[k] = opts.headers[k];
+    }
+    var fetchOpts = { headers: headers };
+    if (opts && opts.method) fetchOpts.method = opts.method;
+    if (opts && opts.body) fetchOpts.body = opts.body;
+    var res = await fetch(API_BASE + path, fetchOpts);
+    if (!res.ok) {
+      var errText = '';
+      try { errText = await res.text(); } catch(e) {}
+      throw new Error('API ' + res.status + (errText ? ': ' + errText : ''));
+    }
     return res.json();
   }
 
-  async function loadReview() {
-    console.log('Billing Review loaded — endpoints not yet wired');
+  // ---- Tabs ----
+  document.addEventListener('click', function(e) {
+    var tab = e.target.closest('.tab');
+    if (!tab) return;
+    var target = tab.getAttribute('data-tab');
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    tab.classList.add('active');
+    var panel = $('panel-' + target);
+    if (panel) panel.classList.add('active');
+  });
+
+  // ---- Sync ----
+  $('btnSync').addEventListener('click', async function() {
+    var btn = $('btnSync');
+    var origText = btn.innerHTML;
+    btn.classList.add('loading');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Syncing...';
+    var banner = $('syncResult');
+
+    try {
+      var data = await api('/v2/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 14 })
+      });
+
+      banner.className = 'sync-result success';
+      banner.innerHTML = 'Sync complete — <strong>' + (data.tasks_fetched || 0) + '</strong> fetched, <strong>' + (data.tasks_new || 0) + '</strong> new, <strong>' + (data.tasks_skipped || 0) + '</strong> unchanged' + (data.errors && data.errors.length ? ', <strong style="color:#ffcc00">' + data.errors.length + ' errors</strong>' : '');
+      banner.classList.remove('hidden');
+      $('btnDryRun').disabled = false;
+    } catch (e) {
+      banner.className = 'sync-result error';
+      banner.textContent = 'Sync failed: ' + e.message;
+      banner.classList.remove('hidden');
+    } finally {
+      btn.classList.remove('loading');
+      btn.innerHTML = origText;
+    }
+  });
+
+  // ---- Dry-Run ----
+  $('btnDryRun').addEventListener('click', runDryRun);
+
+  async function runDryRun() {
+    var btn = $('btnDryRun');
+    btn.classList.add('loading');
+    var origText = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Running...';
+    $('processResults').classList.add('hidden');
+
+    try {
+      var data = await api('/v2/dry-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 14 })
+      });
+
+      cachedDryRun = data;
+      renderDryRun(data);
+      $('btnProcess').disabled = !(data.invoices && data.invoices.length);
+    } catch (e) {
+      $('statsGrid').style.display = 'none';
+      $('tabsContainer').style.display = 'none';
+      var banner = $('syncResult');
+      banner.className = 'sync-result error';
+      banner.textContent = 'Dry-run failed: ' + e.message;
+      banner.classList.remove('hidden');
+    } finally {
+      btn.classList.remove('loading');
+      btn.innerHTML = origText;
+    }
   }
 
-  window.onPageReady = function(user, roles) { loadReview(); };
+  function renderDryRun(data) {
+    var s = data.summary || {};
+
+    // Stats
+    $('stat-invoices').textContent = s.invoices_generated || 0;
+    $('stat-invoice-tasks').textContent = s.invoice_tasks || 0;
+    $('stat-value').textContent = money(s.total_invoice_amount);
+    $('stat-estimates').textContent = s.estimate_tasks || 0;
+    $('stat-other').textContent = (s.hold_tasks || 0) + (s.skip_tasks || 0);
+    $('statsGrid').style.display = '';
+
+    // Tab counts
+    var invoices = data.invoices || [];
+    var estimates = data.estimates || [];
+    var holds = data.holds || [];
+    var skips = data.skips || [];
+
+    $('tab-count-invoices').textContent = invoices.length;
+    $('tab-count-estimates').textContent = estimates.length;
+    $('tab-count-holds').textContent = holds.length;
+    $('tab-count-skips').textContent = skips.length;
+
+    renderInvoices(invoices);
+    renderEstimates(estimates);
+    renderHolds(holds);
+    renderSkips(skips);
+
+    $('tabsContainer').style.display = '';
+  }
+
+  function renderInvoices(invoices) {
+    var tbody = $('invoiceBody');
+    if (!invoices.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No invoices to create</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = invoices.map(function(inv, i) {
+      var visits = inv.visits || [];
+      var taskCount = (inv.all_task_ids || []).length;
+      var totalHours = visits.reduce(function(sum, v) { return sum + (v.billed_hours || 0); }, 0);
+
+      var row = '<tr class="invoice-row" data-idx="' + i + '">' +
+        '<td>&#9654;</td>' +
+        '<td><strong>' + (inv.customer_name || 'Unknown') + '</strong></td>' +
+        '<td>' + (inv.tier || '-') + '</td>' +
+        '<td>' + visits.length + '</td>' +
+        '<td>' + taskCount + '</td>' +
+        '<td>' + totalHours.toFixed(1) + ' hrs</td>' +
+        '<td class="text-right"><strong>' + money(inv.total) + '</strong></td>' +
+        '</tr>';
+
+      row += '<tr class="visit-detail" id="detail-' + i + '"><td colspan="7"><div class="visit-detail-inner">';
+      visits.forEach(function(v, vi) {
+        row += '<div class="visit-block">';
+        row += '<div class="visit-header">';
+        row += 'Visit ' + (vi + 1) + ': ' + (v.visit_date || '?');
+        row += '<span class="visit-meta">' + (v.tech_names || []).join(', ') + '</span>';
+        row += '<span class="visit-meta">' + (v.actual_hours || 0).toFixed(2) + ' actual &rarr; ' + (v.billed_hours || 0).toFixed(1) + ' billed</span>';
+        if (v.minimum_applied) row += '<span class="visit-badge minimum">2.5hr min</span>';
+        row += '</div>';
+
+        if (v.lines && v.lines.length) {
+          row += '<table class="line-table"><thead><tr><th>Description</th><th class="text-right">Qty</th><th class="text-right">Rate</th><th class="text-right">Amount</th></tr></thead><tbody>';
+          v.lines.forEach(function(l) {
+            if (l.DetailType === 'DescriptionOnly') {
+              row += '<tr><td colspan="4" class="line-header">' + (l.Description || '') + '</td></tr>';
+            } else if (l.DetailType === 'SubTotalLineDetail') {
+              row += '<tr class="line-subtotal"><td colspan="3">Subtotal</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+            } else {
+              var d = l.SalesItemLineDetail || {};
+              row += '<tr><td class="line-desc">' + (l.Description || '-') + '</td><td class="text-right">' + (d.Qty || 1) + '</td><td class="text-right">' + money(d.UnitPrice) + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+            }
+          });
+          row += '</tbody></table>';
+        }
+
+        row += '</div>';
+      });
+      row += '</div></td></tr>';
+      return row;
+    }).join('');
+  }
+
+  function renderEstimates(estimates) {
+    var tbody = $('estimateBody');
+    if (!estimates.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No estimates</td></tr>';
+      return;
+    }
+    tbody.innerHTML = estimates.map(function(est) {
+      var signals = (est.estimate_signals || []).map(function(s) {
+        return '<span class="signal-badge">' + String(s).replace(/_/g, ' ') + '</span>';
+      }).join('');
+      return '<tr>' +
+        '<td>' + (est.limble_task_id || '-') + '</td>' +
+        '<td>' + truncate(est.task_name, 60) + '</td>' +
+        '<td>' + (est.customer_name || '-') + '</td>' +
+        '<td>' + (signals || '-') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderHolds(holds) {
+    var tbody = $('holdBody');
+    if (!holds.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="3">No holds</td></tr>';
+      return;
+    }
+    tbody.innerHTML = holds.map(function(h) {
+      return '<tr>' +
+        '<td>' + (h.limble_task_id || '-') + '</td>' +
+        '<td><span class="reason-badge">' + (h.reason || 'UNKNOWN').replace(/_/g, ' ') + '</span></td>' +
+        '<td>' + (h.customer_name || '-') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderSkips(skips) {
+    var tbody = $('skipBody');
+    if (!skips.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="2">No skips</td></tr>';
+      return;
+    }
+    tbody.innerHTML = skips.map(function(s) {
+      return '<tr>' +
+        '<td>' + (s.limble_task_id || '-') + '</td>' +
+        '<td><span class="reason-badge">' + (s.reason || 'UNKNOWN').replace(/_/g, ' ') + '</span></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ---- Expand/Collapse invoice rows ----
+  document.addEventListener('click', function(e) {
+    var row = e.target.closest('.invoice-row');
+    if (!row) return;
+    var idx = row.getAttribute('data-idx');
+    var detail = $('detail-' + idx);
+    if (!detail) return;
+    row.classList.toggle('expanded');
+    detail.classList.toggle('open');
+  });
+
+  // ---- Process ----
+  $('btnProcess').addEventListener('click', function() {
+    if (!cachedDryRun || !cachedDryRun.invoices || !cachedDryRun.invoices.length) return;
+
+    var invoices = cachedDryRun.invoices;
+    var total = cachedDryRun.summary.total_invoice_amount || 0;
+
+    $('confirmSummary').innerHTML = 'This will create <strong>' + invoices.length + '</strong> invoice' + (invoices.length !== 1 ? 's' : '') + ' totaling <strong>' + money(total) + '</strong> in QuickBooks.';
+    $('confirmList').innerHTML = invoices.map(function(inv) {
+      return '<div class="confirm-row"><span>' + (inv.customer_name || 'Unknown') + ' (' + (inv.all_task_ids || []).length + ' tasks)</span><span>' + money(inv.total) + '</span></div>';
+    }).join('');
+
+    $('confirmOverlay').classList.remove('hidden');
+  });
+
+  $('confirmCancel').addEventListener('click', function() {
+    $('confirmOverlay').classList.add('hidden');
+  });
+
+  $('confirmOverlay').addEventListener('click', function(e) {
+    if (e.target === this) $('confirmOverlay').classList.add('hidden');
+  });
+
+  $('confirmGo').addEventListener('click', async function() {
+    var goBtn = $('confirmGo');
+    var cancelBtn = $('confirmCancel');
+    goBtn.disabled = true;
+    goBtn.textContent = 'Creating...';
+    cancelBtn.style.display = 'none';
+
+    try {
+      var data = await api('/v2/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 14, confirm: true })
+      });
+
+      $('confirmOverlay').classList.add('hidden');
+
+      var created = data.created_invoices || [];
+      var errors = data.errors || [];
+      var body = $('processResultsBody');
+
+      if (!created.length && !errors.length) {
+        body.innerHTML = '<p style="color:rgba(255,255,255,0.5);">No results returned.</p>';
+      } else {
+        var html = '';
+        created.forEach(function(inv) {
+          var qbInfo = '';
+          if (inv.qb_doc_number) qbInfo = 'Doc #' + inv.qb_doc_number;
+          if (inv.qb_txn_id) qbInfo += (qbInfo ? ' | ' : '') + 'QB ID ' + inv.qb_txn_id;
+          var tagOk = (inv.tag_results || []).every(function(t) { return t.status === 200; });
+
+          html += '<div class="process-result-row">' +
+            '<div><span class="process-result-customer">' + (inv.customer_name || 'Unknown') + '</span>' +
+            '<div class="process-result-qb">' + money(inv.qb_total) + (qbInfo ? ' — ' + qbInfo : '') +
+            (tagOk ? ' — tags written' : ' — <span style="color:#ffcc00">tag write partial</span>') +
+            '</div></div>' +
+            '<span class="process-result-status success">CREATED</span>' +
+            '</div>';
+        });
+
+        errors.forEach(function(err) {
+          html += '<div class="process-result-row">' +
+            '<div><span class="process-result-customer">' + (err.customer_name || 'Error') + '</span>' +
+            '<div class="process-result-qb">' + (err.message || err.error || 'Unknown error') + '</div></div>' +
+            '<span class="process-result-status error">FAILED</span>' +
+            '</div>';
+        });
+
+        body.innerHTML = html;
+      }
+
+      $('processResults').classList.remove('hidden');
+      $('btnProcess').disabled = true;
+
+    } catch (e) {
+      $('confirmOverlay').classList.add('hidden');
+      var body = $('processResultsBody');
+      body.innerHTML = '<div class="process-result-row"><div><span class="process-result-customer">Process Failed</span><div class="process-result-qb">' + e.message + '</div></div><span class="process-result-status error">ERROR</span></div>';
+      $('processResults').classList.remove('hidden');
+    } finally {
+      goBtn.disabled = false;
+      goBtn.textContent = 'Yes, Create Invoices';
+      cancelBtn.style.display = '';
+    }
+  });
+
+  // ---- Init ----
+  window.onPageReady = function(user, roles) {
+    $('btnDryRun').disabled = false;
+  };
 })();
 </script>
 
