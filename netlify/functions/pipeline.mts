@@ -1,10 +1,10 @@
 import type { Context } from "@netlify/functions";
 
-const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "http://45.55.116.90:8000";
+const DROPLET_URL = Netlify.env.get("DROPLET_URL") || "";
 const DROPLET_INTERNAL_KEY = Netlify.env.get("DROPLET_INTERNAL_KEY") || "";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://aas-portal.netlify.app",
   "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -117,6 +117,12 @@ export default async function handler(req: Request, context: Context): Promise<R
     });
   }
 
+  if (!DROPLET_URL) {
+    return new Response(JSON.stringify({ error: "DROPLET_URL not configured" }), {
+      status: 500, headers: baseHeaders(),
+    });
+  }
+
   if (!DROPLET_INTERNAL_KEY) {
     return new Response(JSON.stringify({ error: "DROPLET_INTERNAL_KEY not configured" }), {
       status: 500, headers: baseHeaders(),
@@ -134,6 +140,10 @@ export default async function handler(req: Request, context: Context): Promise<R
       Accept: "application/json",
       "x-internal-key": DROPLET_INTERNAL_KEY,
     };
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      upstreamHeaders["Authorization"] = authHeader;
+    }
 
     const init: RequestInit = { method: req.method, headers: upstreamHeaders };
 
