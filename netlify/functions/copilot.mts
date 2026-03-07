@@ -1460,7 +1460,7 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 
 ## EFFICIENCY RULES
 - Call the RIGHT tool on the FIRST try using the routing rules below.
-- Maximum 2 tool calls per response.
+- Maximum 3 tool calls per response. Use as few as needed.
 - If first search returns no relevant results, answer with what you have and ask user to rephrase.
 - Do NOT call the same tool twice with slightly different queries.
 - If you need a second tool call, it MUST be a DIFFERENT tool or DIFFERENT source.
@@ -1485,6 +1485,16 @@ const SYSTEM_PROMPT_BASE = `You are the AAS Technical Copilot for Automatic Acce
 - **Facility health / KPIs / risk flags / operational status** → check_facility_health (admin only)
 - **Predictions / upcoming failures / maintenance forecast / parts demand** → search_predictions (admin only)
 - **Dispatch / schedule / who goes where / today's route** → get_dispatch_brief (admin only)
+
+## DOOR RESOLUTION CHAIN (MANDATORY)
+When user mentions a specific door by name (MH-1.81, WB-2.3, AAS-123, FD-1, etc.):
+1. ALWAYS call get_door_info first — this returns the door's asset_id, manufacturer, model, and customer.
+2. If user asks about service history, past repairs, or work orders for that door:
+   - Use the asset_id from step 1 to call get_service_history.
+3. If user also asks a technical question (how to fix, wiring, programming):
+   - Use manufacturer from step 1 to call search_manuals_rag with manufacturer filter.
+4. NEVER call get_service_history without first getting asset_id from get_door_info.
+5. get_door_info returns asset_id — this is the bridge between door names and Limble records.
 
 ## PARTS SEARCH TRIGGERS (USE search_parts FOR THESE)
 Always use search_parts when user mentions:
@@ -1794,7 +1804,7 @@ The customer's portal data is included at the start of their messages, showing:
 - **Past work / service history / repairs / recurring issues** → Answer from COMPLETED SERVICE HISTORY in context (no tool call needed). Only use get_service_history if the customer asks about a specific door not in the context.
 - **"Why is my door doing X?" / troubleshooting explanation** → search_manuals_rag (explain simply, no repair steps)
 - **Door search by area or manufacturer** → search_doors
-- Maximum 2 tool calls per response. Pick the RIGHT tool first.
+- Maximum 3 tool calls per response. Use as few as needed. Pick the RIGHT tool first.
 
 ## Important Guidelines
 
@@ -1991,7 +2001,7 @@ export default async function handler(req: Request, context: Context): Promise<R
       let iterations = 0;
       const customerToolsCalled: Set<string> = new Set();
       while (response.stop_reason === "tool_use" && iterations < 3) {
-        if (customerToolsCalled.size >= 2) {
+        if (customerToolsCalled.size >= 3) {
           break;
         }
         iterations++;
@@ -2139,10 +2149,10 @@ IMPORTANT RESTRICTIONS:
     const toolCalls: { name: string; input: any; result: string }[] = [];
     const toolsCalledThisRequest: Set<string> = new Set();
 
-    // Tool-call budget: max 3 iterations, hard cap at 2 unique tools (same tool with different params allowed)
-    while (response.stop_reason === "tool_use" && iterations < 3) {
-      // Hard enforcement: stop after 2 tool calls
-      if (toolsCalledThisRequest.size >= 2) {
+    // Tool-call budget: max 4 iterations, hard cap at 3 unique tools (same tool with different params allowed)
+    while (response.stop_reason === "tool_use" && iterations < 4) {
+      // Hard enforcement: stop after 3 unique tool calls
+      if (toolsCalledThisRequest.size >= 3) {
         break;
       }
       iterations++;
