@@ -193,6 +193,16 @@
   to = "/pipeline/estimates/index.html"
   status = 200
 
+[[redirects]]
+  from = "/pipeline/status"
+  to = "/pipeline/status/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/review"
+  to = "/pipeline/review/index.html"
+  status = 200
+
 # ============================================================================
 # CORS HEADERS FOR API
 # ============================================================================

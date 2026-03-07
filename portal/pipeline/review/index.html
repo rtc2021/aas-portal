@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice Pipeline - AAS Portal</title>
+  <title>Billing Review - AAS Portal</title>
 
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 
@@ -28,7 +28,7 @@
       <div class="auth-spinner"></div>
       <p id="authLoadingText">Loading...</p>
       <h1 class="auth-title">Sign In Required</h1>
-      <p class="auth-subtitle">Please sign in to access Invoice Pipeline</p>
+      <p class="auth-subtitle">Please sign in to access Billing Review</p>
       <button id="authLoginBtn" class="auth-btn">Sign In</button>
     </div>
   </div>
@@ -69,82 +69,91 @@
     <div class="page-wrapper">
 
       <header class="page-header">
-        <h1 class="page-title">Invoice <span>Pipeline</span></h1>
+        <h1 class="page-title">Billing <span>Review</span></h1>
       </header>
 
-      <div class="info-banner">Central hub for the billing pipeline. Review customer mappings, parts, rate cards, and run invoice previews from here.</div>
+      <div class="info-banner">Admin review queue for matched tasks awaiting approval before QuickBooks invoice creation.</div>
 
-      <!-- Stats Cards -->
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-card" onclick="location.href='/pipeline/customers'">
-          <div class="stat-card-icon" style="background:rgba(255,204,0,0.12)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <!-- Summary Bar -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-icon" style="background:rgba(0,255,136,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-customers">-</div>
-            <div class="stat-card-label">Customers Need Review</div>
+            <div class="stat-card-value" id="stat-ready">0</div>
+            <div class="stat-card-label">Ready to Invoice</div>
           </div>
-          <div class="stat-card-arrow">&rarr;</div>
         </div>
 
-        <div class="stat-card" onclick="location.href='/pipeline/parts'">
-          <div class="stat-card-icon" style="background:rgba(255,68,68,0.12)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#ff4444" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-          </div>
-          <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-parts">-</div>
-            <div class="stat-card-label">Parts Unmapped</div>
-          </div>
-          <div class="stat-card-arrow">&rarr;</div>
-        </div>
-
-        <div class="stat-card" onclick="location.href='/pipeline/rates'">
+        <div class="stat-card">
           <div class="stat-card-icon" style="background:rgba(0,212,255,0.12)">
             <svg viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-tiers">-</div>
-            <div class="stat-card-label">Active Rate Tiers</div>
+            <div class="stat-card-value" id="stat-value">$0</div>
+            <div class="stat-card-label">Estimated Value</div>
           </div>
-          <div class="stat-card-arrow">&rarr;</div>
         </div>
 
-        <div class="stat-card" onclick="location.href='/pipeline/log'">
-          <div class="stat-card-icon" style="background:rgba(0,255,136,0.12)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div class="stat-card">
+          <div class="stat-card-icon" style="background:rgba(255,204,0,0.12)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value" id="stat-invoices">-</div>
-            <div class="stat-card-label">Invoices Created</div>
+            <div class="stat-card-value" id="stat-attention">0</div>
+            <div class="stat-card-label">Needs Attention</div>
           </div>
-          <div class="stat-card-arrow">&rarr;</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-icon" style="background:rgba(255,255,255,0.06)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value" id="stat-hold">0</div>
+            <div class="stat-card-label">On Hold</div>
+          </div>
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="actions-section">
-        <h2 class="section-title">Pipeline Actions</h2>
-        <div class="actions-grid">
-          <div class="action-card" onclick="location.href='/pipeline/preview'">
-            <div class="action-card-title">Dry Run</div>
-            <div class="action-card-desc">Process tasks without creating invoices. Review what would be billed.</div>
-            <div class="action-card-arrow">&rarr;</div>
+      <!-- Review Table -->
+      <div class="table-section">
+        <div class="table-header-row">
+          <h2 class="section-title">Tasks for Review</h2>
+          <div class="table-actions">
+            <label class="select-all-label"><input type="checkbox" id="selectAll"> Select All</label>
           </div>
-          <div class="action-card" onclick="location.href='/pipeline/preview'">
-            <div class="action-card-title">Process Batch</div>
-            <div class="action-card-desc">Create invoices for all ready tasks. Select individually or process all.</div>
-            <div class="action-card-arrow">&rarr;</div>
-          </div>
-          <div class="action-card" onclick="location.href='/pipeline/preview'">
-            <div class="action-card-title">Invoice Preview</div>
-            <div class="action-card-desc">Review assembled invoices before creation.</div>
-            <div class="action-card-arrow">&rarr;</div>
-          </div>
-          <div class="action-card" onclick="location.href='/pipeline/estimates'">
-            <div class="action-card-title">Estimate Preview</div>
-            <div class="action-card-desc">Create QB estimates for quote-request tasks on hold.</div>
-            <div class="action-card-arrow">&rarr;</div>
-          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" id="reviewTable">
+            <thead>
+              <tr>
+                <th style="width:40px"><input type="checkbox" id="selectAllHead" disabled></th>
+                <th>Customer</th>
+                <th>Task</th>
+                <th>Date</th>
+                <th>Labor</th>
+                <th>Parts</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="reviewBody">
+              <tr class="empty-row"><td colspan="8">No tasks pending review</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div class="action-bar-info">
+          <span id="selectedCount">0</span> selected
+        </div>
+        <div class="action-bar-buttons">
+          <button class="btn btn-skip" id="btnSkip" disabled>Skip Selected</button>
+          <button class="btn btn-approve" id="btnApprove" disabled>Approve Selected</button>
         </div>
       </div>
 
@@ -162,58 +171,76 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .info-banner { padding: 10px 16px; margin-bottom: 16px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
 
 /* Stats Grid */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 40px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px; }
 .stat-card {
   display: flex; align-items: center; gap: 16px; padding: 20px;
   background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-  backdrop-filter: blur(20px) saturate(180%); cursor: pointer; transition: all 200ms;
+  backdrop-filter: blur(20px) saturate(180%);
 }
-.stat-card:hover { border-color: rgba(0,212,255,0.35); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 .stat-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .stat-card-icon svg { width: 24px; height: 24px; }
 .stat-card-body { flex: 1; }
 .stat-card-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
 .stat-card-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
-.stat-card-arrow { font-size: 1.2rem; color: rgba(255,255,255,0.3); transition: color 200ms; }
-.stat-card:hover .stat-card-arrow { color: #00d4ff; }
 
-/* Actions Section */
-.actions-section { margin-bottom: 40px; }
-.section-title { font-size: 1.1rem; font-weight: 600; margin: 0 0 16px; color: rgba(255,255,255,0.8); }
-.actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.action-card {
-  padding: 20px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-  backdrop-filter: blur(20px) saturate(180%); cursor: pointer; transition: all 200ms; position: relative;
+/* Tables */
+.table-section { margin-bottom: 24px; }
+.table-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-title { font-size: 1.1rem; font-weight: 600; margin: 0; color: rgba(255,255,255,0.8); }
+.table-actions { display: flex; gap: 12px; align-items: center; }
+.select-all-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.table-wrapper { background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.data-table th { text-align: left; padding: 12px 16px; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.data-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.data-table tbody tr:hover { background: rgba(0,212,255,0.04); }
+.empty-row td { text-align: center; color: rgba(255,255,255,0.4); padding: 32px 16px; font-style: italic; }
+
+.status-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.status-badge.ready { background: rgba(0,255,136,0.12); color: #00ff88; }
+.status-badge.attention { background: rgba(255,204,0,0.12); color: #ffcc00; }
+.status-badge.hold { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+
+/* Action Bar */
+.action-bar {
+  display: flex; align-items: center; justify-content: space-between; padding: 16px 20px;
+  background: rgba(20,20,30,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+  position: sticky; bottom: 16px;
 }
-.action-card:hover { border-color: rgba(0,212,255,0.35); }
-.action-card.disabled { opacity: 0.5; cursor: not-allowed; }
-.action-card.disabled:hover { border-color: rgba(255,255,255,0.1); }
-.action-card-title { font-weight: 700; margin-bottom: 6px; }
-.action-card-desc { font-size: 0.85rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
-.action-card-badge { position: absolute; top: 12px; right: 12px; padding: 2px 8px; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; background: rgba(255,204,0,0.12); color: #ffcc00; }
-.action-card-arrow { position: absolute; top: 20px; right: 16px; font-size: 1.2rem; color: rgba(255,255,255,0.3); }
-.action-card:hover .action-card-arrow { color: #00d4ff; }
+.action-bar-info { font-size: 0.85rem; color: rgba(255,255,255,0.6); }
+.action-bar-buttons { display: flex; gap: 12px; }
+.btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: none; transition: all 200ms; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-skip { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+.btn-skip:hover:not(:disabled) { background: rgba(255,255,255,0.14); }
+.btn-approve { background: linear-gradient(135deg, #00ff88, #00cc6a); color: #0a0a0f; }
+.btn-approve:hover:not(:disabled) { box-shadow: 0 4px 16px rgba(0,255,136,0.3); }
 
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .data-table { font-size: 0.8rem; }
+  .data-table th, .data-table td { padding: 10px 12px; }
+  .action-bar { flex-direction: column; gap: 12px; }
+}
+@media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .actions-grid { grid-template-columns: 1fr; }
 }
 
 /* Light theme */
 body.light-theme::before { opacity: 0; }
-body.light-theme .stat-card,
-body.light-theme .action-card { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
-body.light-theme .stat-card:hover,
-body.light-theme .action-card:hover { border-color: rgba(0,102,170,0.35); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-body.light-theme .action-card.disabled:hover { border-color: rgba(0,0,0,0.1); }
-body.light-theme .stat-card-label,
-body.light-theme .stat-card-arrow,
-body.light-theme .section-title,
-body.light-theme .action-card-desc,
-body.light-theme .action-card-arrow { color: rgba(26,26,46,0.6); }
-body.light-theme .action-card-badge { background: rgba(255,180,0,0.15); }
 body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
+body.light-theme .stat-card,
+body.light-theme .table-wrapper,
+body.light-theme .action-bar { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .data-table th { background: rgba(0,0,0,0.03); color: rgba(26,26,46,0.6); }
+body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.05); }
+body.light-theme .data-table tbody tr:hover { background: rgba(0,102,170,0.04); }
+body.light-theme .stat-card-label,
+body.light-theme .section-title,
+body.light-theme .action-bar-info { color: rgba(26,26,46,0.6); }
+body.light-theme .empty-row td { color: rgba(26,26,46,0.4); }
+body.light-theme .btn-skip { background: rgba(0,0,0,0.06); color: rgba(26,26,46,0.8); }
 </style>
 
 <script>
@@ -246,19 +273,11 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
     return res.json();
   }
 
-  async function loadDashboard() {
-    try {
-      const stats = await api('/stats');
-      document.getElementById('stat-customers').textContent = (stats.customer_map?.NEEDS_REVIEW || 0).toLocaleString();
-      document.getElementById('stat-parts').textContent = (stats.part_map?.UNMAPPED || 0).toLocaleString();
-      document.getElementById('stat-tiers').textContent = (stats.rate_card?.active_tiers || 0).toLocaleString();
-      document.getElementById('stat-invoices').textContent = (stats.billing_log?.total || 0).toLocaleString();
-    } catch (e) {
-      console.error('Dashboard stats failed:', e);
-    }
+  async function loadReview() {
+    console.log('Billing Review loaded — endpoints not yet wired');
   }
 
-  window.onPageReady = function(user, roles) { loadDashboard(); };
+  window.onPageReady = function(user, roles) { loadReview(); };
 })();
 </script>
 
