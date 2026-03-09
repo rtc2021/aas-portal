@@ -77,17 +77,29 @@
       <div class="info-banner">History of all invoices and estimates created through the pipeline. Search by customer, doc number, or status.</div>
 
       <div class="filter-bar">
+        <div class="type-toggle">
+          <button class="type-btn active" data-type="">All</button>
+          <button class="type-btn" data-type="invoice">Invoices</button>
+          <button class="type-btn" data-type="estimate">Estimates</button>
+        </div>
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="searchInput" placeholder="Search invoices..." autocomplete="off">
+          <input type="text" id="searchInput" placeholder="Search documents..." autocomplete="off">
         </div>
         <select class="filter-select" id="filterStatus">
           <option value="">All Statuses</option>
           <option value="created">Created</option>
           <option value="sent">Sent</option>
           <option value="paid">Paid</option>
+          <option value="accepted">Accepted</option>
+          <option value="converted">Converted</option>
           <option value="voided">Voided</option>
         </select>
+        <div class="date-range">
+          <input type="date" id="dateFrom" title="From date">
+          <span class="date-sep">to</span>
+          <input type="date" id="dateTo" title="To date">
+        </div>
         <span class="filter-count" id="filterCount">Loading...</span>
       </div>
 
@@ -95,11 +107,11 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th class="sortable">Doc #</th>
+              <th class="sortable" data-sort="doc">Doc #</th>
               <th>Type</th>
-              <th class="sortable">Customer</th>
-              <th class="sortable">Amount</th>
-              <th class="sortable">Date</th>
+              <th class="sortable" data-sort="customer">Customer</th>
+              <th class="sortable" data-sort="amount">Amount</th>
+              <th class="sortable sort-desc" data-sort="date">Date</th>
               <th>Tasks</th>
               <th>Status</th>
             </tr>
@@ -139,11 +151,22 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .filter-select:hover, .filter-select:focus { border-color: rgba(0,212,255,0.35); outline: none; }
 .filter-select option { background: #1a1a2e; }
 .filter-count { font-size: 0.875rem; color: rgba(255,255,255,0.6); margin-left: auto; white-space: nowrap; }
+.type-toggle { display: flex; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; }
+.type-btn { padding: 7px 14px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 150ms; border-right: 1px solid rgba(255,255,255,0.08); }
+.type-btn:last-child { border-right: none; }
+.type-btn:hover { color: rgba(255,255,255,0.8); }
+.type-btn.active { background: rgba(0,212,255,0.1); color: #00d4ff; }
+.date-range { display: flex; align-items: center; gap: 6px; }
+.date-range input { padding: 7px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.92); font-family: inherit; font-size: 0.8rem; }
+.date-range input:focus { outline: none; border-color: rgba(0,212,255,0.35); }
+.date-sep { color: rgba(255,255,255,0.4); font-size: 0.8rem; }
 .table-wrapper { background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th { padding: 12px 16px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); text-align: left; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
 .data-table th.sortable { cursor: pointer; }
 .data-table th.sortable:hover { color: #00d4ff; }
+.data-table th.sortable.sort-asc::after { content: ' ▲'; font-size: 0.6rem; }
+.data-table th.sortable.sort-desc::after { content: ' ▼'; font-size: 0.6rem; }
 .data-table td { padding: 12px 16px; font-size: 0.875rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
 .data-table tbody tr { transition: background 200ms; }
 .data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
@@ -156,6 +179,8 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .status-SENT { background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
 .status-PAID { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
 .status-VOIDED { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
+.status-ACCEPTED { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
+.status-CONVERTED { background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.2); }
 .status-ERROR { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
 .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.875rem; color: rgba(255,255,255,0.6); }
 .pagination { display: flex; gap: 4px; }
@@ -202,6 +227,15 @@ body.light-theme .status-VOIDED,
 body.light-theme .status-ERROR { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
 
 body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
+body.light-theme .type-toggle { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); }
+body.light-theme .type-btn { color: rgba(26,26,46,0.5); border-right-color: rgba(0,0,0,0.06); }
+body.light-theme .type-btn:hover { color: rgba(26,46,46,0.8); }
+body.light-theme .type-btn.active { background: rgba(0,102,170,0.1); color: #0077b6; }
+body.light-theme .date-range input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); color: rgba(26,26,46,0.92); }
+body.light-theme .date-range input:focus { border-color: rgba(0,102,170,0.35); }
+body.light-theme .date-sep { color: rgba(26,26,46,0.4); }
+body.light-theme .status-ACCEPTED { background: rgba(0,160,80,0.08); color: #008844; border-color: rgba(0,160,80,0.2); }
+body.light-theme .status-CONVERTED { background: rgba(124,58,237,0.08); color: #6d28d9; border-color: rgba(124,58,237,0.2); }
 </style>
 
 <script>
@@ -227,6 +261,10 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
   const API_BASE = '/api/pipeline';
   const PAGE_SIZE = 50;
   let currentPage = 1;
+  let currentType = '';
+  let sortCol = 'date';
+  let sortDir = 'desc';
+  let allItems = [];
 
   async function api(path, options = {}) {
     const token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
@@ -247,7 +285,10 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
   async function loadLog() {
     const status = document.getElementById('filterStatus').value;
     const search = document.getElementById('searchInput').value.trim();
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
     const params = new URLSearchParams();
+    if (currentType) params.set('doc_type', currentType);
     if (status) params.set('status', status.toLowerCase());
     if (search) params.set('search', search);
     params.set('offset', (currentPage - 1) * PAGE_SIZE);
@@ -258,9 +299,26 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
 
     try {
       const data = await api(`/v2/documents?${params}`);
-      const items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
+      let items = Array.isArray(data) ? data : (data.data || data.items || data.results || []);
       const total = data.total || items.length;
-      renderTable(items);
+
+      // Client-side date filtering
+      if (dateFrom) {
+        items = items.filter(function(d) {
+          var created = (d.qb_txn_date || d.created_at || '').slice(0, 10);
+          return created >= dateFrom;
+        });
+      }
+      if (dateTo) {
+        items = items.filter(function(d) {
+          var created = (d.qb_txn_date || d.created_at || '').slice(0, 10);
+          return created <= dateTo;
+        });
+      }
+
+      allItems = items;
+      sortItems();
+      renderTable(allItems);
       renderPagination(total);
       document.getElementById('filterCount').textContent = total === 0 ? 'No documents yet' : `${total.toLocaleString()} document${total !== 1 ? 's' : ''}`;
     } catch (e) {
@@ -268,14 +326,33 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
     }
   }
 
+  function sortItems() {
+    var col = sortCol;
+    var dir = sortDir === 'asc' ? 1 : -1;
+    allItems.sort(function(a, b) {
+      var va, vb;
+      if (col === 'doc') {
+        va = a.qb_doc_number || ''; vb = b.qb_doc_number || '';
+      } else if (col === 'customer') {
+        va = (a.customer_name || '').toLowerCase(); vb = (b.customer_name || '').toLowerCase();
+      } else if (col === 'amount') {
+        va = a.qb_total || a.total || 0; vb = b.qb_total || b.total || 0;
+        return (va - vb) * dir;
+      } else {
+        va = a.qb_txn_date || a.created_at || ''; vb = b.qb_txn_date || b.created_at || '';
+      }
+      return va < vb ? -dir : va > vb ? dir : 0;
+    });
+  }
+
   function renderTable(items) {
     const tbody = document.getElementById('tableBody');
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No documents yet. Invoices will appear here once the pipeline processes tasks.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No documents found.</td></tr>';
       return;
     }
 
-    const statusLabels = { created: 'Created', sent: 'Sent', paid: 'Paid', voided: 'Voided', error: 'Error' };
+    const statusLabels = { created: 'Created', sent: 'Sent', paid: 'Paid', voided: 'Voided', error: 'Error', accepted: 'Accepted', converted: 'Converted' };
     const typeLabels = { invoice: 'Invoice', estimate: 'Estimate' };
 
     tbody.innerHTML = items.map(d => {
@@ -312,9 +389,39 @@ body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: 
     container.querySelectorAll('.page-btn').forEach(b => b.addEventListener('click', () => { currentPage = Number(b.dataset.page); loadLog(); }));
   }
 
+  // Type toggle
+  document.querySelectorAll('.type-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.type-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentType = btn.getAttribute('data-type');
+      currentPage = 1;
+      loadLog();
+    });
+  });
+
+  // Sorting
+  document.querySelectorAll('.data-table th.sortable').forEach(function(th) {
+    th.addEventListener('click', function() {
+      var col = th.getAttribute('data-sort');
+      if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortCol = col;
+        sortDir = 'asc';
+      }
+      document.querySelectorAll('.data-table th.sortable').forEach(function(h) { h.classList.remove('sort-asc', 'sort-desc'); });
+      th.classList.add('sort-' + sortDir);
+      sortItems();
+      renderTable(allItems);
+    });
+  });
+
   let searchTimeout;
   document.getElementById('searchInput').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { currentPage = 1; loadLog(); }, 400); });
   document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; loadLog(); });
+  document.getElementById('dateFrom').addEventListener('change', () => { currentPage = 1; loadLog(); });
+  document.getElementById('dateTo').addEventListener('change', () => { currentPage = 1; loadLog(); });
 
   window.onPageReady = function(user, roles) { loadLog(); };
 })();
