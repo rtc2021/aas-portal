@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Estimate Preview - Invoice Pipeline - AAS Portal</title>
+  <title>Estimate Management - Invoice Pipeline - AAS Portal</title>
 
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 
@@ -28,7 +28,7 @@
       <div class="auth-spinner"></div>
       <p id="authLoadingText">Loading...</p>
       <h1 class="auth-title">Sign In Required</h1>
-      <p class="auth-subtitle">Please sign in to access Estimate Preview</p>
+      <p class="auth-subtitle">Please sign in to access Estimate Management</p>
       <button id="authLoginBtn" class="auth-btn">Sign In</button>
     </div>
   </div>
@@ -69,76 +69,100 @@
     <div class="page-wrapper">
       <header class="page-header">
         <div class="header-left">
-          <h1 class="page-title">Estimate <span>Preview</span></h1>
           <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
+          <h1 class="page-title">Estimate <span>Management</span></h1>
         </div>
         <div class="header-actions">
-          <label class="limit-label">Limit <input type="number" id="limitInput" value="250" min="1" max="500"></label>
-          <button id="runBtn" type="button">Run Dry-Run</button>
-          <button id="processBtn" type="button" class="hidden">Create Estimates (<span id="processBtnCount">0</span>)</button>
+          <button id="createBtn" type="button" class="btn btn-accent">Create Estimates</button>
+          <button id="refreshBtn" type="button" class="btn btn-outlined">Refresh</button>
         </div>
       </header>
 
-      <div class="info-banner" id="infoBanner">
-        Shows tasks classified as <strong>Quote Requests (Scenario 12)</strong>. Estimates are processed through the unified pipeline endpoint so lifecycle and idempotency controls stay consistent.
+      <div class="info-banner">
+        Manage QuickBooks estimates created from the billing pipeline. Estimates can be <strong>approved</strong> for customer acceptance, then <strong>converted to invoices</strong> once accepted. Use the Create Estimates flow to generate new estimates from eligible tasks.
       </div>
 
       <div class="summary-bar" id="summaryBar">
-        <div class="stat-pill"><div class="dot dot-yellow"></div><span class="label">Eligible</span><span class="value" id="sumEligible">—</span></div>
-        <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">—</span></div>
+        <div class="stat-pill"><span class="label">Total</span><span class="value" id="sumTotal">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-blue"></div><span class="label">Created</span><span class="value" id="sumCreated">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-blue"></div><span class="label">Sent</span><span class="value" id="sumSent">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-green"></div><span class="label">Accepted</span><span class="value" id="sumAccepted">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-purple"></div><span class="label">Converted</span><span class="value" id="sumConverted">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-red"></div><span class="label">Voided</span><span class="value" id="sumVoided">&mdash;</span></div>
       </div>
 
-      <div class="selection-counter hidden" id="selectionCounter">
-        <span id="selectionText">0 selected</span>
-        <button class="selection-clear" id="selectionClear">Clear</button>
+      <div class="filter-bar">
+        <div class="filter-chips" id="filterChips">
+          <button class="chip active" data-status="">All</button>
+          <button class="chip" data-status="created">Created</button>
+          <button class="chip" data-status="sent">Sent</button>
+          <button class="chip" data-status="accepted">Accepted</button>
+          <button class="chip" data-status="converted">Converted</button>
+          <button class="chip" data-status="voided">Voided</button>
+        </div>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search customer name...">
       </div>
 
       <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width:32px"><input type="checkbox" id="selectAll" title="Select all rows"></th>
-              <th>Task ID</th>
-              <th>Task Name</th>
+              <th>Status</th>
               <th>Customer</th>
-              <th>Tier</th>
-              <th>Lines</th>
+              <th>Task</th>
+              <th>Estimate #</th>
               <th class="text-right">Total</th>
-              <th>Reason</th>
+              <th>Created</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="8" class="loading-cell">Loading dry-run results...</td></tr>
+            <tr><td colspan="7" class="loading-cell">Loading estimates...</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="process-results hidden" id="processResults">
-        <h3 class="process-results-title">Estimate Results</h3>
-        <div id="processResultsBody"></div>
+      <div class="table-footer" id="tableFooter">
+        <span class="page-info" id="pageInfo">&mdash;</span>
+        <div class="page-buttons" id="pageButtons"></div>
       </div>
 
       <div class="empty-state hidden" id="emptyState">
-        <p>No estimate-eligible tasks found. Tasks need a quote request priority, tag, or language.</p>
+        <p>No estimates found matching your filters.</p>
         <a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a>
       </div>
     </div>
   </div>
 
-  <div class="confirm-overlay hidden" id="confirmOverlay">
-    <div class="confirm-dialog">
-      <h3>Create Real Estimates?</h3>
-      <p>This will create <strong id="confirmCount">0</strong> estimate(s) in QuickBooks via the pipeline processor.</p>
-      <div class="confirm-tasks" id="confirmTasks"></div>
-      <div class="confirm-actions">
-        <button class="confirm-cancel" id="confirmCancel">Cancel</button>
-        <button class="confirm-go" id="confirmGo">Yes, Create Estimates</button>
+  <!-- Create Estimates Modal -->
+  <div class="modal-overlay hidden" id="createModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Create Estimates</h3>
+        <button class="modal-close" id="createModalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="createModalBody">
+        <div class="modal-loading">
+          <div class="auth-spinner" style="border-top-color:#00d4ff;"></div>
+          <p>Running dry-run to find estimate-eligible tasks...</p>
+        </div>
+      </div>
+      <div class="modal-footer hidden" id="createModalFooter">
+        <button class="btn btn-outlined" id="createModalCancel">Cancel</button>
+        <button class="btn btn-green" id="createModalConfirm">Confirm &amp; Create</button>
       </div>
     </div>
   </div>
 
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
 <style>
+/* ===== Base / Background ===== */
 body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.03) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,212,255,0.02) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.hidden { display: none; }
+
+/* ===== Page Layout ===== */
 .page-wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 32px 48px; }
 .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
 .header-left { display: flex; flex-direction: column; gap: 4px; }
@@ -146,170 +170,200 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .back-link:hover { color: #00d4ff; }
 .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
 .page-title span { color: #ffcc00; }
-
 .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.limit-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; }
-.limit-label input { width: 60px; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center; }
-.limit-label input:focus { outline: none; border-color: #00d4ff; }
-#runBtn { padding: 8px 18px; background: #00d4ff; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-#runBtn:hover { filter: brightness(1.1); }
-#runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Info banner */
+/* ===== Buttons ===== */
+.btn { padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; border: none; transition: filter 150ms, background 150ms; }
+.btn:hover { filter: brightness(1.1); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-accent { background: #0096ff; color: #fff; }
+.btn-outlined { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
+.btn-outlined:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.btn-green { background: #00ff88; color: #0a0a0f; }
+.btn-green:hover { background: #00e67a; }
+.btn-sm { padding: 4px 12px; font-size: 0.75rem; border-radius: 6px; }
+.btn-approve { background: transparent; border: 1px solid rgba(0,255,136,0.4); color: #00ff88; }
+.btn-approve:hover { background: rgba(0,255,136,0.1); }
+.btn-convert { background: transparent; border: 1px solid rgba(168,85,247,0.4); color: #a855f7; }
+.btn-convert:hover { background: rgba(168,85,247,0.1); }
+
+/* ===== Info Banner ===== */
 .info-banner { padding: 10px 16px; margin-bottom: 16px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
 .info-banner strong { color: #ffcc00; }
 
-/* Summary bar */
+/* ===== Summary Bar ===== */
 .summary-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
 .stat-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9999px; font-size: 0.85rem; backdrop-filter: blur(20px) saturate(180%); }
 .stat-pill .label { color: rgba(255,255,255,0.6); }
 .stat-pill .value { font-weight: 600; }
-.stat-pill--amount { border-color: rgba(255,204,0,0.3); }
-.stat-pill--amount .value { color: #ffcc00; }
-.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: rgba(255,255,255,0.4); }
-.dot-yellow { background: #ffcc00; box-shadow: 0 0 6px rgba(255,204,0,0.4); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-blue { background: #0096ff; box-shadow: 0 0 6px rgba(0,150,255,0.4); }
+.dot-green { background: #00ff88; box-shadow: 0 0 6px rgba(0,255,136,0.4); }
+.dot-purple { background: #a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.4); }
+.dot-red { background: #ff4444; box-shadow: 0 0 6px rgba(255,68,68,0.4); }
 
-/* Table */
+/* ===== Filter Bar ===== */
+.filter-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { padding: 5px 14px; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); cursor: pointer; transition: all 150ms; }
+.chip:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); }
+.chip.active { background: rgba(0,150,255,0.15); border-color: rgba(0,150,255,0.4); color: #0096ff; }
+.search-input { padding: 6px 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.82rem; width: 200px; outline: none; }
+.search-input::placeholder { color: rgba(255,255,255,0.35); }
+.search-input:focus { border-color: #0096ff; }
+
+/* ===== Data Table ===== */
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .data-table th { text-align: left; padding: 10px 12px; color: rgba(255,255,255,0.5); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
-.data-table tr.result-row { cursor: pointer; transition: background 150ms; }
-.data-table tr.result-row:hover { background: rgba(255,255,255,0.03); }
+.data-table tr.est-row { cursor: pointer; transition: background 150ms; }
+.data-table tr.est-row:hover { background: rgba(255,255,255,0.03); }
 .text-right { text-align: right; }
 .loading-cell { text-align: center; color: rgba(255,255,255,0.5); padding: 40px 12px; }
 
-/* Tier badges */
-.tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+/* ===== Status Badges ===== */
+.status-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.status-created, .status-sent { background: rgba(0,150,255,0.1); color: #0096ff; border: 1px solid rgba(0,150,255,0.25); }
+.status-accepted { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.25); }
+.status-converted { background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.25); }
+.status-voided { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.25); }
 
-/* Hold reason badges */
-.hold-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
-
-/* Detail panel (expanded row) */
+/* ===== Detail Row ===== */
 .detail-row { display: none; }
 .detail-row.open { display: table-row; }
-.detail-panel { padding: 16px 12px; background: rgba(15,15,25,0.6); border-left: 3px solid rgba(255,204,0,0.4); }
+.detail-panel { padding: 16px 12px; background: rgba(15,15,25,0.6); border-left: 3px solid rgba(0,150,255,0.4); }
 .detail-section { margin-bottom: 14px; }
 .detail-section:last-child { margin-bottom: 0; }
 .detail-section h4 { font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); margin: 0 0 8px; letter-spacing: 0.05em; }
 .detail-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
 .detail-table th { text-align: left; padding: 4px 8px; color: rgba(255,255,255,0.4); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .detail-table td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-.walk-step { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: rgba(255,255,255,0.7); }
-.walk-step + .walk-step::before { content: '\2192'; margin-right: 4px; color: rgba(255,255,255,0.3); }
-.walk-status { font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; }
-.walk-VERIFIED { background: rgba(0,255,136,0.1); color: #00ff88; }
-.walk-NOT_IN_MAP { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
-.walk-NEEDS_REVIEW { background: rgba(255,204,0,0.1); color: #ffcc00; }
+.detail-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+.detail-meta strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+.converted-info { margin-top: 8px; padding: 8px 12px; background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 6px; font-size: 0.8rem; color: #a855f7; }
 
-/* Empty state */
+/* ===== Actions Column ===== */
+.action-cell { display: flex; gap: 6px; }
+
+/* ===== Table Footer / Pagination ===== */
+.table-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; font-size: 0.8rem; }
+.page-info { color: rgba(255,255,255,0.5); }
+.page-buttons { display: flex; gap: 4px; }
+.page-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); font-size: 0.78rem; cursor: pointer; }
+.page-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+.page-btn.active { background: rgba(0,150,255,0.15); border-color: rgba(0,150,255,0.4); color: #0096ff; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ===== Empty State ===== */
 .empty-state { text-align: center; padding: 60px 40px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
 .empty-state p { color: rgba(255,255,255,0.6); margin: 0 0 20px; }
 .back-btn { color: #00d4ff; text-decoration: none; font-weight: 600; }
-.hidden { display: none; }
 
-/* Process button */
-#processBtn { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-#processBtn:hover { filter: brightness(1.1); }
-#processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ===== Modal ===== */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
+.modal-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
+.modal-header h3 { font-size: 1.1rem; margin: 0; color: #fff; }
+.modal-close { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; }
+.modal-close:hover { color: #fff; }
+.modal-body { padding: 16px 24px; overflow-y: auto; flex: 1; }
+.modal-loading { text-align: center; padding: 30px 0; }
+.modal-loading p { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin: 12px 0 0; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 0 24px 20px; }
+.modal-task-list { max-height: 300px; overflow-y: auto; }
+.modal-task-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 0.85rem; color: rgba(255,255,255,0.8); }
+.modal-task-row + .modal-task-row { border-top: 1px solid rgba(255,255,255,0.06); }
+.modal-task-total { font-weight: 600; color: #ffcc00; }
+.modal-summary { margin-top: 12px; padding: 10px 12px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); }
+.modal-summary strong { color: #ffcc00; }
 
-/* Confirm overlay */
-.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
-.confirm-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 28px; max-width: 480px; width: 90%; }
-.confirm-dialog h3 { font-size: 1.1rem; margin: 0 0 10px; color: #fff; }
-.confirm-dialog p { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin: 0 0 16px; line-height: 1.5; }
-.confirm-dialog strong { color: #ffcc00; }
-.confirm-tasks { max-height: 160px; overflow-y: auto; margin-bottom: 18px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3); }
-.confirm-task-row { padding: 4px 0; color: rgba(255,255,255,0.7); display: flex; justify-content: space-between; }
-.confirm-task-row + .confirm-task-row { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px; }
-.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.confirm-cancel { padding: 8px 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
-.confirm-go { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-.confirm-go:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ===== Toast ===== */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; color: #fff; min-width: 260px; max-width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: toastIn 300ms ease-out; }
+.toast.toast-out { animation: toastOut 300ms ease-in forwards; }
+.toast-success { background: #16a34a; }
+.toast-error { background: #dc2626; }
+@keyframes toastIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
 
-/* Process results */
-.process-results { margin-top: 24px; padding: 20px; background: rgba(20,20,30,0.9); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; }
-.process-results-title { font-size: 1rem; font-weight: 700; margin: 0 0 14px; color: #00ff88; }
-.process-result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 0.85rem; }
-.process-result-row + .process-result-row { border-top: 1px solid rgba(255,255,255,0.06); }
-.process-result-task { color: rgba(255,255,255,0.8); }
-.process-result-status { font-weight: 600; }
-.process-result-status.invoiced { color: #00ff88; }
-.process-result-status.error { color: #ff4444; }
-.process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
-
-/* Checkbox column */
-.data-table th input[type="checkbox"],
-.data-table td input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #ffcc00; }
-.row-cb-cell { width: 32px; text-align: center; }
-
-/* Selection counter */
-.selection-counter { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 6px 14px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: #ffcc00; }
-.selection-clear { background: none; border: 1px solid rgba(255,204,0,0.3); color: #ffcc00; padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
-.selection-clear:hover { background: rgba(255,204,0,0.1); }
-
-/* Mobile */
+/* ===== Mobile ===== */
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
   .page-header { flex-direction: column; }
   .header-actions { width: 100%; }
   .summary-bar { gap: 6px; }
   .stat-pill { padding: 5px 10px; font-size: 0.78rem; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .search-input { width: 100%; box-sizing: border-box; }
   .data-table { font-size: 0.8rem; }
   .data-table th, .data-table td { padding: 8px 6px; }
+  .table-footer { flex-direction: column; gap: 8px; align-items: flex-start; }
+  .action-cell { flex-direction: column; gap: 4px; }
 }
 
-/* Light theme */
+/* ===== Light Theme ===== */
 body.light-theme::before { opacity: 0; }
-body.light-theme .limit-label { color: rgba(26,26,46,0.6); }
-body.light-theme .limit-label input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
-body.light-theme .limit-label input:focus { border-color: #0077b6; }
-body.light-theme #runBtn { color: #fff; }
+body.light-theme .back-link { color: rgba(26,26,46,0.6); }
+body.light-theme .back-link:hover { color: #0077b6; }
 body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
-body.light-theme .stat-pill .label,
-body.light-theme .back-link,
-body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
+body.light-theme .stat-pill .label { color: rgba(26,26,46,0.6); }
+body.light-theme .loading-cell { color: rgba(26,26,46,0.5); }
+body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
+body.light-theme .info-banner strong { color: #997a00; }
+
+body.light-theme .chip { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.12); color: rgba(26,26,46,0.6); }
+body.light-theme .chip:hover { border-color: rgba(0,0,0,0.25); color: rgba(26,26,46,0.8); }
+body.light-theme .chip.active { background: rgba(0,120,200,0.08); border-color: rgba(0,120,200,0.3); color: #0077b6; }
+body.light-theme .search-input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
+body.light-theme .search-input::placeholder { color: rgba(26,26,46,0.35); }
+body.light-theme .search-input:focus { border-color: #0077b6; }
+
 body.light-theme .data-table th { color: rgba(26,26,46,0.5); border-bottom-color: rgba(0,0,0,0.1); }
 body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.06); }
-body.light-theme .data-table tr.result-row:hover { background: rgba(0,0,0,0.03); }
-body.light-theme .detail-panel { background: rgba(0,0,0,0.02); border-left-color: rgba(200,150,0,0.4); }
+body.light-theme .data-table tr.est-row:hover { background: rgba(0,0,0,0.03); }
+body.light-theme .detail-panel { background: rgba(0,0,0,0.02); border-left-color: rgba(0,120,200,0.4); }
 body.light-theme .detail-section h4 { color: rgba(26,26,46,0.5); }
 body.light-theme .detail-table th { color: rgba(26,26,46,0.4); border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .detail-table td { border-bottom-color: rgba(0,0,0,0.04); }
-body.light-theme .hold-reason { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
-body.light-theme .walk-step { color: rgba(26,26,46,0.7); }
-body.light-theme .walk-step + .walk-step::before { color: rgba(26,26,46,0.3); }
-body.light-theme .walk-VERIFIED { background: rgba(0,160,80,0.08); color: #008844; }
-body.light-theme .walk-NEEDS_REVIEW { background: rgba(200,150,0,0.1); color: #997a00; }
-body.light-theme .walk-NOT_IN_MAP { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.5); }
-body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
+body.light-theme .detail-meta { color: rgba(26,26,46,0.6); }
+body.light-theme .detail-meta strong { color: rgba(26,26,46,0.85); }
+
+body.light-theme .status-created, body.light-theme .status-sent { background: rgba(0,120,200,0.08); color: #0077b6; border-color: rgba(0,120,200,0.2); }
+body.light-theme .status-accepted { background: rgba(0,160,80,0.08); color: #008844; border-color: rgba(0,160,80,0.2); }
+body.light-theme .status-converted { background: rgba(130,60,200,0.08); color: #7c3aed; border-color: rgba(130,60,200,0.2); }
+body.light-theme .status-voided { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
+
+body.light-theme .btn-outlined { border-color: rgba(0,0,0,0.2); color: rgba(26,26,46,0.7); }
+body.light-theme .btn-outlined:hover { border-color: rgba(0,0,0,0.4); color: rgba(26,26,46,0.92); }
+body.light-theme .btn-approve { border-color: rgba(0,160,80,0.3); color: #008844; }
+body.light-theme .btn-approve:hover { background: rgba(0,160,80,0.08); }
+body.light-theme .btn-convert { border-color: rgba(130,60,200,0.3); color: #7c3aed; }
+body.light-theme .btn-convert:hover { background: rgba(130,60,200,0.08); }
+
+body.light-theme .page-info { color: rgba(26,26,46,0.5); }
+body.light-theme .page-btn { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.12); color: rgba(26,26,46,0.7); }
+body.light-theme .page-btn:hover { border-color: rgba(0,0,0,0.25); color: rgba(26,26,46,0.92); }
+body.light-theme .page-btn.active { background: rgba(0,120,200,0.08); border-color: rgba(0,120,200,0.3); color: #0077b6; }
+
 body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
-body.light-theme .info-banner { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
-body.light-theme .info-banner strong { color: #997a00; }
-body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
-body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
-body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
-body.light-theme .confirm-dialog p { color: rgba(26,26,46,0.7); }
-body.light-theme .confirm-dialog strong { color: #997a00; }
-body.light-theme .confirm-tasks { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
-body.light-theme .confirm-task-row { color: rgba(26,26,46,0.7); }
-body.light-theme .confirm-task-row + .confirm-task-row { border-top-color: rgba(0,0,0,0.06); }
-body.light-theme .confirm-cancel { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.8); }
-body.light-theme #processBtn { color: #fff; }
-body.light-theme .confirm-go { color: #fff; }
-body.light-theme .process-results { background: rgba(255,255,255,0.9); border-color: rgba(0,160,80,0.25); }
-body.light-theme .process-results-title { color: #008844; }
-body.light-theme .process-result-row + .process-result-row { border-top-color: rgba(0,0,0,0.06); }
-body.light-theme .process-result-task { color: rgba(26,26,46,0.8); }
-body.light-theme .process-result-status.invoiced { color: #008844; }
-body.light-theme .process-result-status.error { color: #cc2828; }
-body.light-theme .process-result-qb { color: rgba(26,26,46,0.5); }
-body.light-theme .selection-counter { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: #997a00; }
-body.light-theme .selection-clear { border-color: rgba(200,150,0,0.3); color: #997a00; }
-body.light-theme .selection-clear:hover { background: rgba(200,150,0,0.08); }
-body.light-theme .stat-pill--amount { border-color: rgba(200,150,0,0.3); }
-body.light-theme .stat-pill--amount .value { color: #997a00; }
+body.light-theme .back-btn { color: #0077b6; }
+
+body.light-theme .modal-overlay { background: rgba(0,0,0,0.35); }
+body.light-theme .modal-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
+body.light-theme .modal-header h3 { color: rgba(26,26,46,0.92); }
+body.light-theme .modal-close { color: rgba(26,26,46,0.4); }
+body.light-theme .modal-close:hover { color: rgba(26,26,46,0.8); }
+body.light-theme .modal-loading p { color: rgba(26,26,46,0.6); }
+body.light-theme .modal-task-row { color: rgba(26,26,46,0.8); }
+body.light-theme .modal-task-row + .modal-task-row { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .modal-task-total { color: #997a00; }
+body.light-theme .modal-summary { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
+body.light-theme .modal-summary strong { color: #997a00; }
+body.light-theme .btn-green { color: #fff; }
+
+body.light-theme .converted-info { background: rgba(130,60,200,0.06); border-color: rgba(130,60,200,0.2); color: #7c3aed; }
 </style>
 
 <script>
@@ -332,383 +386,491 @@ body.light-theme .stat-pill--amount .value { color: #997a00; }
 (function() {
   'use strict';
 
-  const API_BASE = '/api/pipeline';
-  let eligibleResults = [];
-  let selectedTaskIds = new Set();
+  /* ===== Config ===== */
+  var PER_PAGE = 25;
+  var currentPage = 1;
+  var currentStatus = '';
+  var currentSearch = '';
+  var totalItems = 0;
+  var estimates = [];
+  var searchDebounce = null;
 
-  async function api(path, opts = {}) {
-    var token = window.AASAuth?.getToken ? await window.AASAuth.getToken() : null;
-    var res = await fetch(API_BASE + path, {
-      ...opts,
-      headers: {
-        ...(token ? { Authorization: 'Bearer ' + token } : {}),
-        ...((opts && opts.headers) || {})
-      }
+  /* ===== Helpers ===== */
+  function $(id) { return document.getElementById(id); }
+
+  function money(n) {
+    return '$' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function truncate(s, n) {
+    return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '\u2014';
+    var d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return '\u2014';
+    var d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
+           d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function escHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s || '';
+    return div.innerHTML;
+  }
+
+  /* ===== API Layer ===== */
+  async function api(path, opts) {
+    opts = opts || {};
+    var token = window.AASAuth && window.AASAuth.getToken ? await window.AASAuth.getToken() : null;
+    var res = await fetch('/api/pipeline' + path, {
+      method: opts.method || 'GET',
+      headers: Object.assign(
+        {},
+        token ? { Authorization: 'Bearer ' + token } : {},
+        opts.headers || {}
+      ),
+      body: opts.body || undefined
     });
     if (!res.ok) throw new Error('API ' + res.status);
     return res.json();
   }
 
-  function $(id) { return document.getElementById(id); }
-  function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
-
-  function getResult(r) {
-    return String(r?.result || '').trim().toUpperCase();
+  /* ===== Toast ===== */
+  function showToast(message, type) {
+    var container = $('toastContainer');
+    var el = document.createElement('div');
+    el.className = 'toast toast-' + (type || 'success');
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(function() {
+      el.classList.add('toast-out');
+      setTimeout(function() { el.remove(); }, 300);
+    }, 5000);
   }
 
-  function normalizeDryRunResults(payload) {
-    var results = Array.isArray(payload)
-      ? payload
-      : (payload?.results || payload?.items || payload?.tasks || payload?.data?.results || payload?.data?.items || payload?.data?.tasks || payload?.data || []);
-    return Array.isArray(results) ? results : [];
+  /* ===== Load Estimates ===== */
+  async function loadEstimates() {
+    var tbody = $('tableBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Loading estimates...</td></tr>';
+    $('emptyState').classList.add('hidden');
+    document.querySelector('.table-wrap').classList.remove('hidden');
+    $('tableFooter').classList.remove('hidden');
+
+    try {
+      var offset = (currentPage - 1) * PER_PAGE;
+      var url = '/v2/documents?doc_type=estimate&limit=' + PER_PAGE + '&offset=' + offset;
+      if (currentStatus) url += '&status=' + encodeURIComponent(currentStatus);
+
+      var data = await api(url);
+      estimates = data.data || [];
+      totalItems = data.total || 0;
+
+      // Client-side search filter
+      var filtered = estimates;
+      if (currentSearch) {
+        var q = currentSearch.toLowerCase();
+        filtered = estimates.filter(function(e) {
+          return (e.customer_name || '').toLowerCase().indexOf(q) !== -1;
+        });
+      }
+
+      updateSummary();
+      renderTable(filtered);
+      renderPagination();
+
+      if (!filtered.length && !estimates.length) {
+        document.querySelector('.table-wrap').classList.add('hidden');
+        $('tableFooter').classList.add('hidden');
+        $('emptyState').classList.remove('hidden');
+      }
+    } catch (e) {
+      console.error('[Estimates] Load error:', e);
+      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell" style="color:#ff4444;">Failed to load estimates: ' + escHtml(e.message) + '</td></tr>';
+    }
   }
 
-  function isAlreadyProcessed(r) {
-    var state = String(r.processing_state || r.result || '').toUpperCase();
-    return state === 'ALREADY_PROCESSED' || state === 'INVOICED' || state === 'ESTIMATED' || state === 'CREATED';
-  }
+  /* ===== Summary ===== */
+  function updateSummary() {
+    // Load unfiltered counts for summary by fetching with no status
+    // For now, use the current page data + total
+    $('sumTotal').textContent = totalItems;
 
-  function isEstimateEligible(r) {
-    if (isAlreadyProcessed(r)) return false;
-    var result = getResult(r);
-    if (result === 'ESTIMATE') return true;
-    if (result !== 'HOLD') return false;
-    if (r.estimate_reason) return true;
-
-    var signals = Array.isArray(r.estimate_signals) ? r.estimate_signals : [];
-    var holdReasons = Array.isArray(r.hold_reasons) ? r.hold_reasons : [];
-    var combined = signals.concat(holdReasons).map(function(v) {
-      return String(v || '').toUpperCase();
+    // We show counts from visible data — for a full summary we'd need separate calls
+    // Approximate from current dataset
+    var counts = { created: 0, sent: 0, accepted: 0, converted: 0, voided: 0 };
+    estimates.forEach(function(e) {
+      var s = (e.status || '').toLowerCase();
+      if (counts.hasOwnProperty(s)) counts[s]++;
     });
-
-    return combined.some(function(v) {
-      return v.includes('ESTIMATE') || v.includes('QUOTE_REQUEST') || v.includes('QUOTE REQUEST');
-    });
+    $('sumCreated').textContent = counts.created;
+    $('sumSent').textContent = counts.sent;
+    $('sumAccepted').textContent = counts.accepted;
+    $('sumConverted').textContent = counts.converted;
+    $('sumVoided').textContent = counts.voided;
   }
 
-  function renderSummary() {
-    $('sumEligible').textContent = eligibleResults.length;
-    var totalAmount = eligibleResults.reduce(function(sum, r) { return sum + (r.total || 0); }, 0);
-    $('sumAmount').textContent = money(totalAmount);
-  }
-
-  function renderTable() {
+  /* ===== Render Table ===== */
+  function renderTable(items) {
     var tbody = $('tableBody');
 
-    if (!eligibleResults.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No estimate-eligible tasks found.</td></tr>';
+    if (!items || !items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No estimates found.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = eligibleResults.map(function(r, i) {
-      var cust = r.customer || {};
-      var verifiedNode = (cust.path || []).find(function(p) { return p.status === 'VERIFIED'; });
-      var custName = cust.qbo_display_name || cust.display_name || cust.name || (verifiedNode && verifiedNode.name) || '\u2014';
-      var tier = cust.effective_tier || cust.tier || '';
-      var taskName = truncate(r.task_name, 60);
-      var taskId = r.limble_task_id;
-      var checked = selectedTaskIds.has(taskId) ? ' checked' : '';
+    tbody.innerHTML = items.map(function(e, i) {
+      var status = (e.status || 'created').toLowerCase();
+      var statusClass = 'status-' + status;
+      var custName = escHtml(truncate(e.customer_name, 40));
+      var taskText = e.task_ids && e.task_ids.length
+        ? e.task_ids.map(function(id) { return '#' + id; }).join(', ')
+        : (e.task_name ? escHtml(truncate(e.task_name, 35)) : '\u2014');
+      var estNum = e.qb_doc_number || '\u2014';
+      var total = e.qb_total != null ? money(e.qb_total) : (e.total != null ? money(e.total) : '\u2014');
+      var created = fmtDate(e.created_at);
 
-      var reasonText = r.estimate_reason || (r.estimate_signals && r.estimate_signals.length ? r.estimate_signals.join(', ') : (r.hold_reasons && r.hold_reasons.length ? r.hold_reasons.join(', ').replace(/_/g, ' ') : 'Quote Request'));
-      var reasons = '<span class="hold-reason">' + reasonText + '</span>';
+      // Action buttons
+      var actions = '';
+      if (status === 'created' || status === 'sent') {
+        actions += '<button class="btn btn-sm btn-approve" data-action="approve" data-id="' + e.id + '">Approve</button>';
+      }
+      if (status === 'accepted') {
+        actions += '<button class="btn btn-sm btn-convert" data-action="convert" data-id="' + e.id + '">Convert</button>';
+      }
 
-      var row = '<tr class="result-row" data-idx="' + i + '" data-task-id="' + taskId + '">' +
-        '<td class="row-cb-cell"><input type="checkbox" class="row-cb" data-task-id="' + taskId + '"' + checked + '></td>' +
-        '<td>' + (taskId || '\u2014') + '</td>' +
-        '<td>' + taskName + '</td>' +
+      var row = '<tr class="est-row" data-idx="' + i + '">' +
+        '<td><span class="status-badge ' + statusClass + '">' + escHtml(status) + '</span></td>' +
         '<td>' + custName + '</td>' +
-        '<td>' + (tier ? '<span class="tier-badge">' + tier + '</span>' : '\u2014') + '</td>' +
-        '<td>' + (r.line_count || 0) + '</td>' +
-        '<td class="text-right">' + (r.total ? money(r.total) : '\u2014') + '</td>' +
-        '<td>' + reasons + '</td>' +
+        '<td>' + taskText + '</td>' +
+        '<td>' + escHtml(String(estNum)) + '</td>' +
+        '<td class="text-right">' + total + '</td>' +
+        '<td>' + created + '</td>' +
+        '<td><div class="action-cell">' + actions + '</div></td>' +
         '</tr>';
 
-      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="8">' + buildDetail(r) + '</td></tr>';
+      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="7">' + buildDetail(e) + '</td></tr>';
       return row;
     }).join('');
-
-    updateSelectAllState();
   }
 
-  function buildDetail(r) {
+  /* ===== Build Detail ===== */
+  function buildDetail(e) {
     var html = '<div class="detail-panel">';
 
-    if (r.lines && r.lines.length) {
-      html += '<div class="detail-section"><h4>Line Items</h4><table class="detail-table"><thead><tr><th>Description</th><th>Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th></tr></thead><tbody>';
-      r.lines.forEach(function(l) {
+    // Meta info
+    html += '<div class="detail-section"><h4>Details</h4><div class="detail-meta">';
+    if (e.id) html += '<div>ID: <strong>' + e.id + '</strong></div>';
+    if (e.qb_txn_id) html += '<div>QB Txn: <strong>' + escHtml(e.qb_txn_id) + '</strong></div>';
+    if (e.qb_doc_number) html += '<div>Doc #: <strong>' + escHtml(String(e.qb_doc_number)) + '</strong></div>';
+    if (e.task_ids && e.task_ids.length) html += '<div>Tasks: <strong>' + e.task_ids.map(function(id) { return '#' + id; }).join(', ') + '</strong></div>';
+    if (e.created_at) html += '<div>Created: <strong>' + fmtDateTime(e.created_at) + '</strong></div>';
+    if (e.updated_at) html += '<div>Updated: <strong>' + fmtDateTime(e.updated_at) + '</strong></div>';
+    html += '</div></div>';
+
+    // Line items — documents endpoint returns "line_items", preview returns "lines"
+    var lineItems = e.line_items || e.lines || [];
+    if (lineItems.length) {
+      html += '<div class="detail-section"><h4>Line Items</h4><table class="detail-table"><thead><tr>' +
+        '<th>Description</th><th>Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th>' +
+        '</tr></thead><tbody>';
+      lineItems.forEach(function(l) {
         var detail = l.SalesItemLineDetail || {};
-        html += '<tr><td>' + (l.Description || '\u2014') + '</td><td>' + (detail.Qty || 1) + '</td><td class="text-right">' + money(detail.UnitPrice) + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+        var desc = l.Description || l.description || '\u2014';
+        var qty = detail.Qty || l.qty || 1;
+        var unitPrice = detail.UnitPrice || l.unit_price || 0;
+        var amount = l.Amount || l.amount || 0;
+        html += '<tr><td>' + escHtml(desc) + '</td><td>' + qty + '</td><td class="text-right">' + money(unitPrice) + '</td><td class="text-right">' + money(amount) + '</td></tr>';
       });
       html += '</tbody></table></div>';
+    } else {
+      html += '<div class="detail-section"><p style="color:rgba(255,255,255,0.5);margin:0;font-size:0.8rem;">No line items available.</p></div>';
     }
 
-    if (r.customer && r.customer.path && r.customer.path.length) {
-      html += '<div class="detail-section"><h4>Customer Resolution Path</h4><div>';
-      r.customer.path.forEach(function(step) {
-        html += '<span class="walk-step">' + (step.name || 'Asset ' + step.asset_id) + ' <span class="walk-status walk-' + step.status + '">' + step.status.replace(/_/g, ' ') + '</span></span>';
-      });
-      html += '</div></div>';
-    }
-
-    if (r.warnings && r.warnings.length) {
-      html += '<div class="detail-section"><h4>Warnings</h4><div>';
-      r.warnings.forEach(function(w) {
-        html += '<span class="hold-reason">' + w + '</span>';
-      });
-      html += '</div></div>';
-    }
-
-    if (r.estimate_signals && r.estimate_signals.length) {
-      html += '<div class="detail-section"><h4>Estimate Signals</h4><div>';
-      r.estimate_signals.forEach(function(signal) {
-        html += '<span class="hold-reason">' + String(signal).replace(/_/g, ' ') + '</span>';
-      });
-      html += '</div></div>';
-    }
-
-    if (r.qb_estimate_preview || r.qb_invoice_preview) {
-      var qbPayload = r.qb_estimate_preview || r.qb_invoice_preview;
-      html += '<div class="detail-section"><h4>QB Estimate Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.75);font-size:0.75rem;">' +
-        JSON.stringify(qbPayload, null, 2) + '</pre></div>';
-    }
-
-    if (!r.lines || !r.lines.length) {
-      html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No line items available for this task.</p>';
+    // Converted invoice info
+    if ((e.status || '').toLowerCase() === 'converted' && (e.converted_invoice_id || e.converted_invoice_number)) {
+      html += '<div class="converted-info">Converted to Invoice' +
+        (e.converted_invoice_number ? ' <strong>#' + escHtml(String(e.converted_invoice_number)) + '</strong>' : '') +
+        (e.converted_invoice_id ? ' (ID: ' + e.converted_invoice_id + ')' : '') +
+        '</div>';
     }
 
     html += '</div>';
     return html;
   }
 
-  async function runDryRun(options) {
-    var preserveProcessResults = !!(options && options.preserveProcessResults);
-    var btn = $('runBtn');
-    var tbody = $('tableBody');
-    btn.disabled = true;
-    btn.textContent = 'Running...';
-    if (!preserveProcessResults) {
-      selectedTaskIds.clear();
-      updateSelectionCounter();
+  /* ===== Pagination ===== */
+  function renderPagination() {
+    var totalPages = Math.ceil(totalItems / PER_PAGE) || 1;
+    $('pageInfo').textContent = 'Page ' + currentPage + ' of ' + totalPages + ' (' + totalItems + ' estimates)';
+
+    var btns = $('pageButtons');
+    btns.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    // Prev
+    var prev = document.createElement('button');
+    prev.className = 'page-btn';
+    prev.textContent = '\u2039 Prev';
+    prev.disabled = currentPage <= 1;
+    prev.addEventListener('click', function() { if (currentPage > 1) { currentPage--; loadEstimates(); } });
+    btns.appendChild(prev);
+
+    // Page numbers (show up to 5 around current)
+    var start = Math.max(1, currentPage - 2);
+    var end = Math.min(totalPages, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+
+    for (var p = start; p <= end; p++) {
+      (function(pg) {
+        var btn = document.createElement('button');
+        btn.className = 'page-btn' + (pg === currentPage ? ' active' : '');
+        btn.textContent = pg;
+        btn.addEventListener('click', function() { currentPage = pg; loadEstimates(); });
+        btns.appendChild(btn);
+      })(p);
     }
-    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Running dry-run...</td></tr>';
-    $('emptyState').classList.add('hidden');
-    document.querySelector('.table-wrap').classList.remove('hidden');
 
-    try {
-      var limit = parseInt($('limitInput').value) || 250;
-      var data = await api('/dry-run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: limit })
-      });
-
-      var allResults = normalizeDryRunResults(data);
-      eligibleResults = allResults.filter(isEstimateEligible);
-
-      if (!eligibleResults.length) {
-        document.querySelector('.table-wrap').classList.add('hidden');
-        $('emptyState').classList.remove('hidden');
-        $('sumEligible').textContent = '0';
-        $('sumAmount').textContent = money(0);
-        return;
-      }
-
-      renderSummary();
-      renderTable();
-      updateProcessBtn({ preserveProcessResults: preserveProcessResults });
-    } catch (e) {
-      console.error('[Estimates] Dry-run error:', e);
-      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
-      $('processBtn').classList.add('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Run Dry-Run';
-    }
+    // Next
+    var next = document.createElement('button');
+    next.className = 'page-btn';
+    next.textContent = 'Next \u203A';
+    next.disabled = currentPage >= totalPages;
+    next.addEventListener('click', function() { if (currentPage < totalPages) { currentPage++; loadEstimates(); } });
+    btns.appendChild(next);
   }
 
-  // Expand/collapse rows (skip checkbox clicks)
+  /* ===== Filter Chips ===== */
+  $('filterChips').addEventListener('click', function(e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+    chip.classList.add('active');
+    currentStatus = chip.getAttribute('data-status') || '';
+    currentPage = 1;
+    loadEstimates();
+  });
+
+  /* ===== Search ===== */
+  $('searchInput').addEventListener('input', function() {
+    clearTimeout(searchDebounce);
+    var val = this.value.trim();
+    searchDebounce = setTimeout(function() {
+      currentSearch = val;
+      // Re-render with client-side filter
+      var filtered = estimates;
+      if (currentSearch) {
+        var q = currentSearch.toLowerCase();
+        filtered = estimates.filter(function(e) {
+          return (e.customer_name || '').toLowerCase().indexOf(q) !== -1;
+        });
+      }
+      renderTable(filtered);
+      if (!filtered.length) {
+        document.querySelector('.table-wrap').classList.add('hidden');
+        $('tableFooter').classList.add('hidden');
+        $('emptyState').classList.remove('hidden');
+      } else {
+        document.querySelector('.table-wrap').classList.remove('hidden');
+        $('tableFooter').classList.remove('hidden');
+        $('emptyState').classList.add('hidden');
+      }
+    }, 300);
+  });
+
+  /* ===== Row Expand / Action Buttons ===== */
   document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('row-cb')) return;
-    var row = e.target.closest('.result-row');
+    // Handle action buttons
+    var actionBtn = e.target.closest('[data-action]');
+    if (actionBtn) {
+      e.stopPropagation();
+      var action = actionBtn.getAttribute('data-action');
+      var id = actionBtn.getAttribute('data-id');
+      if (action === 'approve') handleApprove(id, actionBtn);
+      if (action === 'convert') handleConvert(id, actionBtn);
+      return;
+    }
+    // Handle row expand
+    var row = e.target.closest('.est-row');
     if (!row) return;
     var idx = row.getAttribute('data-idx');
     var detail = $('detail-' + idx);
     if (detail) detail.classList.toggle('open');
   });
 
-  // Checkbox change on individual rows
-  document.addEventListener('change', function(e) {
-    if (!e.target.classList.contains('row-cb')) return;
-    e.stopPropagation();
-    var taskId = parseInt(e.target.getAttribute('data-task-id'));
-    if (e.target.checked) {
-      selectedTaskIds.add(taskId);
-    } else {
-      selectedTaskIds.delete(taskId);
-    }
-    updateSelectionCounter();
-    updateProcessBtn();
-    updateSelectAllState();
-  });
-
-  // Select-all checkbox
-  $('selectAll').addEventListener('change', function() {
-    var checked = this.checked;
-    eligibleResults.forEach(function(r) {
-      if (checked) {
-        selectedTaskIds.add(r.limble_task_id);
-      } else {
-        selectedTaskIds.delete(r.limble_task_id);
-      }
-    });
-    document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = checked; });
-    updateSelectionCounter();
-    updateProcessBtn();
-  });
-
-  // Clear selection button
-  $('selectionClear').addEventListener('click', function() {
-    selectedTaskIds.clear();
-    document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = false; });
-    $('selectAll').checked = false;
-    updateSelectionCounter();
-    updateProcessBtn();
-  });
-
-  function updateSelectAllState() {
-    if (!eligibleResults.length) { $('selectAll').checked = false; return; }
-    var allSelected = eligibleResults.every(function(r) { return selectedTaskIds.has(r.limble_task_id); });
-    $('selectAll').checked = allSelected;
-  }
-
-  function updateSelectionCounter() {
-    var count = selectedTaskIds.size;
-    if (count > 0) {
-      $('selectionCounter').classList.remove('hidden');
-      $('selectionText').textContent = count + ' task' + (count === 1 ? '' : 's') + ' selected';
-    } else {
-      $('selectionCounter').classList.add('hidden');
-    }
-  }
-
-  // Run button
-  $('runBtn').addEventListener('click', runDryRun);
-
-  // ---- Process Estimates ----
-
-  function getProcessableTasks() {
-    if (selectedTaskIds.size > 0) {
-      return eligibleResults.filter(function(r) { return selectedTaskIds.has(r.limble_task_id); });
-    }
-    return eligibleResults;
-  }
-
-  function updateProcessBtn(options) {
-    var preserveProcessResults = !!(options && options.preserveProcessResults);
-    var processable = getProcessableTasks();
-    var btn = $('processBtn');
-    var hasSelection = selectedTaskIds.size > 0;
-
-    if (hasSelection) {
-      $('processBtnCount').textContent = processable.length + ' selected';
-    } else {
-      $('processBtnCount').textContent = eligibleResults.length;
-    }
-
-    if (eligibleResults.length > 0) {
-      btn.classList.remove('hidden');
-    } else {
-      btn.classList.add('hidden');
-    }
-    if (!preserveProcessResults) $('processResults').classList.add('hidden');
-  }
-
-  $('processBtn').addEventListener('click', function() {
-    var tasks = getProcessableTasks();
-    if (!tasks.length) return;
-
-    $('confirmCount').textContent = tasks.length;
-    $('confirmTasks').innerHTML = tasks.map(function(t) {
-      return '<div class="confirm-task-row"><span>#' + t.limble_task_id + ' ' + truncate(t.task_name, 40) + '</span><span>' + money(t.total) + '</span></div>';
-    }).join('');
-
-    $('confirmOverlay').classList.remove('hidden');
-  });
-
-  $('confirmCancel').addEventListener('click', function() {
-    $('confirmOverlay').classList.add('hidden');
-  });
-
-  $('confirmOverlay').addEventListener('click', function(e) {
-    if (e.target === this) $('confirmOverlay').classList.add('hidden');
-  });
-
-  $('confirmGo').addEventListener('click', async function() {
-    var tasks = getProcessableTasks();
-    if (!tasks.length) return;
-
-    var goBtn = $('confirmGo');
-    var cancelBtn = $('confirmCancel');
-    goBtn.disabled = true;
-    goBtn.textContent = 'Processing...';
-    cancelBtn.style.display = 'none';
-
-    var results = [];
-    var body = $('processResultsBody');
-
+  /* ===== Approve ===== */
+  async function handleApprove(id, btn) {
+    if (!confirm('Approve estimate #' + id + '? This will mark it as accepted.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Approving...';
     try {
-      var uniqueTaskIds = Array.from(new Set(tasks.map(function(t) { return t.limble_task_id; })));
-      var data = await api('/process', {
+      await api('/v2/estimate/' + id + '/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'ESTIMATE',
-          task_ids: uniqueTaskIds
-        })
+        body: JSON.stringify({ confirm: true })
       });
-      results = data.results || [];
+      showToast('Estimate approved successfully', 'success');
+      loadEstimates();
+    } catch (e) {
+      console.error('[Estimates] Approve error:', e);
+      showToast('Approve failed: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Approve';
+    }
+  }
 
-      $('confirmOverlay').classList.add('hidden');
+  /* ===== Convert ===== */
+  async function handleConvert(id, btn) {
+    if (!confirm('Convert estimate #' + id + ' to an invoice? This action cannot be undone.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Converting...';
+    try {
+      await api('/v2/estimate/' + id + '/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true })
+      });
+      showToast('Estimate converted to invoice', 'success');
+      loadEstimates();
+    } catch (e) {
+      console.error('[Estimates] Convert error:', e);
+      showToast('Convert failed: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Convert';
+    }
+  }
 
-      if (!results.length) {
-        body.innerHTML = '<p style="color:rgba(255,255,255,0.5);">No results returned.</p>';
-      } else {
-        body.innerHTML = results.map(function(r) {
-          var resultStatus = String(r.result || '').toUpperCase();
-          var isOk = resultStatus === 'CREATED' || resultStatus === 'SUCCESS' || resultStatus === 'ALREADY_PROCESSED';
-          var qbInfo = '';
-          if (r.qb_estimate_id) qbInfo = 'QB Est #' + r.qb_estimate_id;
-          if (r.qb_doc_number) qbInfo += (qbInfo ? ' \u2014 ' : '') + 'Doc ' + r.qb_doc_number;
-          if (r.error) qbInfo = r.error;
-          return '<div class="process-result-row">' +
-            '<div><span class="process-result-task">#' + (r.limble_task_id || '\u2014') + ' ' + truncate(r.task_name || '', 40) + '</span>' +
-            (qbInfo ? '<div class="process-result-qb">' + qbInfo + '</div>' : '') +
-            '</div>' +
-            '<span class="process-result-status ' + (isOk ? 'invoiced' : 'error') + '">' + (r.result || 'UNKNOWN') + '</span>' +
-            '</div>';
-        }).join('');
+  /* ===== Refresh ===== */
+  $('refreshBtn').addEventListener('click', function() {
+    loadEstimates();
+  });
+
+  /* ===== Create Estimates Flow ===== */
+  var dryRunEstimates = [];
+
+  $('createBtn').addEventListener('click', function() {
+    dryRunEstimates = [];
+    $('createModal').classList.remove('hidden');
+    $('createModalFooter').classList.add('hidden');
+    $('createModalBody').innerHTML =
+      '<div class="modal-loading">' +
+        '<div class="auth-spinner" style="border-top-color:#00d4ff;"></div>' +
+        '<p>Running dry-run to find estimate-eligible tasks...</p>' +
+      '</div>';
+    runCreateDryRun();
+  });
+
+  async function runCreateDryRun() {
+    try {
+      var data = await api('/v2/estimate/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 30 })
+      });
+
+      // Extract estimates array from preview response
+      var items = data.estimates || [];
+      if (!Array.isArray(items)) items = [];
+
+      dryRunEstimates = items;
+
+      if (!items.length) {
+        $('createModalBody').innerHTML =
+          '<p style="text-align:center;color:rgba(255,255,255,0.6);padding:20px 0;">No estimate-eligible tasks found. All tasks have already been processed or do not qualify.</p>';
+        return;
       }
 
-      $('processResults').classList.remove('hidden');
-      $('processBtn').classList.add('hidden');
-      selectedTaskIds.clear();
-      updateSelectionCounter();
-      await runDryRun({ preserveProcessResults: true });
+      var totalAmount = items.reduce(function(sum, t) { return sum + (t.total || 0); }, 0);
+
+      var validCount = 0;
+      var validAmount = 0;
+      var html = '<div class="modal-task-list">';
+      items.forEach(function(t) {
+        var taskLabel = t.limble_task_id ? '#' + t.limble_task_id : (t.task_id ? '#' + t.task_id : '\u2014');
+        var custName = t.customer_name || (t.customer && (t.customer.display_name || t.customer.name)) || '\u2014';
+        var custId = t.customer && t.customer.qbo_customer_id;
+        var hasQb = custId && custId !== 'None' && custId !== null;
+        if (hasQb) { validCount++; validAmount += (t.total || 0); }
+        html += '<div class="modal-task-row' + (hasQb ? '' : ' unmapped') + '" style="' + (hasQb ? '' : 'opacity:0.5;') + '">' +
+          '<span>' + escHtml(taskLabel) + ' &mdash; ' + escHtml(truncate(custName, 30)) + (hasQb ? '' : ' <em style="color:#ff9800;font-size:0.75rem;">(no QB customer)</em>') + '</span>' +
+          '<span class="modal-task-total">' + money(t.total) + '</span>' +
+          '</div>';
+      });
+      html += '</div>';
+      if (validCount < items.length) {
+        html += '<div style="color:#ff9800;font-size:0.8rem;margin:8px 0;">' + (items.length - validCount) + ' task(s) skipped — customer not mapped in QuickBooks.</div>';
+      }
+      html += '<div class="modal-summary"><strong>' + validCount + '</strong> estimate(s) totaling <strong>' + money(validAmount) + '</strong> ready to create.</div>';
+
+      $('createModalBody').innerHTML = html;
+      $('createModalFooter').classList.remove('hidden');
     } catch (e) {
-      console.error('[Estimates] Process error:', e);
-      $('confirmOverlay').classList.add('hidden');
-      body.innerHTML = '<p style="color:#ff4444;">Estimate creation failed: ' + e.message + '</p>';
-      $('processResults').classList.remove('hidden');
+      console.error('[Estimates] Dry-run error:', e);
+      $('createModalBody').innerHTML =
+        '<p style="text-align:center;color:#ff4444;padding:20px 0;">Dry-run failed: ' + escHtml(e.message) + '</p>';
+    }
+  }
+
+  $('createModalClose').addEventListener('click', closeCreateModal);
+  $('createModalCancel').addEventListener('click', closeCreateModal);
+  $('createModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCreateModal();
+  });
+
+  function closeCreateModal() {
+    $('createModal').classList.add('hidden');
+  }
+
+  $('createModalConfirm').addEventListener('click', async function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    try {
+      // Pass specific task IDs from preview, only those with valid QB customer
+      var taskIds = dryRunEstimates
+        .filter(function(t) {
+          var custId = t.customer && t.customer.qbo_customer_id;
+          return custId && custId !== 'None' && custId !== null;
+        })
+        .map(function(t) { return t.limble_task_id; });
+
+      if (!taskIds.length) {
+        showToast('No estimates have valid QB customers mapped', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Create';
+        return;
+      }
+
+      var data = await api('/v2/estimate/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_ids: taskIds, confirm: true })
+      });
+
+      var created = (data.created_estimates || []).length || data.summary && data.summary.estimates_created || 0;
+      closeCreateModal();
+      showToast('Successfully created ' + created + ' estimate(s)', 'success');
+      loadEstimates();
+    } catch (e) {
+      console.error('[Estimates] Create error:', e);
+      showToast('Failed to create estimates: ' + e.message, 'error');
     } finally {
-      goBtn.disabled = false;
-      goBtn.textContent = 'Yes, Create Estimates';
-      cancelBtn.style.display = '';
+      btn.disabled = false;
+      btn.textContent = 'Confirm & Create';
     }
   });
 
+  /* ===== Page Ready ===== */
   window.onPageReady = function(user, roles) {
-    runDryRun();
+    loadEstimates();
   };
 })();
 </script>
