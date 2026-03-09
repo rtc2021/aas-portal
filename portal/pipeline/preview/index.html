@@ -337,7 +337,10 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
   .page-header { flex-direction: column; }
-  .header-actions { width: 100%; }
+  .header-actions { width: 100%; flex-wrap: wrap; }
+  .days-control { width: 100%; justify-content: space-between; }
+  .days-label input { width: 44px; padding: 5px 6px; font-size: 0.8rem; }
+  .days-btn { padding: 4px 8px; font-size: 0.7rem; }
   .summary-bar { gap: 6px; }
   .stat-pill { padding: 5px 10px; font-size: 0.78rem; }
   .tab-btn { padding: 8px 12px; font-size: 0.78rem; }
@@ -438,6 +441,8 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
   function api(path, opts) {
     opts = opts || {};
+    var controller = new AbortController();
+    var timeout = setTimeout(function() { controller.abort(); }, 25000);
     return Promise.resolve(window.AASAuth && window.AASAuth.getToken ? window.AASAuth.getToken() : null).then(function(token) {
       return fetch(API_BASE + path, {
         method: opts.method || 'GET',
@@ -446,11 +451,17 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
           token ? { Authorization: 'Bearer ' + token } : {},
           opts.headers || {}
         ),
-        body: opts.body || undefined
+        body: opts.body || undefined,
+        signal: controller.signal
       });
     }).then(function(res) {
+      clearTimeout(timeout);
       if (!res.ok) throw new Error('API ' + res.status);
       return res.json();
+    }).catch(function(e) {
+      clearTimeout(timeout);
+      if (e.name === 'AbortError') throw new Error('Request timed out (25s)');
+      throw e;
     });
   }
 
