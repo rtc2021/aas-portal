@@ -73,17 +73,6 @@
           <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
         </div>
         <div class="header-actions">
-          <div class="days-control">
-            <label class="days-label">Days
-              <input type="number" id="daysInput" value="14" min="1" max="365">
-            </label>
-            <div class="days-quick">
-              <button class="days-btn" data-days="7">7d</button>
-              <button class="days-btn active" data-days="14">14d</button>
-              <button class="days-btn" data-days="30">30d</button>
-              <button class="days-btn" data-days="60">60d</button>
-            </div>
-          </div>
           <button id="syncBtn" type="button">Sync Tasks</button>
           <button id="runBtn" type="button">Run Dry-Run</button>
           <button id="processBtn" type="button" class="hidden">Create Invoices</button>
@@ -115,7 +104,7 @@
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Customer</th><th>Tier</th><th>Visits</th><th>Tasks</th><th class="text-right">Billed Hrs</th><th class="text-right">Total</th></tr></thead>
-            <tbody id="invoiceBody"><tr><td colspan="6" class="loading-cell">Click "Run Dry-Run" to preview invoices</td></tr></tbody>
+            <tbody id="invoiceBody"><tr><td colspan="6" class="loading-cell">Run dry-run to preview invoices</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -195,16 +184,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .page-title span { color: #00d4ff; }
 .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hidden { display: none; }
-
-/* Days control */
-.days-control { display: flex; align-items: center; gap: 8px; }
-.days-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px; }
-.days-label input { width: 52px; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.85rem; text-align: center; }
-.days-label input:focus { outline: none; border-color: #00d4ff; }
-.days-quick { display: flex; gap: 4px; }
-.days-btn { padding: 5px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: rgba(255,255,255,0.6); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 150ms; }
-.days-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
-.days-btn.active { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.3); color: #00d4ff; }
 
 /* Sync button */
 #syncBtn { padding: 8px 18px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
@@ -337,10 +316,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
   .page-header { flex-direction: column; }
-  .header-actions { width: 100%; flex-wrap: wrap; }
-  .days-control { width: 100%; justify-content: space-between; }
-  .days-label input { width: 44px; padding: 5px 6px; font-size: 0.8rem; }
-  .days-btn { padding: 4px 8px; font-size: 0.7rem; }
+  .header-actions { width: 100%; }
   .summary-bar { gap: 6px; }
   .stat-pill { padding: 5px 10px; font-size: 0.78rem; }
   .tab-btn { padding: 8px 12px; font-size: 0.78rem; }
@@ -358,12 +334,6 @@ body.light-theme .info-banner strong { color: #997a00; }
 body.light-theme #runBtn { color: #fff; }
 body.light-theme #processBtn { color: #fff; }
 body.light-theme .confirm-go { color: #fff; }
-body.light-theme .days-label { color: rgba(26,26,46,0.6); }
-body.light-theme .days-label input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.92); }
-body.light-theme .days-label input:focus { border-color: #0077b6; }
-body.light-theme .days-btn { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); color: rgba(26,26,46,0.5); }
-body.light-theme .days-btn:hover { background: rgba(0,0,0,0.06); color: rgba(26,26,46,0.8); }
-body.light-theme .days-btn.active { background: rgba(0,102,170,0.08); border-color: rgba(0,102,170,0.3); color: #0077b6; }
 body.light-theme #syncBtn { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.8); border-color: rgba(0,0,0,0.15); }
 body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .stat-pill .label { color: rgba(26,26,46,0.6); }
@@ -441,8 +411,6 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
   function api(path, opts) {
     opts = opts || {};
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 25000);
     return Promise.resolve(window.AASAuth && window.AASAuth.getToken ? window.AASAuth.getToken() : null).then(function(token) {
       return fetch(API_BASE + path, {
         method: opts.method || 'GET',
@@ -451,17 +419,11 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
           token ? { Authorization: 'Bearer ' + token } : {},
           opts.headers || {}
         ),
-        body: opts.body || undefined,
-        signal: controller.signal
+        body: opts.body || undefined
       });
     }).then(function(res) {
-      clearTimeout(timeout);
       if (!res.ok) throw new Error('API ' + res.status);
       return res.json();
-    }).catch(function(e) {
-      clearTimeout(timeout);
-      if (e.name === 'AbortError') throw new Error('Request timed out (25s)');
-      throw e;
     });
   }
 
@@ -473,31 +435,6 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     var dt = new Date(d);
     return isNaN(dt) ? '\u2014' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
-
-  // ---- Days control ----
-  function getDays() { return parseInt($('daysInput').value) || 14; }
-  function setDays(d) {
-    $('daysInput').value = d;
-    sessionStorage.setItem('pipeline_days', d);
-    document.querySelectorAll('.days-btn').forEach(function(b) {
-      b.classList.toggle('active', parseInt(b.getAttribute('data-days')) === d);
-    });
-  }
-
-  (function initDays() {
-    var saved = parseInt(sessionStorage.getItem('pipeline_days'));
-    if (saved && saved > 0) setDays(saved);
-  })();
-
-  document.querySelectorAll('.days-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() { setDays(parseInt(this.getAttribute('data-days'))); });
-  });
-  $('daysInput').addEventListener('change', function() {
-    var v = parseInt(this.value) || 14;
-    if (v < 1) v = 1;
-    if (v > 365) v = 365;
-    setDays(v);
-  });
 
   // ---- Tab switching ----
   document.addEventListener('click', function(e) {
@@ -531,7 +468,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     api('/v2/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: getDays() })
+      body: JSON.stringify({ days: 14 })
     }).then(function(data) {
       result.className = 'sync-result sync-success';
       result.innerHTML = 'Sync complete \u2014 <strong>' + (data.tasks_fetched || 0) + '</strong> fetched, <strong>' + (data.tasks_new || 0) + '</strong> new, <strong>' + (data.tasks_skipped || 0) + '</strong> skipped' +
@@ -562,7 +499,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     api('/v2/dry-run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: getDays() })
+      body: JSON.stringify({ days: 14 })
     }).then(function(data) {
       cachedDryRun = data;
       var s = data.summary || {};
@@ -770,7 +707,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     api('/v2/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: getDays() })
+      body: JSON.stringify({ days: 14 })
     }).then(function(preview) {
       var invoices = preview.invoices || (cachedDryRun ? cachedDryRun.invoices : []) || [];
       var totalAmount = (preview.summary ? preview.summary.total_invoice_amount : null) ||
@@ -810,7 +747,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     api('/v2/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: getDays(), confirm: true })
+      body: JSON.stringify({ days: 14, confirm: true })
     }).then(function(data) {
       $('confirmOverlay').classList.add('hidden');
 
@@ -887,6 +824,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
   // ---- Page Ready ----
   window.onPageReady = function() {
+    runDryRun();
     loadDocuments();
   };
 })();
