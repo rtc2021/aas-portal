@@ -315,12 +315,12 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "search_manuals_rag",
-    description: "Search 29,000+ technical manual chunks AND field knowledge using AI semantic search. Returns actual content excerpts with source citations PLUS AAS tribal knowledge tips. Use this for detailed technical questions about installation, troubleshooting, programming, wiring, specifications, and maintenance procedures.",
+    description: "Search 81,000+ technical manual chunks AND field knowledge using AI semantic search. Returns actual content excerpts with source citations PLUS AAS tribal knowledge tips. Use this for detailed technical questions about installation, troubleshooting, programming, wiring, specifications, and maintenance procedures.",
     input_schema: {
       type: "object" as const,
       properties: {
         query: { type: "string", description: "Natural language search - describe what you're looking for" },
-        manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax" },
+        manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax, lcn, von duprin, falcon, schlage, ives, steelcraft, hager, select, detex, bea, zero international, glynn-johnson, dexter, locknetics, adams rite, securitron, cal-royal, norton, sargent, ngp, banner solutions" },
         door_type: { type: "string", description: "Filter by door type: slide, swing, folding, icu, fire, revolving" },
         doc_type: { type: "string", description: "Filter by document type: installation, service, programming, wiring, parts, troubleshooting" },
         component: { type: "string", description: "Filter by component: motor, controller, sensor, belt, carrier, track, gearbox" },
@@ -536,7 +536,7 @@ const CUSTOMER_TOOLS: Anthropic.Tool[] = [
       type: "object" as const,
       properties: {
         query: { type: "string", description: "What you're looking for - describe the issue or topic" },
-        manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax" },
+        manufacturer: { type: "string", description: "Filter by manufacturer: horton, stanley, besam, nabco, record, tormax, lcn, von duprin, falcon, schlage, ives, steelcraft, hager, select, detex, bea, zero international, glynn-johnson, dexter, locknetics, adams rite, securitron, cal-royal, norton, sargent, ngp, banner solutions" },
         door_type: { type: "string", description: "Filter by door type: slide, swing, folding, icu, fire, revolving" },
         limit: { type: "number", description: "Number of results (default 5, max 10)" }
       },
@@ -2269,6 +2269,29 @@ function detectManufacturer(text: string): string | undefined {
   if (/tormax|ict|tx9[0-9]|uni-turn/.test(lower)) return "tormax";
   if (/\bbea\b|ixio|lzr[- ]?\w|eagle\s*\d/.test(lower)) return "bea";
   if (/boon\s*edam|tourlock|speedlane|circlelock/.test(lower)) return "boon edam";
+  // Allegion brands
+  if (/\blcn\b|lcn[- ]?\d{4}/.test(lower)) return "lcn";
+  if (/von\s*duprin|\bvd\b.*exit/.test(lower)) return "von duprin";
+  if (/\bfalcon\b.*(?:exit|panic|closer|lock)/.test(lower)) return "falcon";
+  if (/\bschlage\b|schlage\s*\w{2}\d/.test(lower)) return "schlage";
+  if (/\bives\b.*(?:hinge|stop|plate|pivot)/.test(lower)) return "ives";
+  if (/zero\s*international|zero\s*seal/.test(lower)) return "zero international";
+  if (/\bsteelcraft\b/.test(lower)) return "steelcraft";
+  if (/\bdexter\b.*(?:lock|knob|lever)/.test(lower)) return "dexter";
+  if (/locknetics|magnalock\b/.test(lower)) return "locknetics";
+  if (/glynn[- ]?johnson/.test(lower)) return "glynn-johnson";
+  // ASSA ABLOY sub-brands
+  if (/\bnorton\b.*(?:closer|operator|door)/.test(lower)) return "norton";
+  if (/\bsargent\b/.test(lower)) return "sargent";
+  if (/adams\s*rite|ms1850|ms[- ]?\d{4}/.test(lower)) return "adams rite";
+  if (/securitron|magnalock\b|m32\b|m62\b/.test(lower)) return "securitron";
+  // Other brands
+  if (/\bhager\b.*(?:hinge|roton|frame)|\broton\b/.test(lower)) return "hager";
+  if (/\bselect\b.*hinge|select\s+hinges/.test(lower)) return "select";
+  if (/cal[- ]?royal/.test(lower)) return "cal-royal";
+  if (/\bdetex\b/.test(lower)) return "detex";
+  if (/\bngp\b|national\s*guard\s*products/.test(lower)) return "ngp";
+  if (/banner\s*solutions/.test(lower)) return "banner solutions";
   return undefined;
 }
 
