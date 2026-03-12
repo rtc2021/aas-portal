@@ -2226,7 +2226,7 @@ IMPORTANT RESTRICTIONS:
       : "I processed your request but couldn't generate a text response. Check the tool results in the browser console.";
 
     const latestUserMsg = body.messages.filter((m) => m.role === "user").pop()?.content || "";
-    const manufacturer = detectManufacturer(latestUserMsg + " " + responseText) || body.doorContext?.manufacturer;
+    const manufacturer = detectManufacturer(latestUserMsg) || body.doorContext?.manufacturer;
 
     // ========== SAVE MEMORY (ADMIN/TECH) ==========
     if (memCtx) {
