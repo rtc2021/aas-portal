@@ -2278,7 +2278,7 @@ function detectManufacturer(text: string): string | undefined {
   if (/zero\s*international|zero\s*seal/.test(lower)) return "zero international";
   if (/\bsteelcraft\b/.test(lower)) return "steelcraft";
   if (/\bdexter\b.*(?:lock|knob|lever)/.test(lower)) return "dexter";
-  if (/locknetics|magnalock\b/.test(lower)) return "locknetics";
+  if (/locknetics/.test(lower)) return "locknetics";
   if (/glynn[- ]?johnson/.test(lower)) return "glynn-johnson";
   // ASSA ABLOY sub-brands
   if (/\bnorton\b.*(?:closer|operator|door)/.test(lower)) return "norton";
