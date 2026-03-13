@@ -310,6 +310,57 @@
       .header { flex-direction: column; align-items: flex-start; }
       .page-content { padding: 16px; padding-top: 70px; }
     }
+
+    /* ── Light Theme Overrides ── */
+    body.light-theme {
+      --bg-primary: #f7f8fc;
+      --bg-glass: rgba(255, 255, 255, 0.95);
+      --bg-card: rgba(255, 255, 255, 0.8);
+      --border-subtle: rgba(15, 23, 42, 0.08);
+      --border-glow: rgba(37, 99, 235, 0.4);
+      --text-primary: rgba(15, 23, 42, 0.95);
+      --text-secondary: rgba(15, 23, 42, 0.65);
+      --text-muted: rgba(15, 23, 42, 0.4);
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --glow-blue: 0 2px 8px rgba(15, 23, 42, 0.08);
+
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      background-image:
+        radial-gradient(ellipse at top, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.03) 0%, transparent 50%);
+    }
+
+    /* Auth overlay */
+    body.light-theme .auth-overlay { background: rgba(247, 248, 252, 0.98); }
+    body.light-theme .auth-card { background: rgba(255, 255, 255, 0.9); border-color: rgba(15, 23, 42, 0.08); box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06); }
+    body.light-theme .auth-subtitle { color: rgba(15, 23, 42, 0.55); }
+    body.light-theme .auth-btn { color: #ffffff; }
+    body.light-theme .auth-spinner { border-color: rgba(15, 23, 42, 0.1); border-top-color: #2563eb; }
+    body.light-theme #authLoadingText { color: rgba(15, 23, 42, 0.65); }
+
+    /* Cards & surfaces */
+    body.light-theme .card { box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04); backdrop-filter: none; -webkit-backdrop-filter: none; }
+    body.light-theme .card:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); }
+    body.light-theme .card-icon { background: rgba(37, 99, 235, 0.08); }
+    body.light-theme .action-btn { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04); }
+    body.light-theme .action-btn:hover { background: rgba(37, 99, 235, 0.06); }
+
+    /* Compliance icons */
+    body.light-theme .compliance-icon.aaadm { background: rgba(5, 150, 105, 0.1); }
+    body.light-theme .compliance-icon.fire { background: rgba(220, 38, 38, 0.1); }
+    body.light-theme .compliance-item { background: rgba(15, 23, 42, 0.03); }
+
+    /* Status dot glows — softer in light mode */
+    body.light-theme .status-pass .status-dot { box-shadow: 0 0 6px rgba(5, 150, 105, 0.4); }
+    body.light-theme .status-fail .status-dot { box-shadow: 0 0 6px rgba(220, 38, 38, 0.4); }
+    body.light-theme .status-pending .status-dot { box-shadow: 0 0 6px rgba(217, 119, 6, 0.4); }
+
+    /* Door ID gradient for light */
+    body.light-theme .door-id { background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, #2563eb 100%); -webkit-background-clip: text; background-clip: text; }
   </style>
 </head>
 <body>
