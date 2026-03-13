@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice Preview - Invoice Pipeline - AAS Portal</title>
+  <title>Pipeline Preview - AAS Portal</title>
 
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
 
@@ -28,7 +28,7 @@
       <div class="auth-spinner"></div>
       <p id="authLoadingText">Loading...</p>
       <h1 class="auth-title">Sign In Required</h1>
-      <p class="auth-subtitle">Please sign in to access Invoice Preview</p>
+      <p class="auth-subtitle">Please sign in to access Pipeline Preview</p>
       <button id="authLoginBtn" class="auth-btn">Sign In</button>
     </div>
   </div>
@@ -69,42 +69,53 @@
     <div class="page-wrapper">
       <header class="page-header">
         <div class="header-left">
-          <h1 class="page-title">Invoice <span>Preview</span></h1>
+          <h1 class="page-title">Pipeline <span>Preview</span></h1>
           <a href="/pipeline/" class="back-link">&larr; Pipeline Dashboard</a>
         </div>
         <div class="header-actions">
+          <button id="clearRefreshBtn" type="button">Clear &amp; Refresh</button>
           <button id="syncBtn" type="button">Sync Tasks</button>
           <button id="runBtn" type="button">Run Dry-Run</button>
-          <button id="processBtn" type="button" class="hidden">Create Invoices</button>
+          <button id="processBtn" type="button" class="hidden">Create Selected Invoices</button>
         </div>
       </header>
 
       <div id="syncResult" class="sync-result hidden"></div>
+      <div id="toastContainer"></div>
 
-      <div class="info-banner">V2 Pipeline &mdash; <strong>Sync</strong> tasks from Limble, <strong>preview</strong> visit-grouped invoices, then <strong>create</strong> in QuickBooks.</div>
+      <div class="info-banner">V2 Pipeline &mdash; <strong>Sync</strong> tasks from Limble, <strong>preview</strong> classified results, <strong>select</strong> invoices, then <strong>create</strong> in QuickBooks.</div>
 
       <div class="summary-bar" id="summaryBar">
         <div class="stat-pill"><div class="dot"></div><span class="label">Total</span><span class="value" id="sumTotal">&mdash;</span></div>
         <div class="stat-pill"><div class="dot dot-green"></div><span class="label">Invoices</span><span class="value" id="sumInvoices">&mdash;</span></div>
         <div class="stat-pill"><div class="dot dot-blue"></div><span class="label">Estimates</span><span class="value" id="sumEstimates">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-orange"></div><span class="label">Splits</span><span class="value" id="sumSplits">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-gray"></div><span class="label">Exists</span><span class="value" id="sumExists">&mdash;</span></div>
         <div class="stat-pill"><div class="dot dot-yellow"></div><span class="label">Holds</span><span class="value" id="sumHolds">&mdash;</span></div>
         <div class="stat-pill"><div class="dot dot-gray"></div><span class="label">Skips</span><span class="value" id="sumSkips">&mdash;</span></div>
-        <div class="stat-pill"><div class="dot dot-purple"></div><span class="label">Visits</span><span class="value" id="sumVisits">&mdash;</span></div>
+        <div class="stat-pill"><div class="dot dot-amber"></div><span class="label">Review</span><span class="value" id="sumReview">&mdash;</span></div>
         <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">&mdash;</span></div>
       </div>
 
       <div class="tab-nav" id="tabNav">
         <button class="tab-btn active" data-tab="invoices">Invoices <span id="tabCountInvoices"></span></button>
         <button class="tab-btn" data-tab="estimates">Estimates <span id="tabCountEstimates"></span></button>
+        <button class="tab-btn" data-tab="splits">Splits <span id="tabCountSplits"></span></button>
+        <button class="tab-btn" data-tab="already_exists">Already Exists <span id="tabCountExists"></span></button>
         <button class="tab-btn" data-tab="holds">Holds <span id="tabCountHolds"></span></button>
         <button class="tab-btn" data-tab="skips">Skips <span id="tabCountSkips"></span></button>
+        <button class="tab-btn" data-tab="needs_review">Needs Review <span id="tabCountReview"></span></button>
       </div>
 
       <div class="tab-content active" id="tab-invoices">
+        <div class="invoice-toolbar hidden" id="invoiceToolbar">
+          <label class="select-all-label"><input type="checkbox" id="selectAllCheck"> Select All</label>
+          <span id="selectedCount" class="selected-count">0 selected</span>
+        </div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Customer</th><th>Tier</th><th>Visits</th><th>Tasks</th><th class="text-right">Billed Hrs</th><th class="text-right">Total</th></tr></thead>
-            <tbody id="invoiceBody"><tr><td colspan="6" class="loading-cell">Run dry-run to preview invoices</td></tr></tbody>
+            <thead><tr><th class="th-check"><input type="checkbox" id="selectAllHead" title="Select All"></th><th>Customer</th><th>Tier</th><th>Visits</th><th>Tasks</th><th class="text-right">Billed Hrs</th><th class="text-right">Total</th></tr></thead>
+            <tbody id="invoiceBody"><tr><td colspan="7" class="loading-cell">Run dry-run to preview invoices</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -114,6 +125,24 @@
           <table class="data-table">
             <thead><tr><th>Task ID</th><th>Task Name</th><th>Customer</th><th>Signals</th></tr></thead>
             <tbody id="estimateBody"><tr><td colspan="4" class="loading-cell">Run dry-run to see estimate routing</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-splits">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Task Name</th><th>Customer</th><th>Reason</th></tr></thead>
+            <tbody id="splitBody"><tr><td colspan="3" class="loading-cell">Run dry-run to see split tasks</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-already_exists">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Task Name</th><th>Customer</th><th>QB Doc #</th><th>Reason</th></tr></thead>
+            <tbody id="existsBody"><tr><td colspan="4" class="loading-cell">Run dry-run to see existing documents</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -132,6 +161,15 @@
           <table class="data-table">
             <thead><tr><th>Task ID</th><th>Reason</th></tr></thead>
             <tbody id="skipBody"><tr><td colspan="2" class="loading-cell">Run dry-run to see skipped tasks</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-needs_review">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Task Name</th><th>Customer</th><th>Date Completed</th><th>Reason</th></tr></thead>
+            <tbody id="reviewBody"><tr><td colspan="4" class="loading-cell">Run dry-run to see tasks needing review</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -163,8 +201,8 @@
 
   <div class="confirm-overlay hidden" id="confirmOverlay">
     <div class="confirm-dialog">
-      <h3>Create Real Invoices?</h3>
-      <p>This will create <strong id="confirmCount">0</strong> invoice(s) totaling <strong id="confirmTotal">$0</strong> in QuickBooks and tag tasks as @Billed in Limble. This action cannot be undone.</p>
+      <h3 id="confirmTitle">Create Real Invoices?</h3>
+      <p id="confirmMessage">This will create <strong id="confirmCount">0</strong> invoice(s) totaling <strong id="confirmTotal">$0</strong> in QuickBooks and tag tasks as @Billed in Limble. This action cannot be undone.</p>
       <div class="confirm-tasks" id="confirmTasks"></div>
       <div class="confirm-actions">
         <button class="confirm-cancel" id="confirmCancel">Cancel</button>
@@ -185,31 +223,33 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hidden { display: none; }
 
-/* Sync button */
 #syncBtn { padding: 8px 18px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
 #syncBtn:hover { background: rgba(255,255,255,0.12); }
 #syncBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* Run button */
 #runBtn { padding: 8px 18px; background: #00d4ff; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
 #runBtn:hover { filter: brightness(1.1); }
 #runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* Process button */
 #processBtn { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
 #processBtn:hover { filter: brightness(1.1); }
 #processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+#clearRefreshBtn { padding: 8px 18px; background: rgba(255,204,0,0.08); color: #ffcc00; border: 1px solid rgba(255,204,0,0.25); border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+#clearRefreshBtn:hover { background: rgba(255,204,0,0.14); }
+#clearRefreshBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Sync result toast */
 .sync-result { padding: 10px 16px; margin-bottom: 16px; border-radius: 8px; font-size: 0.82rem; line-height: 1.5; }
 .sync-success { background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); color: rgba(255,255,255,0.8); }
 .sync-error { background: rgba(255,68,68,0.06); border: 1px solid rgba(255,68,68,0.2); color: #ff4444; }
 
-/* Info banner */
+#toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9500; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { padding: 12px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; animation: toastIn 300ms ease-out; backdrop-filter: blur(20px); }
+.toast-success { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+.toast-error { background: rgba(255,68,68,0.15); color: #ff4444; border: 1px solid rgba(255,68,68,0.3); }
+.toast-info { background: rgba(0,212,255,0.15); color: #00d4ff; border: 1px solid rgba(0,212,255,0.3); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
 .info-banner { padding: 10px 16px; margin-bottom: 16px; background: rgba(255,204,0,0.06); border: 1px solid rgba(255,204,0,0.2); border-radius: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
 .info-banner strong { color: #ffcc00; }
 
-/* Summary bar */
 .summary-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
 .stat-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 9999px; font-size: 0.85rem; backdrop-filter: blur(20px) saturate(180%); }
 .stat-pill .label { color: rgba(255,255,255,0.6); }
@@ -223,37 +263,50 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .dot-gray { background: rgba(255,255,255,0.35); }
 .dot-blue { background: #0096ff; box-shadow: 0 0 6px rgba(0,150,255,0.4); }
 .dot-purple { background: #a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.4); }
+.dot-orange { background: #ff8800; box-shadow: 0 0 6px rgba(255,136,0,0.4); }
+.dot-amber { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.4); }
 
-/* Tabs */
-.tab-nav { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0; }
-.tab-btn { padding: 10px 20px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: color 150ms, border-color 150ms; }
+.tab-nav { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 10px 20px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: color 150ms, border-color 150ms; white-space: nowrap; flex-shrink: 0; }
 .tab-btn:hover { color: rgba(255,255,255,0.8); }
 .tab-btn.active { color: #00d4ff; border-bottom-color: #00d4ff; }
 .tab-btn span { font-weight: 400; font-size: 0.78rem; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
-/* Table */
+.invoice-toolbar { display: flex; align-items: center; gap: 16px; padding: 10px 12px; margin-top: 8px; background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.12); border-radius: 8px; font-size: 0.82rem; }
+.invoice-toolbar.hidden { display: none; }
+.select-all-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: rgba(255,255,255,0.8); font-weight: 600; }
+.selected-count { color: rgba(255,255,255,0.5); }
+
+.th-check { width: 36px; text-align: center; }
+.td-check { text-align: center; }
+.data-table input[type="checkbox"] { width: 16px; height: 16px; accent-color: #00d4ff; cursor: pointer; vertical-align: middle; }
+
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .data-table th { text-align: left; padding: 10px 12px; color: rgba(255,255,255,0.5); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
 .data-table tr.result-row { cursor: pointer; transition: background 150ms; }
 .data-table tr.result-row:hover { background: rgba(255,255,255,0.03); }
+.data-table tr.result-row.selected { background: rgba(0,212,255,0.04); }
 .text-right { text-align: right; }
 .loading-cell { text-align: center; color: rgba(255,255,255,0.5); padding: 40px 12px; }
 
-/* Tier badges */
 .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
 
-/* Status badges */
 .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 .status-created { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid rgba(0,255,136,0.2); }
 .status-voided { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid rgba(255,68,68,0.2); }
 .status-sent { background: rgba(0,150,255,0.1); color: #0096ff; border: 1px solid rgba(0,150,255,0.2); }
 .status-paid { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
 
-/* Detail panel (expanded row) */
+.hold-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
+.split-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,136,0,0.1); color: #ff8800; border: 1px solid rgba(255,136,0,0.2); }
+.exists-badge { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.12); }
+.review-badge { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+
 .detail-row { display: none; }
 .detail-row.open { display: table-row; }
 .detail-panel { padding: 16px 12px; background: rgba(15,15,25,0.6); border-left: 3px solid rgba(0,212,255,0.4); }
@@ -264,7 +317,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .detail-table th { text-align: left; padding: 4px 8px; color: rgba(255,255,255,0.4); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .detail-table td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
 
-/* Visit blocks in invoice detail */
 .visit-block { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .visit-block:last-child { margin-bottom: 0; border-bottom: none; }
 .visit-header { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 0.82rem; color: rgba(255,255,255,0.8); flex-wrap: wrap; }
@@ -274,15 +326,10 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .line-desc-only td { color: rgba(255,255,255,0.4); font-style: italic; }
 .line-subtotal td { font-weight: 700; border-top: 1px solid rgba(255,255,255,0.1); }
 
-/* Signal / hold reason tags */
-.hold-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,204,0,0.1); color: #ffcc00; border: 1px solid rgba(255,204,0,0.2); }
-
-/* Empty state */
 .empty-state { text-align: center; padding: 60px 40px; background: rgba(20,20,30,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
 .empty-state p { color: rgba(255,255,255,0.6); margin: 0 0 20px; }
 .back-btn { color: #00d4ff; text-decoration: none; font-weight: 600; }
 
-/* Confirm overlay */
 .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
 .confirm-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 28px; max-width: 480px; width: 90%; }
 .confirm-dialog h3 { font-size: 1.1rem; margin: 0 0 10px; color: #fff; }
@@ -296,7 +343,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .confirm-go { padding: 8px 18px; background: #00ff88; color: #0a0a0f; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
 .confirm-go:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Process results */
 .process-results { margin-top: 24px; padding: 20px; background: rgba(20,20,30,0.9); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; }
 .process-results-title { font-size: 1rem; font-weight: 700; margin: 0 0 14px; color: #00ff88; }
 .process-result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 0.85rem; }
@@ -307,12 +353,10 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .process-result-status.error { color: #ff4444; }
 .process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
 
-/* Recent docs */
 .recent-docs { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); }
 .view-all-link { font-size: 0.82rem; color: #00d4ff; text-decoration: none; }
 .view-all-link:hover { text-decoration: underline; }
 
-/* Mobile */
 @media (max-width: 768px) {
   .page-wrapper { padding: 16px; }
   .page-header { flex-direction: column; }
@@ -323,9 +367,9 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   .data-table { font-size: 0.8rem; }
   .data-table th, .data-table td { padding: 8px 6px; }
   .visit-header { gap: 8px; font-size: 0.78rem; }
+  .invoice-toolbar { flex-wrap: wrap; gap: 8px; }
 }
 
-/* Light theme */
 body.light-theme::before { opacity: 0; }
 body.light-theme .back-link,
 body.light-theme .loading-cell { color: rgba(26,26,46,0.6); }
@@ -335,11 +379,13 @@ body.light-theme #runBtn { color: #fff; }
 body.light-theme #processBtn { color: #fff; }
 body.light-theme .confirm-go { color: #fff; }
 body.light-theme #syncBtn { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.8); border-color: rgba(0,0,0,0.15); }
+body.light-theme #clearRefreshBtn { background: rgba(200,150,0,0.06); color: #997a00; border-color: rgba(200,150,0,0.2); }
 body.light-theme .stat-pill { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .stat-pill .label { color: rgba(26,26,46,0.6); }
 body.light-theme .data-table th { color: rgba(26,26,46,0.5); border-bottom-color: rgba(0,0,0,0.1); }
 body.light-theme .data-table td { border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .data-table tr.result-row:hover { background: rgba(0,0,0,0.03); }
+body.light-theme .data-table tr.result-row.selected { background: rgba(0,140,220,0.04); }
 body.light-theme .tab-nav { border-bottom-color: rgba(0,0,0,0.1); }
 body.light-theme .tab-btn { color: rgba(26,26,46,0.5); }
 body.light-theme .tab-btn:hover { color: rgba(26,26,46,0.8); }
@@ -356,12 +402,17 @@ body.light-theme .min-badge { background: rgba(200,150,0,0.1); color: #997a00; b
 body.light-theme .line-desc-only td { color: rgba(26,26,46,0.4); }
 body.light-theme .line-subtotal td { border-top-color: rgba(0,0,0,0.1); }
 body.light-theme .hold-reason { background: rgba(200,150,0,0.1); color: #997a00; border-color: rgba(200,150,0,0.2); }
+body.light-theme .split-reason { background: rgba(200,100,0,0.1); color: #b35c00; border-color: rgba(200,100,0,0.2); }
+body.light-theme .exists-badge { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.6); border-color: rgba(0,0,0,0.1); }
+body.light-theme .review-badge { background: rgba(200,130,0,0.1); color: #a36800; border-color: rgba(200,130,0,0.2); }
 body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
 body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
 body.light-theme .dot-gray { background: rgba(0,0,0,0.25); }
 body.light-theme .dot-blue { background: #0070b8; box-shadow: 0 0 6px rgba(0,112,184,0.3); }
 body.light-theme .dot-purple { background: #7c3aed; box-shadow: 0 0 6px rgba(124,58,237,0.3); }
+body.light-theme .dot-orange { background: #cc6e00; box-shadow: 0 0 6px rgba(204,110,0,0.3); }
+body.light-theme .dot-amber { background: #b47c00; box-shadow: 0 0 6px rgba(180,124,0,0.3); }
 body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
 body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
 body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
@@ -384,6 +435,12 @@ body.light-theme .status-created { background: rgba(0,160,80,0.08); color: #0088
 body.light-theme .status-voided { background: rgba(200,40,40,0.08); color: #cc2828; border-color: rgba(200,40,40,0.2); }
 body.light-theme .status-sent { background: rgba(0,120,200,0.08); color: #0070b8; border-color: rgba(0,120,200,0.2); }
 body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844; border-color: rgba(0,160,80,0.3); }
+body.light-theme .invoice-toolbar { background: rgba(0,120,200,0.04); border-color: rgba(0,120,200,0.1); }
+body.light-theme .select-all-label { color: rgba(26,26,46,0.8); }
+body.light-theme .selected-count { color: rgba(26,26,46,0.5); }
+body.light-theme .toast-success { background: rgba(0,160,80,0.12); color: #008844; border-color: rgba(0,160,80,0.25); }
+body.light-theme .toast-error { background: rgba(200,40,40,0.12); color: #cc2828; border-color: rgba(200,40,40,0.25); }
+body.light-theme .toast-info { background: rgba(0,120,200,0.12); color: #0070b8; border-color: rgba(0,120,200,0.25); }
 </style>
 
 <script>
@@ -408,6 +465,8 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
   var API_BASE = '/api/pipeline';
   var cachedDryRun = null;
+  var selectedInvoices = {};
+  var confirmAction = null;
 
   function api(path, opts) {
     opts = opts || {};
@@ -429,12 +488,26 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
   function $(id) { return document.getElementById(id); }
   function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
   function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
   function formatDate(d) {
     if (!d) return '\u2014';
     var dt = new Date(d);
     return isNaN(dt) ? '\u2014' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
+
+  // ---- Toast ----
+  function showToast(msg, type) {
+    var container = $('toastContainer');
+    var el = document.createElement('div');
+    el.className = 'toast toast-' + (type || 'info');
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
+  }
+
+  // ---- Safe HTML builder ----
+  function setHTML(el, html) { el.innerHTML = html; }
 
   // ---- Tab switching ----
   document.addEventListener('click', function(e) {
@@ -450,12 +523,84 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
   // ---- Expand/collapse rows ----
   document.addEventListener('click', function(e) {
     if (e.target.closest('.tab-btn')) return;
+    if (e.target.closest('input[type="checkbox"]')) return;
     var row = e.target.closest('.result-row');
     if (!row) return;
     var idx = row.getAttribute('data-idx');
     var detail = $('detail-' + idx);
     if (detail) detail.classList.toggle('open');
   });
+
+  // ---- Checkbox selection ----
+  function updateSelection() {
+    var invoices = cachedDryRun ? (cachedDryRun.invoices || []) : [];
+    var count = Object.keys(selectedInvoices).length;
+    var toolbar = $('invoiceToolbar');
+    var processBtn = $('processBtn');
+
+    if (invoices.length > 0) {
+      toolbar.classList.remove('hidden');
+    }
+
+    if (count > 0) {
+      processBtn.textContent = 'Create Selected Invoices (' + count + ')';
+      processBtn.classList.remove('hidden');
+    } else {
+      processBtn.classList.add('hidden');
+    }
+
+    $('selectedCount').textContent = count + ' of ' + invoices.length + ' selected';
+
+    var selectAllHead = $('selectAllHead');
+    var selectAllCheck = $('selectAllCheck');
+    selectAllHead.checked = count === invoices.length && invoices.length > 0;
+    selectAllHead.indeterminate = count > 0 && count < invoices.length;
+    selectAllCheck.checked = selectAllHead.checked;
+    selectAllCheck.indeterminate = selectAllHead.indeterminate;
+  }
+
+  function toggleSelectAll(checked) {
+    var invoices = cachedDryRun ? (cachedDryRun.invoices || []) : [];
+    selectedInvoices = {};
+    if (checked) {
+      invoices.forEach(function(inv, i) { selectedInvoices[i] = true; });
+    }
+    document.querySelectorAll('.inv-checkbox').forEach(function(cb) { cb.checked = checked; });
+    document.querySelectorAll('.result-row[data-idx^="inv-"]').forEach(function(row) {
+      row.classList.toggle('selected', checked);
+    });
+    updateSelection();
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'selectAllHead' || e.target.id === 'selectAllCheck') {
+      toggleSelectAll(e.target.checked);
+      return;
+    }
+    if (e.target.classList.contains('inv-checkbox')) {
+      var idx = parseInt(e.target.getAttribute('data-inv-idx'));
+      if (e.target.checked) {
+        selectedInvoices[idx] = true;
+      } else {
+        delete selectedInvoices[idx];
+      }
+      var row = e.target.closest('.result-row');
+      if (row) row.classList.toggle('selected', e.target.checked);
+      updateSelection();
+    }
+  });
+
+  function getSelectedTaskIds() {
+    var invoices = cachedDryRun ? (cachedDryRun.invoices || []) : [];
+    var taskIds = [];
+    Object.keys(selectedInvoices).forEach(function(idx) {
+      var inv = invoices[parseInt(idx)];
+      if (inv && inv.all_task_ids) {
+        taskIds = taskIds.concat(inv.all_task_ids);
+      }
+    });
+    return taskIds;
+  }
 
   // ---- Sync ----
   function syncTasks() {
@@ -471,18 +616,61 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
       body: JSON.stringify({ days: 14 })
     }).then(function(data) {
       result.className = 'sync-result sync-success';
-      result.innerHTML = 'Sync complete \u2014 <strong>' + (data.tasks_fetched || 0) + '</strong> fetched, <strong>' + (data.tasks_new || 0) + '</strong> new, <strong>' + (data.tasks_skipped || 0) + '</strong> skipped' +
-        (data.errors && data.errors.length ? ', <span style="color:#ff4444">' + data.errors.length + ' errors</span>' : '');
+      setHTML(result, 'Sync complete \u2014 <strong>' + esc(String(data.tasks_fetched || 0)) + '</strong> fetched, <strong>' + esc(String(data.tasks_new || 0)) + '</strong> new, <strong>' + esc(String(data.tasks_skipped || 0)) + '</strong> skipped' +
+        (data.errors && data.errors.length ? ', <span style="color:#ff4444">' + esc(String(data.errors.length)) + ' errors</span>' : ''));
+      showToast('Sync complete', 'success');
     }).catch(function(e) {
       result.className = 'sync-result sync-error';
       result.textContent = 'Sync failed: ' + e.message;
+      showToast('Sync failed: ' + e.message, 'error');
     }).finally(function() {
       btn.disabled = false;
       btn.textContent = 'Sync Tasks';
     });
   }
 
+  // ---- Clear & Refresh ----
+  function clearAndRefresh() {
+    var btn = $('clearRefreshBtn');
+    btn.disabled = true;
+    btn.textContent = 'Clearing...';
+
+    api('/v2/cache/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }).then(function() {
+      showToast('Cache cleared', 'info');
+      btn.textContent = 'Syncing...';
+      return api('/v2/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 14 })
+      });
+    }).then(function() {
+      btn.textContent = 'Running...';
+      return runDryRunAsync();
+    }).then(function() {
+      showToast('Refresh complete', 'success');
+    }).catch(function(e) {
+      showToast('Clear & Refresh failed: ' + e.message, 'error');
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Clear & Refresh';
+    });
+  }
+
   // ---- Dry-Run ----
+  function runDryRunAsync() {
+    return api('/v2/dry-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 14 })
+    }).then(function(data) {
+      processDryRunData(data);
+      return data;
+    });
+  }
+
   function runDryRun() {
     var btn = $('runBtn');
     btn.disabled = true;
@@ -490,95 +678,111 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     $('processBtn').classList.add('hidden');
     $('processResults').classList.add('hidden');
     $('emptyState').classList.add('hidden');
+    selectedInvoices = {};
 
-    $('invoiceBody').innerHTML = '<tr><td colspan="6" class="loading-cell">Running dry-run...</td></tr>';
-    $('estimateBody').innerHTML = '<tr><td colspan="4" class="loading-cell">Running...</td></tr>';
-    $('holdBody').innerHTML = '<tr><td colspan="3" class="loading-cell">Running...</td></tr>';
-    $('skipBody').innerHTML = '<tr><td colspan="2" class="loading-cell">Running...</td></tr>';
+    setHTML($('invoiceBody'), '<tr><td colspan="7" class="loading-cell">Running dry-run...</td></tr>');
+    setHTML($('estimateBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
+    setHTML($('splitBody'), '<tr><td colspan="3" class="loading-cell">Running...</td></tr>');
+    setHTML($('existsBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
+    setHTML($('holdBody'), '<tr><td colspan="3" class="loading-cell">Running...</td></tr>');
+    setHTML($('skipBody'), '<tr><td colspan="2" class="loading-cell">Running...</td></tr>');
+    setHTML($('reviewBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
 
-    api('/v2/dry-run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: 14 })
-    }).then(function(data) {
-      cachedDryRun = data;
-      var s = data.summary || {};
-
-      $('sumTotal').textContent = s.total_tasks || 0;
-      $('sumInvoices').textContent = s.invoice_tasks || 0;
-      $('sumEstimates').textContent = s.estimate_tasks || 0;
-      $('sumHolds').textContent = s.hold_tasks || 0;
-      $('sumSkips').textContent = s.skip_tasks || 0;
-      $('sumVisits').textContent = s.visits_grouped || 0;
-      $('sumAmount').textContent = money(s.total_invoice_amount);
-
-      var invoices = data.invoices || [];
-      var estimates = data.estimates || [];
-      var holds = data.holds || [];
-      var skips = data.skips || [];
-
-      $('tabCountInvoices').textContent = '(' + invoices.length + ')';
-      $('tabCountEstimates').textContent = '(' + estimates.length + ')';
-      $('tabCountHolds').textContent = '(' + holds.length + ')';
-      $('tabCountSkips').textContent = '(' + skips.length + ')';
-
-      renderInvoices(invoices);
-      renderEstimates(estimates);
-      renderHolds(holds);
-      renderSkips(skips);
-
-      if (invoices.length > 0) {
-        $('processBtn').textContent = 'Create Invoices (' + invoices.length + ')';
-        $('processBtn').classList.remove('hidden');
-      }
-
-      if (!s.total_tasks) {
-        $('emptyState').classList.remove('hidden');
-      }
-    }).catch(function(e) {
+    runDryRunAsync().catch(function(e) {
       console.error('[Preview] Dry-run error:', e);
-      $('invoiceBody').innerHTML = '<tr><td colspan="6" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + e.message + '</td></tr>';
+      setHTML($('invoiceBody'), '<tr><td colspan="7" class="loading-cell" style="color:#ff4444;">Dry-run failed: ' + esc(e.message) + '</td></tr>');
+      showToast('Dry-run failed: ' + e.message, 'error');
     }).finally(function() {
       btn.disabled = false;
       btn.textContent = 'Run Dry-Run';
     });
   }
 
+  function processDryRunData(data) {
+    cachedDryRun = data;
+    var s = data.summary || {};
+
+    $('sumTotal').textContent = s.total_tasks || 0;
+    $('sumInvoices').textContent = s.invoice_tasks || 0;
+    $('sumEstimates').textContent = s.estimate_tasks || 0;
+    $('sumSplits').textContent = s.split_tasks || 0;
+    $('sumExists').textContent = s.already_exists_tasks || 0;
+    $('sumHolds').textContent = s.hold_tasks || 0;
+    $('sumSkips').textContent = s.skip_tasks || 0;
+    $('sumReview').textContent = s.needs_review_tasks || 0;
+    $('sumAmount').textContent = money(s.total_invoice_amount);
+
+    var invoices = data.invoices || [];
+    var estimates = data.estimates || [];
+    var splits = data.splits || [];
+    var already_exists = data.already_exists || [];
+    var holds = data.holds || [];
+    var skips = data.skips || [];
+    var needs_review = data.needs_review || [];
+
+    $('tabCountInvoices').textContent = '(' + invoices.length + ')';
+    $('tabCountEstimates').textContent = '(' + estimates.length + ')';
+    $('tabCountSplits').textContent = '(' + splits.length + ')';
+    $('tabCountExists').textContent = '(' + already_exists.length + ')';
+    $('tabCountHolds').textContent = '(' + holds.length + ')';
+    $('tabCountSkips').textContent = '(' + skips.length + ')';
+    $('tabCountReview').textContent = '(' + needs_review.length + ')';
+
+    renderInvoices(invoices);
+    renderEstimates(estimates);
+    renderSplits(splits);
+    renderAlreadyExists(already_exists);
+    renderHolds(holds);
+    renderSkips(skips);
+    renderNeedsReview(needs_review);
+
+    selectedInvoices = {};
+    updateSelection();
+
+    if (!s.total_tasks) {
+      $('emptyState').classList.remove('hidden');
+    }
+  }
+
   // ---- Render Invoices ----
   function renderInvoices(invoices) {
     var tbody = $('invoiceBody');
+    var toolbar = $('invoiceToolbar');
     if (!invoices.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No invoices to create.</td></tr>';
+      setHTML(tbody, '<tr><td colspan="7" class="loading-cell">No invoices to create.</td></tr>');
+      toolbar.classList.add('hidden');
       return;
     }
 
-    tbody.innerHTML = invoices.map(function(inv, i) {
+    toolbar.classList.remove('hidden');
+    setHTML(tbody, invoices.map(function(inv, i) {
       var billedHrs = (inv.visits || []).reduce(function(sum, v) { return sum + (v.billed_hours || 0); }, 0);
       var row = '<tr class="result-row" data-idx="inv-' + i + '">' +
-        '<td>' + (inv.customer_name || '\u2014') + '</td>' +
-        '<td>' + (inv.tier ? '<span class="tier-badge">' + inv.tier + '</span>' : '\u2014') + '</td>' +
+        '<td class="td-check"><input type="checkbox" class="inv-checkbox" data-inv-idx="' + i + '"></td>' +
+        '<td>' + esc(inv.customer_name) + '</td>' +
+        '<td>' + (inv.tier ? '<span class="tier-badge">' + esc(inv.tier) + '</span>' : '\u2014') + '</td>' +
         '<td>' + (inv.visits || []).length + '</td>' +
         '<td>' + (inv.all_task_ids || []).length + '</td>' +
         '<td class="text-right">' + billedHrs.toFixed(1) + '</td>' +
         '<td class="text-right">' + money(inv.total) + '</td>' +
         '</tr>';
-      row += '<tr class="detail-row" id="detail-inv-' + i + '"><td colspan="6">' + buildInvoiceDetail(inv) + '</td></tr>';
+      row += '<tr class="detail-row" id="detail-inv-' + i + '"><td colspan="7">' + buildInvoiceDetail(inv) + '</td></tr>';
       return row;
-    }).join('');
+    }).join(''));
   }
 
   function buildInvoiceDetail(inv) {
     var html = '<div class="detail-panel">';
 
     if (inv._customer_memo) {
-      html += '<div class="detail-section"><h4>Customer Memo</h4><p style="margin:0;font-size:0.82rem;color:rgba(255,255,255,0.7);">' + inv._customer_memo + '</p></div>';
+      html += '<div class="detail-section"><h4>Customer Memo</h4><p style="margin:0;font-size:0.82rem;color:rgba(255,255,255,0.7);">' + esc(inv._customer_memo) + '</p></div>';
     }
 
     (inv.visits || []).forEach(function(visit) {
       html += '<div class="visit-block">';
       html += '<div class="visit-header">';
-      html += '<span class="visit-date">' + formatDate(visit.visit_date) + '</span>';
-      html += '<span>' + (visit.tech_names || []).join(', ') + '</span>';
+      html += '<span class="visit-date">' + esc(formatDate(visit.visit_date)) + '</span>';
+      html += '<span>' + esc((visit.tech_names || []).join(', ')) + '</span>';
       html += '<span class="visit-hours">' + (visit.actual_hours || 0).toFixed(1) + 'h actual \u2192 ' + (visit.billed_hours || 0).toFixed(1) + 'h billed</span>';
       if (visit.minimum_applied) {
         html += '<span class="min-badge">2.5h minimum</span>';
@@ -587,7 +791,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
       if (visit._task_names && visit._task_names.length) {
         html += '<div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin:4px 0 8px;padding-left:4px;">';
-        html += visit._task_names.join(' \u2022 ');
+        html += esc(visit._task_names.join(' \u2022 '));
         html += '</div>';
       }
 
@@ -595,12 +799,12 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
         html += '<table class="detail-table"><thead><tr><th>Description</th><th>Qty</th><th class="text-right">Unit Price</th><th class="text-right">Amount</th></tr></thead><tbody>';
         visit.lines.forEach(function(l) {
           if (l.DetailType === 'DescriptionOnly') {
-            html += '<tr class="line-desc-only"><td colspan="4">' + (l.Description || '') + '</td></tr>';
+            html += '<tr class="line-desc-only"><td colspan="4">' + esc(l.Description || '') + '</td></tr>';
           } else if (l.DetailType === 'SubTotalLineDetail') {
             html += '<tr class="line-subtotal"><td colspan="3">Subtotal</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
           } else {
             var detail = l.SalesItemLineDetail || {};
-            html += '<tr><td>' + (l.Description || '\u2014') + '</td><td>' + (detail.Qty || '') + '</td><td class="text-right">' + (detail.UnitPrice ? money(detail.UnitPrice) : '') + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
+            html += '<tr><td>' + esc(l.Description || '\u2014') + '</td><td>' + esc(String(detail.Qty || '')) + '</td><td class="text-right">' + (detail.UnitPrice ? money(detail.UnitPrice) : '') + '</td><td class="text-right">' + money(l.Amount) + '</td></tr>';
           }
         });
         html += '</tbody></table>';
@@ -611,7 +815,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
     if (inv.qb_invoice_preview) {
       html += '<div class="detail-section"><h4>QB Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.6);font-size:0.72rem;max-height:300px;overflow-y:auto;">' +
-        JSON.stringify(inv.qb_invoice_preview, null, 2) + '</pre></div>';
+        esc(JSON.stringify(inv.qb_invoice_preview, null, 2)) + '</pre></div>';
     }
 
     html += '</div>';
@@ -622,21 +826,21 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
   function renderEstimates(estimates) {
     var tbody = $('estimateBody');
     if (!estimates.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="loading-cell">No tasks routed to estimates.</td></tr>';
+      setHTML(tbody, '<tr><td colspan="4" class="loading-cell">No tasks routed to estimates.</td></tr>');
       return;
     }
 
-    tbody.innerHTML = estimates.map(function(est, i) {
+    setHTML(tbody, estimates.map(function(est, i) {
       var signals = (est.estimate_signals || []).map(function(s) { return s.replace(/_/g, ' '); }).join(', ');
       var row = '<tr class="result-row" data-idx="est-' + i + '">' +
-        '<td>' + (est.limble_task_id || '\u2014') + '</td>' +
-        '<td>' + truncate(est.task_name, 60) + '</td>' +
-        '<td>' + (est.customer_name || '\u2014') + '</td>' +
-        '<td>' + signals + '</td>' +
+        '<td>' + esc(String(est.limble_task_id || '\u2014')) + '</td>' +
+        '<td>' + esc(truncate(est.task_name, 60)) + '</td>' +
+        '<td>' + esc(est.customer_name || '\u2014') + '</td>' +
+        '<td>' + esc(signals) + '</td>' +
         '</tr>';
       row += '<tr class="detail-row" id="detail-est-' + i + '"><td colspan="4">' + buildEstimateDetail(est) + '</td></tr>';
       return row;
-    }).join('');
+    }).join(''));
   }
 
   function buildEstimateDetail(est) {
@@ -645,7 +849,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     if (est.labor_entries && est.labor_entries.length) {
       html += '<div class="detail-section"><h4>Labor Entries</h4><table class="detail-table"><thead><tr><th>User ID</th><th>Time (hrs)</th></tr></thead><tbody>';
       est.labor_entries.forEach(function(le) {
-        html += '<tr><td>' + (le.userID || '\u2014') + '</td><td>' + ((le.timeSpent || 0) / 3600).toFixed(1) + '</td></tr>';
+        html += '<tr><td>' + esc(String(le.userID || '\u2014')) + '</td><td>' + ((le.timeSpent || 0) / 3600).toFixed(1) + '</td></tr>';
       });
       html += '</tbody></table></div>';
     }
@@ -653,7 +857,7 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     if (est.parts_usage && est.parts_usage.length) {
       html += '<div class="detail-section"><h4>Parts Usage</h4><table class="detail-table"><thead><tr><th>Part</th><th>Qty</th></tr></thead><tbody>';
       est.parts_usage.forEach(function(p) {
-        html += '<tr><td>' + (p.name || 'Part ' + p.partID) + '</td><td>' + (p.usedCount || 0) + '</td></tr>';
+        html += '<tr><td>' + esc(p.name || 'Part ' + p.partID) + '</td><td>' + (p.usedCount || 0) + '</td></tr>';
       });
       html += '</tbody></table></div>';
     }
@@ -666,132 +870,204 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     return html;
   }
 
+  // ---- Render Splits ----
+  function renderSplits(splits) {
+    var tbody = $('splitBody');
+    if (!splits.length) {
+      setHTML(tbody, '<tr><td colspan="3" class="loading-cell">No split tasks.</td></tr>');
+      return;
+    }
+    setHTML(tbody, splits.map(function(s) {
+      return '<tr>' +
+        '<td>' + esc(truncate(s.task_name, 60)) + '</td>' +
+        '<td>' + esc(s.customer_name || '\u2014') + '</td>' +
+        '<td><span class="split-reason">' + esc((s.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
+        '</tr>';
+    }).join(''));
+  }
+
+  // ---- Render Already Exists ----
+  function renderAlreadyExists(items) {
+    var tbody = $('existsBody');
+    if (!items.length) {
+      setHTML(tbody, '<tr><td colspan="4" class="loading-cell">No existing documents.</td></tr>');
+      return;
+    }
+    setHTML(tbody, items.map(function(item) {
+      return '<tr>' +
+        '<td>' + esc(truncate(item.task_name, 60)) + '</td>' +
+        '<td>' + esc(item.customer_name || '\u2014') + '</td>' +
+        '<td><span class="exists-badge">' + esc(item.qb_doc_number || '\u2014') + '</span></td>' +
+        '<td><span class="exists-badge">' + esc((item.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
+        '</tr>';
+    }).join(''));
+  }
+
   // ---- Render Holds ----
   function renderHolds(holds) {
     var tbody = $('holdBody');
     if (!holds.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="loading-cell">No tasks on hold.</td></tr>';
+      setHTML(tbody, '<tr><td colspan="3" class="loading-cell">No tasks on hold.</td></tr>');
       return;
     }
-    tbody.innerHTML = holds.map(function(h) {
+    setHTML(tbody, holds.map(function(h) {
       return '<tr>' +
-        '<td>' + (h.limble_task_id || '\u2014') + '</td>' +
-        '<td><span class="hold-reason">' + (h.reason || '\u2014').replace(/_/g, ' ') + '</span></td>' +
-        '<td>' + (h.customer_name || '\u2014') + '</td>' +
+        '<td>' + esc(String(h.limble_task_id || '\u2014')) + '</td>' +
+        '<td><span class="hold-reason">' + esc((h.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
+        '<td>' + esc(h.customer_name || '\u2014') + '</td>' +
         '</tr>';
-    }).join('');
+    }).join(''));
   }
 
   // ---- Render Skips ----
   function renderSkips(skips) {
     var tbody = $('skipBody');
     if (!skips.length) {
-      tbody.innerHTML = '<tr><td colspan="2" class="loading-cell">No tasks skipped.</td></tr>';
+      setHTML(tbody, '<tr><td colspan="2" class="loading-cell">No tasks skipped.</td></tr>');
       return;
     }
-    tbody.innerHTML = skips.map(function(s) {
+    setHTML(tbody, skips.map(function(s) {
       return '<tr>' +
-        '<td>' + (s.limble_task_id || '\u2014') + '</td>' +
-        '<td><span class="hold-reason">' + (s.reason || '\u2014').replace(/_/g, ' ') + '</span></td>' +
+        '<td>' + esc(String(s.limble_task_id || '\u2014')) + '</td>' +
+        '<td><span class="hold-reason">' + esc((s.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
         '</tr>';
-    }).join('');
+    }).join(''));
   }
 
-  // ---- Process ----
-  $('processBtn').addEventListener('click', function() {
-    var btn = $('processBtn');
-    btn.disabled = true;
-    var origText = btn.textContent;
-    btn.textContent = 'Checking...';
+  // ---- Render Needs Review ----
+  function renderNeedsReview(items) {
+    var tbody = $('reviewBody');
+    if (!items.length) {
+      setHTML(tbody, '<tr><td colspan="4" class="loading-cell">No tasks needing review.</td></tr>');
+      return;
+    }
+    setHTML(tbody, items.map(function(item) {
+      return '<tr>' +
+        '<td>' + esc(truncate(item.task_name, 60)) + '</td>' +
+        '<td>' + esc(item.customer_name || '\u2014') + '</td>' +
+        '<td>' + esc(formatDate(item.date_completed)) + '</td>' +
+        '<td><span class="review-badge">' + esc((item.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
+        '</tr>';
+    }).join(''));
+  }
 
-    api('/v2/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: 14 })
-    }).then(function(preview) {
-      var invoices = preview.invoices || (cachedDryRun ? cachedDryRun.invoices : []) || [];
-      var totalAmount = (preview.summary ? preview.summary.total_invoice_amount : null) ||
-        (cachedDryRun && cachedDryRun.summary ? cachedDryRun.summary.total_invoice_amount : 0);
+  // ---- Confirm dialog ----
+  function showConfirm(title, message, taskListHtml, goText, onConfirm) {
+    $('confirmTitle').textContent = title;
+    setHTML($('confirmMessage'), message);
+    setHTML($('confirmTasks'), taskListHtml);
+    $('confirmGo').textContent = goText;
+    $('confirmOverlay').classList.remove('hidden');
+    confirmAction = onConfirm;
+  }
 
-      $('confirmCount').textContent = invoices.length;
-      $('confirmTotal').textContent = money(totalAmount);
-      $('confirmTasks').innerHTML = invoices.map(function(inv) {
-        return '<div class="confirm-task-row"><span>' + (inv.customer_name || '\u2014') + '</span><span>' + money(inv.total) + '</span></div>';
-      }).join('');
-
-      $('confirmOverlay').classList.remove('hidden');
-    }).catch(function(e) {
-      console.error('[Preview] Process preview error:', e);
-      alert('Process preview failed: ' + e.message);
-    }).finally(function() {
-      btn.disabled = false;
-      btn.textContent = origText;
-    });
-  });
-
-  $('confirmCancel').addEventListener('click', function() {
+  function hideConfirm() {
     $('confirmOverlay').classList.add('hidden');
-  });
+    confirmAction = null;
+  }
 
+  $('confirmCancel').addEventListener('click', hideConfirm);
   $('confirmOverlay').addEventListener('click', function(e) {
-    if (e.target === this) $('confirmOverlay').classList.add('hidden');
+    if (e.target === this) hideConfirm();
   });
 
   $('confirmGo').addEventListener('click', function() {
-    var goBtn = $('confirmGo');
-    var cancelBtn = $('confirmCancel');
-    goBtn.disabled = true;
-    goBtn.textContent = 'Processing...';
-    cancelBtn.style.display = 'none';
+    if (confirmAction) confirmAction();
+  });
 
-    api('/v2/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ days: 14, confirm: true })
-    }).then(function(data) {
-      $('confirmOverlay').classList.add('hidden');
+  // ---- Process (create selected invoices) ----
+  $('processBtn').addEventListener('click', function() {
+    var invoices = cachedDryRun ? (cachedDryRun.invoices || []) : [];
+    var selectedIdxs = Object.keys(selectedInvoices).map(Number);
+    if (!selectedIdxs.length) return;
 
-      var body = $('processResultsBody');
-      var created = data.created_invoices || [];
-      var summary = data.summary || {};
+    var selectedInvs = selectedIdxs.map(function(i) { return invoices[i]; }).filter(Boolean);
+    var totalAmount = selectedInvs.reduce(function(sum, inv) { return sum + (inv.total || 0); }, 0);
 
-      var summaryHtml = '<div style="display:flex;gap:16px;margin-bottom:14px;font-size:0.85rem;flex-wrap:wrap;">' +
-        '<span>Created: <strong>' + (summary.invoices_created || 0) + '</strong></span>' +
-        '<span>Amount: <strong>' + money(summary.total_amount) + '</strong></span>' +
-        '<span>Tasks Tagged: <strong>' + (summary.tasks_tagged_billed || 0) + '</strong></span>' +
-        (summary.errors ? '<span style="color:#ff4444;">Errors: <strong>' + summary.errors + '</strong></span>' : '') +
-        '</div>';
+    var taskListHtml = selectedInvs.map(function(inv) {
+      return '<div class="confirm-task-row"><span>' + esc(inv.customer_name || '\u2014') + '</span><span>' + money(inv.total) + '</span></div>';
+    }).join('');
 
-      if (!created.length) {
-        body.innerHTML = summaryHtml + '<p style="color:rgba(255,255,255,0.5);">No invoices returned.</p>';
-      } else {
-        body.innerHTML = summaryHtml + created.map(function(inv) {
-          var tagOk = (inv.tag_results || []).every(function(t) { return t.status === 200; });
-          return '<div class="process-result-row">' +
-            '<div>' +
-            '<span class="process-result-task">' + (inv.customer_name || '\u2014') + '</span>' +
-            '<div class="process-result-qb">Doc #' + (inv.qb_doc_number || '\u2014') + ' \u2014 QB TxnId ' + (inv.qb_txn_id || '\u2014') + ' \u2014 ' + money(inv.qb_total) + '</div>' +
-            '</div>' +
-            '<span class="process-result-status invoiced">' + (tagOk ? 'CREATED' : 'CREATED (tag issues)') + '</span>' +
+    showConfirm(
+      'Create ' + selectedInvs.length + ' Invoice(s)?',
+      'This will create <strong>' + selectedInvs.length + '</strong> invoice(s) totaling <strong>' + money(totalAmount) + '</strong> in QuickBooks and tag tasks as @Billed in Limble. This action cannot be undone.',
+      taskListHtml,
+      'Yes, Create ' + selectedInvs.length + ' Invoice(s)',
+      function() {
+        var goBtn = $('confirmGo');
+        var cancelBtn = $('confirmCancel');
+        goBtn.disabled = true;
+        goBtn.textContent = 'Processing...';
+        cancelBtn.style.display = 'none';
+
+        var taskIds = getSelectedTaskIds();
+
+        api('/v2/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task_ids: taskIds, confirm: true })
+        }).then(function(data) {
+          hideConfirm();
+
+          var body = $('processResultsBody');
+          var created = data.created_invoices || [];
+          var summary = data.summary || {};
+
+          var summaryHtml = '<div style="display:flex;gap:16px;margin-bottom:14px;font-size:0.85rem;flex-wrap:wrap;">' +
+            '<span>Created: <strong>' + (summary.invoices_created || 0) + '</strong></span>' +
+            '<span>Amount: <strong>' + money(summary.total_amount) + '</strong></span>' +
+            '<span>Tasks Tagged: <strong>' + (summary.tasks_tagged_billed || 0) + '</strong></span>' +
+            (summary.errors ? '<span style="color:#ff4444;">Errors: <strong>' + summary.errors + '</strong></span>' : '') +
             '</div>';
-        }).join('');
+
+          if (!created.length) {
+            setHTML(body, summaryHtml + '<p style="color:rgba(255,255,255,0.5);">No invoices returned.</p>');
+          } else {
+            setHTML(body, summaryHtml + created.map(function(inv) {
+              var tagOk = (inv.tag_results || []).every(function(t) { return t.status === 200; });
+              return '<div class="process-result-row">' +
+                '<div>' +
+                '<span class="process-result-task">' + esc(inv.customer_name || '\u2014') + '</span>' +
+                '<div class="process-result-qb">Doc #' + esc(String(inv.qb_doc_number || '\u2014')) + ' \u2014 QB TxnId ' + esc(String(inv.qb_txn_id || '\u2014')) + ' \u2014 ' + money(inv.qb_total) + '</div>' +
+                '</div>' +
+                '<span class="process-result-status invoiced">' + (tagOk ? 'CREATED' : 'CREATED (tag issues)') + '</span>' +
+                '</div>';
+            }).join(''));
+          }
+
+          $('processResults').classList.remove('hidden');
+          $('processBtn').classList.add('hidden');
+          showToast('Created ' + (summary.invoices_created || 0) + ' invoice(s)', 'success');
+
+          runDryRun();
+          loadDocuments();
+        }).catch(function(e) {
+          console.error('[Preview] Process error:', e);
+          hideConfirm();
+          setHTML($('processResultsBody'), '<p style="color:#ff4444;">Process failed: ' + esc(e.message) + '</p>');
+          $('processResults').classList.remove('hidden');
+          showToast('Process failed: ' + e.message, 'error');
+        }).finally(function() {
+          goBtn.disabled = false;
+          goBtn.textContent = 'Yes, Create Invoices';
+          cancelBtn.style.display = '';
+        });
       }
+    );
+  });
 
-      $('processResults').classList.remove('hidden');
-      $('processBtn').classList.add('hidden');
-
-      runDryRun();
-      loadDocuments();
-    }).catch(function(e) {
-      console.error('[Preview] Process error:', e);
-      $('confirmOverlay').classList.add('hidden');
-      $('processResultsBody').innerHTML = '<p style="color:#ff4444;">Process failed: ' + e.message + '</p>';
-      $('processResults').classList.remove('hidden');
-    }).finally(function() {
-      goBtn.disabled = false;
-      goBtn.textContent = 'Yes, Create Invoices';
-      cancelBtn.style.display = '';
-    });
+  // ---- Clear & Refresh confirm ----
+  $('clearRefreshBtn').addEventListener('click', function() {
+    showConfirm(
+      'Clear Cache & Refresh?',
+      'This will <strong style="color:#ffcc00;">clear the task cache</strong>, re-sync from Limble (14 days), and run a fresh dry-run.',
+      '',
+      'Yes, Clear & Refresh',
+      function() {
+        hideConfirm();
+        clearAndRefresh();
+      }
+    );
   });
 
   // ---- Recent Documents ----
@@ -800,21 +1076,21 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
     api('/v2/documents?limit=10').then(function(data) {
       var docs = data.data || [];
       if (!docs.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No documents yet.</td></tr>';
+        setHTML(tbody, '<tr><td colspan="6" class="loading-cell">No documents yet.</td></tr>');
         return;
       }
-      tbody.innerHTML = docs.map(function(d) {
+      setHTML(tbody, docs.map(function(d) {
         return '<tr>' +
-          '<td>' + (d.qb_doc_number || '\u2014') + '</td>' +
-          '<td>' + (d.customer_name || '\u2014') + '</td>' +
-          '<td>' + (d.doc_type || '\u2014') + '</td>' +
-          '<td><span class="status-badge status-' + (d.status || 'created') + '">' + (d.status || '\u2014') + '</span></td>' +
+          '<td>' + esc(d.qb_doc_number || '\u2014') + '</td>' +
+          '<td>' + esc(d.customer_name || '\u2014') + '</td>' +
+          '<td>' + esc(d.doc_type || '\u2014') + '</td>' +
+          '<td><span class="status-badge status-' + esc(d.status || 'created') + '">' + esc(d.status || '\u2014') + '</span></td>' +
           '<td class="text-right">' + money(d.qb_total) + '</td>' +
-          '<td>' + formatDate(d.created_at) + '</td>' +
+          '<td>' + esc(formatDate(d.created_at)) + '</td>' +
           '</tr>';
-      }).join('');
+      }).join(''));
     }).catch(function() {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading-cell" style="color:#ff4444;">Failed to load documents</td></tr>';
+      setHTML(tbody, '<tr><td colspan="6" class="loading-cell" style="color:#ff4444;">Failed to load documents</td></tr>');
     });
   }
 
@@ -824,7 +1100,6 @@ body.light-theme .status-paid { background: rgba(0,160,80,0.12); color: #008844;
 
   // ---- Page Ready ----
   window.onPageReady = function() {
-    runDryRun();
     loadDocuments();
   };
 })();
