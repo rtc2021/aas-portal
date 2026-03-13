@@ -18,7 +18,7 @@
     .auth-btn { display: none; background: var(--gradient-primary, linear-gradient(135deg, #4f8cff, #6366f1)); color: var(--ui-bg, #0b0f19); border: none; padding: 14px 32px; border-radius: var(--radius-lg, 14px); font-weight: 700; font-size: 16px; cursor: pointer; }
     .auth-spinner { width: 40px; height: 40px; border: 3px solid var(--ui-border, rgba(255,255,255,0.07)); border-top-color: var(--ui-accent, #4f8cff); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .page-content { display: none; }
+    .page-content { display: none; padding-bottom: 80px; }
   </style>
 </head>
 
@@ -97,30 +97,30 @@
         <div class="stat-pill stat-pill--amount"><span class="label">Amount</span><span class="value" id="sumAmount">&mdash;</span></div>
       </div>
 
-      <div class="tab-nav" id="tabNav">
-        <button class="tab-btn active" data-tab="invoices">Invoices <span id="tabCountInvoices"></span></button>
-        <button class="tab-btn" data-tab="estimates">Estimates <span id="tabCountEstimates"></span></button>
-        <button class="tab-btn" data-tab="splits">Splits <span id="tabCountSplits"></span></button>
-        <button class="tab-btn" data-tab="already_exists">Already Exists <span id="tabCountExists"></span></button>
-        <button class="tab-btn" data-tab="holds">Holds <span id="tabCountHolds"></span></button>
-        <button class="tab-btn" data-tab="skips">Skips <span id="tabCountSkips"></span></button>
-        <button class="tab-btn" data-tab="needs_review">Needs Review <span id="tabCountReview"></span></button>
+      <div class="tab-nav" id="tabNav" role="tablist" aria-label="Pipeline categories">
+        <button class="tab-btn active" data-tab="invoices" role="tab" aria-selected="true" aria-controls="tab-invoices">Invoices <span id="tabCountInvoices"></span></button>
+        <button class="tab-btn" data-tab="estimates" role="tab" aria-selected="false" aria-controls="tab-estimates">Estimates <span id="tabCountEstimates"></span></button>
+        <button class="tab-btn" data-tab="splits" role="tab" aria-selected="false" aria-controls="tab-splits">Splits <span id="tabCountSplits"></span></button>
+        <button class="tab-btn" data-tab="already_exists" role="tab" aria-selected="false" aria-controls="tab-already_exists">Already Exists <span id="tabCountExists"></span></button>
+        <button class="tab-btn" data-tab="holds" role="tab" aria-selected="false" aria-controls="tab-holds">Holds <span id="tabCountHolds"></span></button>
+        <button class="tab-btn" data-tab="skips" role="tab" aria-selected="false" aria-controls="tab-skips">Skips <span id="tabCountSkips"></span></button>
+        <button class="tab-btn" data-tab="needs_review" role="tab" aria-selected="false" aria-controls="tab-needs_review">Needs Review <span id="tabCountReview"></span></button>
       </div>
 
-      <div class="tab-content active" id="tab-invoices">
+      <div class="tab-content active" id="tab-invoices" role="tabpanel">
         <div class="invoice-toolbar hidden" id="invoiceToolbar">
           <label class="select-all-label"><input type="checkbox" id="selectAllCheck"> Select All</label>
           <span id="selectedCount" class="selected-count">0 selected</span>
         </div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th class="th-check"><input type="checkbox" id="selectAllHead" title="Select All"></th><th>Customer</th><th>Tier</th><th>Visits</th><th>Tasks</th><th class="text-right">Billed Hrs</th><th class="text-right">Total</th></tr></thead>
+            <thead><tr><th class="th-check"></th><th>Customer</th><th>Tier</th><th>Visits</th><th>Tasks</th><th class="text-right">Billed Hrs</th><th class="text-right">Total</th></tr></thead>
             <tbody id="invoiceBody"><tr><td colspan="7" class="loading-cell">Run dry-run to preview invoices</td></tr></tbody>
           </table>
         </div>
       </div>
 
-      <div class="tab-content" id="tab-estimates">
+      <div class="tab-content" id="tab-estimates" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Task ID</th><th>Task Name</th><th>Customer</th><th>Signals</th></tr></thead>
@@ -129,7 +129,7 @@
         </div>
       </div>
 
-      <div class="tab-content" id="tab-splits">
+      <div class="tab-content" id="tab-splits" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Task Name</th><th>Customer</th><th>Reason</th></tr></thead>
@@ -138,7 +138,7 @@
         </div>
       </div>
 
-      <div class="tab-content" id="tab-already_exists">
+      <div class="tab-content" id="tab-already_exists" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Task Name</th><th>Customer</th><th>QB Doc #</th><th>Reason</th></tr></thead>
@@ -147,7 +147,7 @@
         </div>
       </div>
 
-      <div class="tab-content" id="tab-holds">
+      <div class="tab-content" id="tab-holds" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Task ID</th><th>Reason</th><th>Customer</th></tr></thead>
@@ -156,7 +156,7 @@
         </div>
       </div>
 
-      <div class="tab-content" id="tab-skips">
+      <div class="tab-content" id="tab-skips" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Task ID</th><th>Reason</th></tr></thead>
@@ -165,7 +165,7 @@
         </div>
       </div>
 
-      <div class="tab-content" id="tab-needs_review">
+      <div class="tab-content" id="tab-needs_review" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr><th>Task Name</th><th>Customer</th><th>Date Completed</th><th>Reason</th></tr></thead>
@@ -181,7 +181,7 @@
 
       <div class="recent-docs" id="recentDocs">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <h3 style="font-size:1rem;font-weight:700;margin:0;color:rgba(255,255,255,0.9);">Recent Documents</h3>
+          <h3 class="recent-docs-title">Recent Documents</h3>
           <a href="/pipeline/log/" class="view-all-link">View All &rarr;</a>
         </div>
         <div class="table-wrap">
@@ -353,6 +353,12 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .process-result-status.error { color: #ff4444; }
 .process-result-qb { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
 
+.detail-memo { margin: 0; font-size: 0.82rem; color: rgba(255,255,255,0.7); }
+.missing-customer { color: #fbbf24; font-weight: 600; font-size: 0.82rem; }
+.copy-json-btn { padding: 2px 10px; font-size: 0.7rem; font-weight: 600; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; }
+.copy-json-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+.qb-json-pre { margin: 8px 0 0; white-space: pre-wrap; color: rgba(255,255,255,0.6); font-size: 0.72rem; max-height: 300px; overflow-y: auto; }
+.recent-docs-title { font-size: 1rem; font-weight: 700; margin: 0; }
 .recent-docs { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--ui-border, rgba(255,255,255,0.07)); }
 .view-all-link { font-size: 0.82rem; color: var(--ui-accent, #4f8cff); text-decoration: none; }
 .view-all-link:hover { text-decoration: underline; }
@@ -441,6 +447,21 @@ body.light-theme .selected-count { color: rgba(26,26,46,0.5); }
 body.light-theme .toast-success { background: rgba(0,160,80,0.12); color: #008844; border-color: rgba(0,160,80,0.25); }
 body.light-theme .toast-error { background: rgba(200,40,40,0.12); color: #cc2828; border-color: rgba(200,40,40,0.25); }
 body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+body.light-theme .auth-overlay { background: rgba(247,248,252,0.98); }
+body.light-theme .auth-card { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); }
+body.light-theme .auth-subtitle { color: rgba(26,26,46,0.55); }
+body.light-theme .auth-btn { color: #fff; }
+body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.1); border-top-color: #2563eb; }
+body.light-theme #authLoadingText { color: rgba(26,26,46,0.55); }
+body.light-theme .dot { background: rgba(0,0,0,0.25); }
+body.light-theme .dot-green { background: #059669; box-shadow: 0 0 6px rgba(5,150,105,0.3); }
+body.light-theme .dot-yellow { background: #b47c00; box-shadow: 0 0 6px rgba(180,124,0,0.3); }
+body.light-theme .dot-red { background: #dc2626; box-shadow: 0 0 6px rgba(220,38,38,0.3); }
+body.light-theme .detail-memo { color: rgba(26,26,46,0.7); }
+body.light-theme .missing-customer { color: #b47c00; }
+body.light-theme .copy-json-btn { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.6); border-color: rgba(0,0,0,0.1); }
+body.light-theme .copy-json-btn:hover { background: rgba(0,0,0,0.08); color: rgba(26,26,46,0.8); }
+body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
 </style>
 
 <script>
@@ -489,6 +510,7 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
   function $(id) { return document.getElementById(id); }
   function money(n) { return '$' + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function stripHtml(s) { if (!s) return ''; var tmp = document.createElement('div'); tmp.innerHTML = s; return tmp.textContent || tmp.innerText || ''; }
   function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '\u2014'); }
   function formatDate(d) {
     if (!d) return '\u2014';
@@ -514,9 +536,10 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
     var tabBtn = e.target.closest('.tab-btn');
     if (!tabBtn) return;
     var tab = tabBtn.getAttribute('data-tab');
-    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
     document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
     tabBtn.classList.add('active');
+    tabBtn.setAttribute('aria-selected', 'true');
     $('tab-' + tab).classList.add('active');
   });
 
@@ -551,12 +574,9 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
 
     $('selectedCount').textContent = count + ' of ' + invoices.length + ' selected';
 
-    var selectAllHead = $('selectAllHead');
     var selectAllCheck = $('selectAllCheck');
-    selectAllHead.checked = count === invoices.length && invoices.length > 0;
-    selectAllHead.indeterminate = count > 0 && count < invoices.length;
-    selectAllCheck.checked = selectAllHead.checked;
-    selectAllCheck.indeterminate = selectAllHead.indeterminate;
+    selectAllCheck.checked = count === invoices.length && invoices.length > 0;
+    selectAllCheck.indeterminate = count > 0 && count < invoices.length;
   }
 
   function toggleSelectAll(checked) {
@@ -573,7 +593,7 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
   }
 
   document.addEventListener('change', function(e) {
-    if (e.target.id === 'selectAllHead' || e.target.id === 'selectAllCheck') {
+    if (e.target.id === 'selectAllCheck') {
       toggleSelectAll(e.target.checked);
       return;
     }
@@ -775,7 +795,7 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
     var html = '<div class="detail-panel">';
 
     if (inv._customer_memo) {
-      html += '<div class="detail-section"><h4>Customer Memo</h4><p style="margin:0;font-size:0.82rem;color:rgba(255,255,255,0.7);">' + esc(inv._customer_memo) + '</p></div>';
+      html += '<div class="detail-section"><h4>Customer Memo</h4><p class="detail-memo">' + esc(stripHtml(inv._customer_memo)) + '</p></div>';
     }
 
     (inv.visits || []).forEach(function(visit) {
@@ -814,8 +834,9 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
     });
 
     if (inv.qb_invoice_preview) {
-      html += '<div class="detail-section"><h4>QB Preview</h4><pre style="margin:0;white-space:pre-wrap;color:rgba(255,255,255,0.6);font-size:0.72rem;max-height:300px;overflow-y:auto;">' +
-        esc(JSON.stringify(inv.qb_invoice_preview, null, 2)) + '</pre></div>';
+      var jsonStr = JSON.stringify(inv.qb_invoice_preview, null, 2);
+      html += '<div class="detail-section"><div style="display:flex;align-items:center;justify-content:space-between;"><h4 style="margin:0;">QB Preview</h4><button class="copy-json-btn" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},1500)}.bind(this))" type="button">Copy</button></div><pre class="qb-json-pre">' +
+        esc(jsonStr) + '</pre></div>';
     }
 
     html += '</div>';
@@ -878,9 +899,10 @@ body.light-theme .toast-info { background: rgba(37,99,235,0.12); color: #2563eb;
       return;
     }
     setHTML(tbody, splits.map(function(s) {
+      var custCell = s.customer_name ? esc(s.customer_name) : '<span class="missing-customer" title="Customer not mapped">\u26a0 Missing</span>';
       return '<tr>' +
         '<td>' + esc(truncate(s.task_name, 60)) + '</td>' +
-        '<td>' + esc(s.customer_name || '\u2014') + '</td>' +
+        '<td>' + custCell + '</td>' +
         '<td><span class="split-reason">' + esc((s.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
         '</tr>';
     }).join(''));

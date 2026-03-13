@@ -170,6 +170,36 @@ body.light-theme {
 
   --gradient-primary: linear-gradient(135deg, #2563eb, #4f46e5);
   --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.3));
+
+  --glass-blur: blur(12px);
+  --glass-saturate: saturate(120%);
+}
+
+/* ---- Light-theme auth overlay ---- */
+body.light-theme .auth-overlay {
+  background: rgba(247, 248, 252, 0.98);
+}
+
+body.light-theme .auth-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+body.light-theme .auth-subtitle {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+body.light-theme .auth-btn {
+  color: #fff;
+}
+
+body.light-theme .auth-spinner {
+  border-color: rgba(15, 23, 42, 0.1);
+  border-top-color: var(--ui-accent);
+}
+
+body.light-theme #authLoadingText {
+  color: rgba(15, 23, 42, 0.55);
 }
 
 /* ============================================================
