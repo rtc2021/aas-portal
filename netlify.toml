@@ -76,6 +76,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/qb/webhook"
+  to = "/.netlify/functions/qb-webhook"
+  status = 200
+
+[[redirects]]
   from = "/api/qb/*"
   to = "/.netlify/functions/qb"
   status = 200
