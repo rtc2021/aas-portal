@@ -1486,6 +1486,7 @@
   <script>
     // Manning Customer Portal
     const CUSTOMER_KEY = 'manning';
+    const CUSTOMER_POSTING_NAME = 'Manning';
     const CUSTOMER_LABEL = "Manning Family Children's Hospital";
     const DOOR_PREFIX = 'MH-';
     const TASKS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaL-Cagmos7f4rCojgOROSm_Zs8Gnl41nvUUN8hXJIrDyGdv4eYhtJKq56lMRK9euN0TvFNOj_rszM/pub?gid=1054197999&single=true&output=csv';
@@ -1813,6 +1814,7 @@
     let openTasks = [];
     let taskNotes = [];
     let currentUser = null;
+    let currentAuthCustomerId = null;
     let currentModalTaskId = null;
 
     async function loadData() {
@@ -2259,6 +2261,7 @@
 
     async function initPage(user, roles, customerId) {
       currentUser = user;
+      currentAuthCustomerId = customerId || CUSTOMER_KEY;
       console.log('[Portal] Init for', user?.email, 'customer:', customerId);
 
       // Update greeting
@@ -2350,7 +2353,10 @@
           body: JSON.stringify({
             action: 'add_message',
             taskId: currentModalTaskId,
-            customer: 'Manning',
+            customer: CUSTOMER_POSTING_NAME,
+            customerKey: CUSTOMER_KEY,
+            portalPath: window.location.pathname,
+            auth0CustomerId: currentAuthCustomerId,
             fromEmail: currentUser?.email || 'unknown',
             fromName: currentUser?.name || currentUser?.email || 'Customer',
             role: 'customer',
@@ -2423,7 +2429,10 @@
           body: JSON.stringify({
             action: 'submit_po',
             taskId: currentModalTaskId,
-            customer: 'Manning',
+            customer: CUSTOMER_POSTING_NAME,
+            customerKey: CUSTOMER_KEY,
+            portalPath: window.location.pathname,
+            auth0CustomerId: currentAuthCustomerId,
             customerWO: customerWO,
             customerPO: customerPO,
             approvedBy: approvedBy
