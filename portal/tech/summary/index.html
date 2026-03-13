@@ -7,14 +7,14 @@
   <!-- Auth0 SDK (page-specific dependency) -->
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0a0a0f; color: #fff; min-height: 100vh; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0b0f19; color: #fff; min-height: 100vh; }
     .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
     .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
-    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #4f8cff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
     .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
-    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
-    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #4f8cff, #6366f1); color: #0b0f19; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #4f8cff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .page-content { display: none; }
   </style>
@@ -45,19 +45,19 @@
 
 #workSummary {
   /* Dark theme (default) */
-  --ws-bg: #0a0a0f;
+  --ws-bg: #0b0f19;
   --ws-surface: rgba(255,255,255,0.03);
   --ws-card: rgba(255,255,255,0.05);
   --ws-card-hover: rgba(255,255,255,0.08);
   --ws-border: rgba(255,255,255,0.08);
-  --ws-border-hover: rgba(0,212,255,0.3);
+  --ws-border-hover: rgba(79,140,255,0.3);
   --ws-text: #ffffff;
   --ws-text-secondary: rgba(255,255,255,0.7);
   --ws-text-muted: rgba(255,255,255,0.5);
-  --ws-accent: #00d4ff;
-  --ws-accent-bg: rgba(0,212,255,0.12);
+  --ws-accent: #4f8cff;
+  --ws-accent-bg: rgba(79,140,255,0.12);
   --ws-input-bg: rgba(255,255,255,0.06);
-  --ws-table-header: rgba(0,212,255,0.08);
+  --ws-table-header: rgba(79,140,255,0.08);
   --ws-table-row-hover: rgba(255,255,255,0.04);
   --ws-shadow: 0 8px 32px rgba(0,0,0,0.3);
 
@@ -80,14 +80,14 @@ body.light-theme #workSummary {
   --ws-card: #ffffff;
   --ws-card-hover: #ffffff;
   --ws-border: rgba(0,0,0,0.1);
-  --ws-border-hover: rgba(0,102,170,0.4);
+  --ws-border-hover: rgba(37,99,235,0.4);
   --ws-text: #1a1a2e;
   --ws-text-secondary: rgba(26,26,46,0.75);
   --ws-text-muted: rgba(26,26,46,0.55);
-  --ws-accent: #0077aa;
-  --ws-accent-bg: rgba(0,119,170,0.1);
+  --ws-accent: #2563eb;
+  --ws-accent-bg: rgba(37,99,235,0.1);
   --ws-input-bg: #ffffff;
-  --ws-table-header: rgba(0,119,170,0.06);
+  --ws-table-header: rgba(37,99,235,0.06);
   --ws-table-row-hover: rgba(0,0,0,0.03);
   --ws-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }

@@ -6,14 +6,14 @@
   <title>Pipeline Ops &bull; AAS Portal</title>
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0a0a0f; color: #fff; min-height: 100vh; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0b0f19; color: #fff; min-height: 100vh; }
     .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
     .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
-    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #4f8cff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
     .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
-    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
-    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #4f8cff, #6366f1); color: #0b0f19; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #4f8cff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .page-content { display: none; }
 
@@ -30,17 +30,17 @@
     .status-expired .status-dot { background: #f59e0b; }
     .status-disconnected .status-dot { background: #ef4444; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-    button { border: 1px solid rgba(0,212,255,.36); color: #c9f4ff; background: rgba(0,212,255,.12); border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
+    button { border: 1px solid rgba(79,140,255,.36); color: #c9d8ff; background: rgba(79,140,255,.12); border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
     button.secondary { border-color: rgba(255,255,255,.25); color: rgba(255,255,255,.86); background: rgba(255,255,255,.08); }
     .link-card { display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; }
-    .link-card:hover { border-color: rgba(0,212,255,.4); box-shadow: 0 12px 30px rgba(0,212,255,.12); transform: translateY(-1px); }
+    .link-card:hover { border-color: rgba(79,140,255,.4); box-shadow: 0 12px 30px rgba(79,140,255,.12); transform: translateY(-1px); }
     .link-title { font-size: 16px; font-weight: 700; }
     .link-meta { font-size: 13px; color: rgba(255,255,255,.6); }
     .count-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); font-size: 12px; font-weight: 600; }
     .count-warn { color: #f59e0b; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.08); }
     .count-bad { color: #ef4444; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.08); }
     .count-good { color: #10b981; border-color: rgba(16,185,129,.4); background: rgba(16,185,129,.08); }
-    .count-info { color: #00d4ff; border-color: rgba(0,212,255,.4); background: rgba(0,212,255,.08); }
+    .count-info { color: #4f8cff; border-color: rgba(79,140,255,.4); background: rgba(79,140,255,.08); }
   </style>
 </head>
 <body>

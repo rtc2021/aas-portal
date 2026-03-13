@@ -10,14 +10,14 @@
 
   <!-- Auth overlay must render before any external script -->
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0a0a0f; color: #fff; min-height: 100vh; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0b0f19; color: #fff; min-height: 100vh; }
     .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-overlay.hidden { display: none; }
     .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
-    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #00d4ff, #6ea8fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #4f8cff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
     .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
-    .auth-btn { display: none; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0a0a0f; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
-    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #4f8cff, #6366f1); color: #0b0f19; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #4f8cff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .page-content { display: none; }
   </style>
@@ -57,11 +57,11 @@
               <img
                 src="https://images.squarespace-cdn.com/content/53292562e4b06710691770b4/c75debc4-7194-4008-875d-856c6fa3b205/dis+lis+logo.webp?content-type=image%2Fwebp"
                 alt="AAS Logo"
-                style="height:clamp(80px, 15vw, 140px); width:auto; filter: drop-shadow(0 0 25px rgba(0,210,255,0.6)) drop-shadow(0 0 50px rgba(0,210,255,0.3));"
+                style="height:clamp(80px, 15vw, 140px); width:auto; filter: drop-shadow(0 0 25px rgba(79,140,255,0.6)) drop-shadow(0 0 50px rgba(79,140,255,0.3));"
               >
               <div style="text-align:center;">
-                <div style="letter-spacing:6px; font-weight:300; font-size:clamp(20px, 5vw, 32px); color:#b8e5ff; text-shadow: 0 0 5px rgba(0,210,255,0.9), 0 0 15px rgba(0,210,255,0.7), 0 0 30px rgba(0,210,255,0.5), 0 0 50px rgba(0,210,255,0.3);">AUTOMATIC</div>
-                <div style="letter-spacing:10px; font-weight:300; font-size:clamp(12px, 3vw, 18px); color:#8ad4f0; margin-top:6px; text-shadow: 0 0 5px rgba(0,210,255,0.8), 0 0 15px rgba(0,210,255,0.6), 0 0 30px rgba(0,210,255,0.4);">ACCESS</div>
+                <div style="letter-spacing:6px; font-weight:300; font-size:clamp(20px, 5vw, 32px); color:#b8d4ff; text-shadow: 0 0 5px rgba(79,140,255,0.9), 0 0 15px rgba(79,140,255,0.7), 0 0 30px rgba(79,140,255,0.5), 0 0 50px rgba(79,140,255,0.3);">AUTOMATIC</div>
+                <div style="letter-spacing:10px; font-weight:300; font-size:clamp(12px, 3vw, 18px); color:#8ab4ff; margin-top:6px; text-shadow: 0 0 5px rgba(79,140,255,0.8), 0 0 15px rgba(79,140,255,0.6), 0 0 30px rgba(79,140,255,0.4);">ACCESS</div>
               </div>
             </div>
           </div>
