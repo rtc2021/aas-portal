@@ -56,7 +56,7 @@
   
   const CONFIG = {
     apiEndpoint: '/api/copilot',
-    allowedRoles: ['Admin', 'Tech'],
+    allowedRoles: ['admin', 'tech'],
     panelWidth: '420px',
     animationDuration: '300ms'
   };
