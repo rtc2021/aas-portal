@@ -1102,7 +1102,7 @@ body.light-theme .confirm-cancel { background: rgba(0,0,0,0.04); border-color: r
   /* ===== Page Ready ===== */
   window.onPageReady = function(user, roles, customerId) {
     // Pipeline proxy enforces Admin role; this is defense-in-depth
-    if (roles && roles.indexOf('Admin') === -1) {
+    if (roles && roles.indexOf('admin') === -1) {
       document.querySelector('.page-wrapper').innerHTML =
         '<div class="empty-state"><p>Admin access required for Estimate Management.</p><a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a></div>';
       return;

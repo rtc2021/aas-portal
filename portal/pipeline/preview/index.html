@@ -325,12 +325,16 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .btn-apply:hover { background: rgba(79,140,255,0.15); }
 .classify-select { padding: 4px 8px; font-size: 0.72rem; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); cursor: pointer; }
 .classify-select:focus { border-color: var(--ui-accent, #4f8cff); outline: none; }
+.prefix-warning { display: inline-block; padding: 1px 6px; margin-left: 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 700; background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); vertical-align: middle; letter-spacing: 0.02em; }
 
 .detail-row { display: none; }
 .detail-row.open { display: table-row; }
 .detail-panel { padding: 16px 12px; background: rgba(15,15,25,0.6); border-left: 3px solid rgba(79,140,255,0.4); }
 .detail-section { margin-bottom: 14px; }
 .detail-section:last-child { margin-bottom: 0; }
+.detail-meta { color: rgba(255,255,255,0.6); }
+.detail-notes { color: rgba(255,255,255,0.8); }
+.detail-empty { color: rgba(255,255,255,0.5); }
 .detail-section h4 { font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.5); margin: 0 0 8px; letter-spacing: 0.05em; }
 .detail-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
 .detail-table th { text-align: left; padding: 4px 8px; color: rgba(255,255,255,0.4); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); }
@@ -434,6 +438,9 @@ body.light-theme .sync-success { background: rgba(0,160,80,0.06); border-color: 
 body.light-theme .sync-error { background: rgba(200,40,40,0.06); border-color: rgba(200,40,40,0.2); color: #cc2828; }
 body.light-theme .detail-panel { background: rgba(0,0,0,0.02); border-left-color: rgba(37,99,235,0.4); }
 body.light-theme .detail-section h4 { color: rgba(26,26,46,0.5); }
+body.light-theme .detail-meta { color: rgba(26,26,46,0.55); }
+body.light-theme .detail-notes { color: rgba(26,26,46,0.8); }
+body.light-theme .detail-empty { color: rgba(26,26,46,0.45); }
 body.light-theme .detail-table th { color: rgba(26,26,46,0.4); border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .detail-table td { border-bottom-color: rgba(0,0,0,0.04); }
 body.light-theme .visit-header { color: rgba(26,26,46,0.8); }
@@ -445,6 +452,7 @@ body.light-theme .hold-reason { background: rgba(200,150,0,0.1); color: #997a00;
 body.light-theme .split-reason { background: rgba(200,100,0,0.1); color: #b35c00; border-color: rgba(200,100,0,0.2); }
 body.light-theme .exists-badge { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.6); border-color: rgba(0,0,0,0.1); }
 body.light-theme .review-badge { background: rgba(200,130,0,0.1); color: #a36800; border-color: rgba(200,130,0,0.2); }
+body.light-theme .prefix-warning { background: rgba(200,130,0,0.08); color: #a36800; border-color: rgba(200,130,0,0.2); }
 body.light-theme .tier-badge { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
 body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
 body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
@@ -1012,6 +1020,14 @@ body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
     }
   }
 
+  function hasDocPrefix(name) {
+    if (!name) return null;
+    var lower = name.toLowerCase().trim();
+    if (/^inv[\.\s]/.test(lower)) return 'INV';
+    if (/^est[\.\s]/.test(lower)) return 'EST';
+    return null;
+  }
+
   // ---- Render Invoices ----
   function renderInvoices(invoices) {
     var tbody = $('invoiceBody');
@@ -1101,9 +1117,11 @@ body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
 
     setHTML(tbody, estimates.map(function(est, i) {
       var signals = (est.estimate_signals || []).map(function(s) { return s.replace(/_/g, ' '); }).join(', ');
+      var pfx = hasDocPrefix(est.task_name);
+      var nameCell = esc(truncate(est.task_name, 60)) + (pfx ? ' <span class="prefix-warning" title="Task name starts with ' + pfx + ' prefix — may already have a QB document">' + pfx + '</span>' : '');
       var row = '<tr class="result-row" data-idx="est-' + i + '">' +
         '<td>' + esc(String(est.limble_task_id || '\u2014')) + '</td>' +
-        '<td>' + esc(truncate(est.task_name, 60)) + '</td>' +
+        '<td>' + nameCell + '</td>' +
         '<td>' + esc(est.customer_name || '\u2014') + '</td>' +
         '<td>' + esc(signals) + '</td>' +
         '</tr>';
@@ -1114,6 +1132,32 @@ body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
 
   function buildEstimateDetail(est) {
     var html = '<div class="detail-panel">';
+    var hasMeta = false;
+
+    // Task metadata row
+    var meta = [];
+    if (est.tech_name) meta.push('Tech: ' + esc(est.tech_name));
+    if (est.date_completed) meta.push('Completed: ' + esc(formatDate(est.date_completed)));
+    if (meta.length) {
+      html += '<div class="detail-section detail-meta" style="margin-bottom:10px;font-size:0.8rem;">' + meta.join(' &nbsp;\u2022&nbsp; ') + '</div>';
+      hasMeta = true;
+    }
+
+    // Completion notes
+    if (est.completion_notes) {
+      html += '<div class="detail-section"><h4>Completion Notes</h4><p class="detail-notes" style="margin:0;font-size:0.82rem;line-height:1.5;">' + esc(stripHtml(est.completion_notes)) + '</p></div>';
+      hasMeta = true;
+    }
+
+    // Estimate signals explanation
+    if (est.estimate_signals && est.estimate_signals.length) {
+      html += '<div class="detail-section"><h4>Routing Signals</h4><div style="display:flex;flex-wrap:wrap;gap:4px;">';
+      est.estimate_signals.forEach(function(sig) {
+        html += '<span class="split-reason">' + esc(sig.replace(/_/g, ' ')) + '</span>';
+      });
+      html += '</div></div>';
+      hasMeta = true;
+    }
 
     if (est.labor_entries && est.labor_entries.length) {
       html += '<div class="detail-section"><h4>Labor Entries</h4><table class="detail-table"><thead><tr><th>User ID</th><th>Time (hrs)</th></tr></thead><tbody>';
@@ -1121,6 +1165,7 @@ body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
         html += '<tr><td>' + esc(String(le.userID || '\u2014')) + '</td><td>' + ((le.timeSpent || 0) / 3600).toFixed(1) + '</td></tr>';
       });
       html += '</tbody></table></div>';
+      hasMeta = true;
     }
 
     if (est.parts_usage && est.parts_usage.length) {
@@ -1129,10 +1174,11 @@ body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
         html += '<tr><td>' + esc(p.name || 'Part ' + p.partID) + '</td><td>' + (p.usedCount || 0) + '</td></tr>';
       });
       html += '</tbody></table></div>';
+      hasMeta = true;
     }
 
-    if ((!est.labor_entries || !est.labor_entries.length) && (!est.parts_usage || !est.parts_usage.length)) {
-      html += '<p style="color:rgba(255,255,255,0.5);margin:0;">No additional details.</p>';
+    if (!hasMeta) {
+      html += '<p class="detail-empty" style="margin:0;">No additional details.</p>';
     }
 
     html += '</div>';
@@ -1151,14 +1197,71 @@ body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
     toolbar.classList.remove('hidden');
     setHTML(tbody, splits.map(function(s, i) {
       var custCell = s.customer_name ? esc(s.customer_name) : '<span class="missing-customer" title="Customer not mapped">\u26a0 Missing</span>';
-      return '<tr class="result-row" data-idx="split-' + i + '">' +
+      var pfx = hasDocPrefix(s.task_name);
+      var nameCell = esc(truncate(s.task_name, 60)) + (pfx ? ' <span class="prefix-warning" title="Task name starts with ' + pfx + ' prefix — may already have a QB document">' + pfx + '</span>' : '');
+      var row = '<tr class="result-row" data-idx="split-' + i + '">' +
         '<td class="td-check"><input type="checkbox" class="split-checkbox" data-split-idx="' + i + '"></td>' +
         '<td>' + esc(String(s.limble_task_id || '\u2014')) + '</td>' +
-        '<td>' + esc(truncate(s.task_name, 60)) + '</td>' +
+        '<td>' + nameCell + '</td>' +
         '<td>' + custCell + '</td>' +
         '<td><span class="split-reason">' + esc((s.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
         '</tr>';
+      row += '<tr class="detail-row" id="detail-split-' + i + '"><td colspan="5">' + buildSplitDetail(s) + '</td></tr>';
+      return row;
     }).join(''));
+  }
+
+  function buildSplitDetail(s) {
+    var html = '<div class="detail-panel">';
+    var hasMeta = false;
+
+    // Task metadata row
+    var meta = [];
+    if (s.tech_name) meta.push('Tech: ' + esc(s.tech_name));
+    if (s.date_completed) meta.push('Completed: ' + esc(formatDate(s.date_completed)));
+    if (meta.length) {
+      html += '<div class="detail-section detail-meta" style="margin-bottom:10px;font-size:0.8rem;">' + meta.join(' &nbsp;\u2022&nbsp; ') + '</div>';
+      hasMeta = true;
+    }
+
+    // Completion notes
+    if (s.completion_notes) {
+      html += '<div class="detail-section"><h4>Completion Notes</h4><p class="detail-notes" style="margin:0;font-size:0.82rem;line-height:1.5;">' + esc(stripHtml(s.completion_notes)) + '</p></div>';
+      hasMeta = true;
+    }
+
+    // Split reason details
+    if (s.reason) {
+      html += '<div class="detail-section"><h4>Split Reason</h4><span class="split-reason">' + esc(s.reason.replace(/_/g, ' ')) + '</span></div>';
+      hasMeta = true;
+    }
+
+    // Labor entries
+    if (s.labor_entries && s.labor_entries.length) {
+      html += '<div class="detail-section"><h4>Labor Entries</h4><table class="detail-table"><thead><tr><th>User ID</th><th>Time (hrs)</th></tr></thead><tbody>';
+      s.labor_entries.forEach(function(le) {
+        html += '<tr><td>' + esc(String(le.userID || '\u2014')) + '</td><td>' + ((le.timeSpent || 0) / 3600).toFixed(1) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      hasMeta = true;
+    }
+
+    // Parts usage
+    if (s.parts_usage && s.parts_usage.length) {
+      html += '<div class="detail-section"><h4>Parts Usage</h4><table class="detail-table"><thead><tr><th>Part</th><th>Qty</th></tr></thead><tbody>';
+      s.parts_usage.forEach(function(p) {
+        html += '<tr><td>' + esc(p.name || 'Part ' + p.partID) + '</td><td>' + (p.usedCount || 0) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      hasMeta = true;
+    }
+
+    if (!hasMeta) {
+      html += '<p class="detail-empty" style="margin:0;">No additional details.</p>';
+    }
+
+    html += '</div>';
+    return html;
   }
 
   // ---- Render Already Exists ----

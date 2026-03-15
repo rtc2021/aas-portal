@@ -69,9 +69,10 @@ function extractUserFromToken(authHeader: string | null): {
     const payload = JSON.parse(base64UrlDecode(parts[1]));
     const namespace = 'https://aas-portal.com';
 
+    const rawRoles: string[] = payload[`${namespace}/roles`] || [];
     return {
       email: payload.email,
-      roles: payload[`${namespace}/roles`] || [],
+      roles: rawRoles.map((r: string) => r.toLowerCase()),
       customerId: payload[`${namespace}/customer_id`],
       technicianId: getTechnicianId(payload.email)
     };
@@ -123,7 +124,7 @@ function verifyCustomerToken(authHeader: string | null): { valid: boolean; email
       valid: true,
       email: payload.email,
       customerId: payload[`${namespace}/customer_id`],
-      roles: payload[`${namespace}/roles`] || []
+      roles: (payload[`${namespace}/roles`] || []).map((r: string) => r.toLowerCase())
     };
   } catch (e) {
     console.error('[Copilot] Token verification error:', e);
@@ -1942,8 +1943,8 @@ export default async function handler(req: Request, context: Context): Promise<R
 
     const authHeader = req.headers.get('Authorization');
     const userInfo = extractUserFromToken(authHeader);
-    const isAdmin = userInfo.roles.includes('Admin');
-    const isTech = userInfo.roles.includes('Tech');
+    const isAdmin = userInfo.roles.includes('admin');
+    const isTech = userInfo.roles.includes('tech');
 
     console.log(`[Copilot V21.2] Request from ${userInfo.email}, roles: ${userInfo.roles.join(', ')}`);
 
