@@ -155,8 +155,8 @@
       <div class="tab-content" id="tab-holds" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Task ID</th><th>Reason</th><th>Customer</th></tr></thead>
-            <tbody id="holdBody"><tr><td colspan="3" class="loading-cell">Run dry-run to see held tasks</td></tr></tbody>
+            <thead><tr><th>Task ID</th><th>Task Name</th><th>Reason</th><th>Customer</th><th>Actions</th></tr></thead>
+            <tbody id="holdBody"><tr><td colspan="5" class="loading-cell">Run dry-run to see held tasks</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -173,8 +173,8 @@
       <div class="tab-content" id="tab-needs_review" role="tabpanel">
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Task Name</th><th>Customer</th><th>Date Completed</th><th>Reason</th></tr></thead>
-            <tbody id="reviewBody"><tr><td colspan="4" class="loading-cell">Run dry-run to see tasks needing review</td></tr></tbody>
+            <thead><tr><th>Task ID</th><th>Task Name</th><th>Customer</th><th>Date Completed</th><th>Reason</th><th>Actions</th></tr></thead>
+            <tbody id="reviewBody"><tr><td colspan="6" class="loading-cell">Run dry-run to see tasks needing review</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -311,6 +311,20 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .split-reason { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,136,0,0.1); color: #ff8800; border: 1px solid rgba(255,136,0,0.2); }
 .exists-badge { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.12); }
 .review-badge { display: inline-block; padding: 2px 8px; margin: 2px 4px 2px 0; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+
+.hold-actions, .review-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn-action { padding: 4px 10px; font-size: 0.72rem; font-weight: 600; border-radius: 6px; cursor: pointer; }
+.btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ready { background: rgba(0,255,136,0.08); color: #00ff88; border: 1px solid rgba(0,255,136,0.25); }
+.btn-ready:hover { background: rgba(0,255,136,0.15); }
+.btn-quote { background: rgba(0,150,255,0.08); color: #0096ff; border: 1px solid rgba(0,150,255,0.25); }
+.btn-quote:hover { background: rgba(0,150,255,0.15); }
+.btn-skip-action { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.12); }
+.btn-skip-action:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+.btn-apply { background: rgba(79,140,255,0.08); color: var(--ui-accent, #4f8cff); border: 1px solid rgba(79,140,255,0.25); }
+.btn-apply:hover { background: rgba(79,140,255,0.15); }
+.classify-select { padding: 4px 8px; font-size: 0.72rem; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); cursor: pointer; }
+.classify-select:focus { border-color: var(--ui-accent, #4f8cff); outline: none; }
 
 .detail-row { display: none; }
 .detail-row.open { display: table-row; }
@@ -492,6 +506,16 @@ body.light-theme .split-preview-error { border-color: rgba(200,40,40,0.3); }
 body.light-theme .split-preview-error-msg { color: #cc2828; }
 body.light-theme .split-preview-totals { border-top-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
 body.light-theme .split-preview-totals strong { color: #008844; }
+body.light-theme .btn-ready { background: rgba(0,160,80,0.06); color: #008844; border-color: rgba(0,160,80,0.25); }
+body.light-theme .btn-ready:hover { background: rgba(0,160,80,0.12); }
+body.light-theme .btn-quote { background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+body.light-theme .btn-quote:hover { background: rgba(37,99,235,0.12); }
+body.light-theme .btn-skip-action { background: rgba(0,0,0,0.03); color: rgba(26,26,46,0.5); border-color: rgba(0,0,0,0.12); }
+body.light-theme .btn-skip-action:hover { background: rgba(0,0,0,0.06); color: rgba(26,26,46,0.7); }
+body.light-theme .classify-select { background: rgba(0,0,0,0.03); color: rgba(26,26,46,0.8); border-color: rgba(0,0,0,0.15); }
+body.light-theme .classify-select:focus { border-color: #2563eb; }
+body.light-theme .btn-apply { background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.25); }
+body.light-theme .btn-apply:hover { background: rgba(37,99,235,0.12); }
 </style>
 
 <script>
@@ -926,9 +950,9 @@ body.light-theme .split-preview-totals strong { color: #008844; }
     setHTML($('estimateBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
     setHTML($('splitBody'), '<tr><td colspan="5" class="loading-cell">Running...</td></tr>');
     setHTML($('existsBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
-    setHTML($('holdBody'), '<tr><td colspan="3" class="loading-cell">Running...</td></tr>');
+    setHTML($('holdBody'), '<tr><td colspan="5" class="loading-cell">Running...</td></tr>');
     setHTML($('skipBody'), '<tr><td colspan="2" class="loading-cell">Running...</td></tr>');
-    setHTML($('reviewBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
+    setHTML($('reviewBody'), '<tr><td colspan="6" class="loading-cell">Running...</td></tr>');
 
     runDryRunAsync().catch(function(e) {
       console.error('[Preview] Dry-run error:', e);
@@ -1158,14 +1182,21 @@ body.light-theme .split-preview-totals strong { color: #008844; }
   function renderHolds(holds) {
     var tbody = $('holdBody');
     if (!holds.length) {
-      setHTML(tbody, '<tr><td colspan="3" class="loading-cell">No tasks on hold.</td></tr>');
+      setHTML(tbody, '<tr><td colspan="5" class="loading-cell">No tasks on hold.</td></tr>');
       return;
     }
     setHTML(tbody, holds.map(function(h) {
+      var taskId = h.limble_task_id || '';
       return '<tr>' +
-        '<td>' + esc(String(h.limble_task_id || '\u2014')) + '</td>' +
+        '<td>' + esc(String(taskId || '\u2014')) + '</td>' +
+        '<td>' + esc(truncate(h.task_name, 50)) + '</td>' +
         '<td><span class="hold-reason">' + esc((h.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
         '<td>' + esc(h.customer_name || '\u2014') + '</td>' +
+        '<td><div class="hold-actions">' +
+          '<button class="btn-action btn-ready" data-hold-action="ready" data-task-id="' + esc(String(taskId)) + '">Ready to Bill</button>' +
+          '<button class="btn-action btn-quote" data-hold-action="quote" data-task-id="' + esc(String(taskId)) + '">Mark as Quote</button>' +
+          '<button class="btn-action btn-skip-action" data-hold-action="skip" data-task-id="' + esc(String(taskId)) + '">Skip</button>' +
+        '</div></td>' +
         '</tr>';
     }).join(''));
   }
@@ -1189,18 +1220,99 @@ body.light-theme .split-preview-totals strong { color: #008844; }
   function renderNeedsReview(items) {
     var tbody = $('reviewBody');
     if (!items.length) {
-      setHTML(tbody, '<tr><td colspan="4" class="loading-cell">No tasks needing review.</td></tr>');
+      setHTML(tbody, '<tr><td colspan="6" class="loading-cell">No tasks needing review.</td></tr>');
       return;
     }
     setHTML(tbody, items.map(function(item) {
+      var taskId = item.limble_task_id || '';
       return '<tr>' +
-        '<td>' + esc(truncate(item.task_name, 60)) + '</td>' +
+        '<td>' + esc(String(taskId || '\u2014')) + '</td>' +
+        '<td>' + esc(truncate(item.task_name, 50)) + '</td>' +
         '<td>' + esc(item.customer_name || '\u2014') + '</td>' +
         '<td>' + esc(formatDate(item.date_completed)) + '</td>' +
         '<td><span class="review-badge">' + esc((item.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
+        '<td><div class="review-actions">' +
+          '<select class="classify-select" data-task-id="' + esc(String(taskId)) + '">' +
+            '<option value="">Classify as\u2026</option>' +
+            '<option value="invoice">Invoice</option>' +
+            '<option value="estimate">Estimate</option>' +
+            '<option value="split">Split</option>' +
+            '<option value="skip">Skip</option>' +
+          '</select>' +
+          '<button class="btn-action btn-apply" data-classify-task="' + esc(String(taskId)) + '">Apply</button>' +
+        '</div></td>' +
         '</tr>';
     }).join(''));
   }
+
+  // ---- Tag task (shared by Hold actions + Classify) ----
+  var TAG_MAP = {
+    'ready':    { add: ['@Waiting to be billed'] },
+    'quote':    { add: ['@Quote Request'] },
+    'skip':     { add: ['@Warranty/ No Charge'] },
+    'invoice':  { add: ['@Waiting to be billed'] },
+    'estimate': { add: ['@Quote Request'] },
+    'split':    { add: ['@Waiting to be billed', '@Quote Request'] }
+  };
+
+  var ACTION_LABELS = {
+    'ready': 'Ready to Bill', 'quote': 'Mark as Quote', 'skip': 'Skip',
+    'invoice': 'Invoice', 'estimate': 'Estimate', 'split': 'Split'
+  };
+
+  function tagTask(taskId, action) {
+    if (!taskId || !TAG_MAP[action]) return;
+    var label = ACTION_LABELS[action];
+
+    showConfirm(
+      label + ' \u2014 Task #' + taskId,
+      'Reclassify task <strong>#' + esc(String(taskId)) + '</strong> as <strong>' + esc(label) + '</strong>?<br>The task will move to a different category on the next dry-run.',
+      '',
+      'Yes, ' + label,
+      function() {
+        var goBtn = $('confirmGo');
+        goBtn.disabled = true;
+        goBtn.textContent = 'Updating...';
+
+        api('/v2/task/' + taskId + '/tags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(TAG_MAP[action])
+        }).then(function() {
+          hideConfirm();
+          showToast('Task #' + taskId + ' tagged as ' + label + ' \u2014 refreshing', 'success');
+          runDryRun();
+        }).catch(function(e) {
+          hideConfirm();
+          showToast('Failed to update task #' + taskId + ': ' + e.message, 'error');
+        }).finally(function() {
+          goBtn.disabled = false;
+        });
+      }
+    );
+  }
+
+  // Delegated handler for hold action buttons + classify apply buttons
+  document.addEventListener('click', function(e) {
+    var holdBtn = e.target.closest('[data-hold-action]');
+    if (holdBtn) {
+      e.stopPropagation();
+      tagTask(holdBtn.getAttribute('data-task-id'), holdBtn.getAttribute('data-hold-action'));
+      return;
+    }
+    var applyBtn = e.target.closest('[data-classify-task]');
+    if (applyBtn) {
+      e.stopPropagation();
+      var select = applyBtn.previousElementSibling;
+      var action = select ? select.value : '';
+      if (!action) {
+        showToast('Select a classification first', 'info');
+        return;
+      }
+      tagTask(applyBtn.getAttribute('data-classify-task'), action);
+      return;
+    }
+  });
 
   // ---- Confirm dialog ----
   function showConfirm(title, message, taskListHtml, goText, onConfirm) {

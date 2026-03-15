@@ -103,10 +103,18 @@
         <input type="text" class="search-input" id="searchInput" placeholder="Search customer name...">
       </div>
 
+      <div class="est-toolbar hidden" id="estToolbar">
+        <label class="select-all-label"><input type="checkbox" id="selectAllEstCheck"> Select All</label>
+        <span id="estSelectedCount" class="selected-count">0 selected</span>
+        <button id="bulkApproveBtn" type="button" class="btn btn-sm btn-approve hidden">Approve Selected</button>
+        <button id="bulkConvertBtn" type="button" class="btn btn-sm btn-convert hidden">Convert Selected</button>
+      </div>
+
       <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
+              <th class="th-check"></th>
               <th>Status</th>
               <th>Customer</th>
               <th>Task</th>
@@ -117,7 +125,7 @@
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="7" class="loading-cell">Loading estimates...</td></tr>
+            <tr><td colspan="8" class="loading-cell">Loading estimates...</td></tr>
           </tbody>
         </table>
       </div>
@@ -150,6 +158,19 @@
       <div class="modal-footer hidden" id="createModalFooter">
         <button class="btn btn-outlined" id="createModalCancel">Cancel</button>
         <button class="btn btn-green" id="createModalConfirm">Confirm &amp; Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div class="confirm-overlay hidden" id="confirmOverlay">
+    <div class="confirm-dialog">
+      <h3 id="confirmTitle">Confirm</h3>
+      <p id="confirmMessage"></p>
+      <div class="confirm-tasks" id="confirmTasks"></div>
+      <div class="confirm-actions">
+        <button class="confirm-cancel" id="confirmCancel">Cancel</button>
+        <button class="confirm-go" id="confirmGo">Confirm</button>
       </div>
     </div>
   </div>
@@ -243,6 +264,32 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .detail-meta strong { color: rgba(255,255,255,0.85); font-weight: 600; }
 .converted-info { margin-top: 8px; padding: 8px 12px; background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 6px; font-size: 0.8rem; color: #a855f7; }
 
+/* ===== Checkbox & Toolbar ===== */
+.th-check { width: 36px; text-align: center; }
+.td-check { text-align: center; }
+.data-table input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0096ff; cursor: pointer; vertical-align: middle; }
+.est-toolbar { display: flex; align-items: center; gap: 16px; padding: 10px 12px; margin-bottom: 8px; background: rgba(0,150,255,0.04); border: 1px solid rgba(0,150,255,0.12); border-radius: 8px; font-size: 0.82rem; }
+.est-toolbar.hidden { display: none; }
+.select-all-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: rgba(255,255,255,0.8); font-weight: 600; }
+.selected-count { color: rgba(255,255,255,0.5); }
+.data-table tr.est-row.selected { background: rgba(0,150,255,0.04); }
+
+/* ===== Shared Overlay ===== */
+.modal-overlay, .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
+
+/* ===== Confirm Dialog ===== */
+.confirm-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 28px; max-width: 480px; width: 90%; }
+.confirm-dialog h3 { font-size: 1.1rem; margin: 0 0 10px; color: #fff; }
+.confirm-dialog p { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin: 0 0 16px; line-height: 1.5; }
+.confirm-dialog strong { color: #00ff88; }
+.confirm-tasks { max-height: 200px; overflow-y: auto; margin-bottom: 18px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3); }
+.confirm-task-row { padding: 4px 0; color: rgba(255,255,255,0.7); display: flex; justify-content: space-between; }
+.confirm-task-row + .confirm-task-row { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-cancel { padding: 8px 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.confirm-go { padding: 8px 18px; background: #00ff88; color: #0b0f19; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+.confirm-go:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ===== Actions Column ===== */
 .action-cell { display: flex; gap: 6px; }
 
@@ -261,7 +308,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .back-btn { color: #4f8cff; text-decoration: none; font-weight: 600; }
 
 /* ===== Modal ===== */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
 .modal-dialog { background: #12121f; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
 .modal-header h3 { font-size: 1.1rem; margin: 0; color: #fff; }
@@ -350,18 +396,18 @@ body.light-theme .empty-state { background: rgba(255,255,255,0.9); border-color:
 body.light-theme .empty-state p { color: rgba(26,26,46,0.6); }
 body.light-theme .back-btn { color: #2563eb; }
 
-body.light-theme .modal-overlay { background: rgba(0,0,0,0.35); }
-body.light-theme .modal-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
-body.light-theme .modal-header h3 { color: rgba(26,26,46,0.92); }
+body.light-theme .modal-overlay, body.light-theme .confirm-overlay { background: rgba(0,0,0,0.35); }
+body.light-theme .modal-dialog, body.light-theme .confirm-dialog { background: #fff; border-color: rgba(0,0,0,0.15); }
+body.light-theme .modal-header h3, body.light-theme .confirm-dialog h3 { color: rgba(26,26,46,0.92); }
 body.light-theme .modal-close { color: rgba(26,26,46,0.4); }
 body.light-theme .modal-close:hover { color: rgba(26,26,46,0.8); }
 body.light-theme .modal-loading p { color: rgba(26,26,46,0.6); }
 body.light-theme .modal-task-row { color: rgba(26,26,46,0.8); }
-body.light-theme .modal-task-row + .modal-task-row { border-top-color: rgba(0,0,0,0.06); }
+body.light-theme .modal-task-row + .modal-task-row, body.light-theme .confirm-task-row + .confirm-task-row { border-top-color: rgba(0,0,0,0.06); }
 body.light-theme .modal-task-total { color: #997a00; }
 body.light-theme .modal-summary { background: rgba(200,150,0,0.06); border-color: rgba(200,150,0,0.2); color: rgba(26,26,46,0.7); }
 body.light-theme .modal-summary strong { color: #997a00; }
-body.light-theme .btn-green { color: #fff; }
+body.light-theme .btn-green, body.light-theme .confirm-go { color: #fff; }
 
 body.light-theme .converted-info { background: rgba(130,60,200,0.06); border-color: rgba(130,60,200,0.2); color: #7c3aed; }
 body.light-theme .auth-overlay { background: rgba(247,248,252,0.98); }
@@ -370,6 +416,16 @@ body.light-theme .auth-subtitle { color: rgba(15,23,42,0.55); }
 body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
 body.light-theme .table-footer { color: rgba(26,26,46,0.5); }
 body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+
+body.light-theme .est-toolbar { background: rgba(37,99,235,0.04); border-color: rgba(37,99,235,0.1); }
+body.light-theme .select-all-label { color: rgba(26,26,46,0.8); }
+body.light-theme .selected-count { color: rgba(26,26,46,0.5); }
+body.light-theme .data-table tr.est-row.selected { background: rgba(37,99,235,0.04); }
+body.light-theme .data-table input[type="checkbox"] { accent-color: #2563eb; }
+body.light-theme .confirm-dialog p, body.light-theme .confirm-task-row { color: rgba(26,26,46,0.7); }
+body.light-theme .confirm-dialog strong { color: #008844; }
+body.light-theme .confirm-tasks { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.light-theme .confirm-cancel { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.15); color: rgba(26,26,46,0.8); }
 </style>
 
 <script>
@@ -400,6 +456,8 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
   var totalItems = 0;
   var estimates = [];
   var searchDebounce = null;
+  var selectedEstimates = {};
+  var confirmAction = null;
 
   /* ===== Helpers ===== */
   function $(id) { return document.getElementById(id); }
@@ -430,6 +488,10 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
     div.textContent = s || '';
     return div.innerHTML;
   }
+
+  function statusOf(e) { return (e.status || '').toLowerCase(); }
+  function isActionable(s) { return s === 'created' || s === 'sent' || s === 'accepted'; }
+  function isApprovable(s) { return s === 'created' || s === 'sent'; }
 
   /* ===== API Layer ===== */
   async function api(path, opts) {
@@ -464,7 +526,7 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
   /* ===== Load Estimates ===== */
   async function loadEstimates() {
     var tbody = $('tableBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Loading estimates...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Loading estimates...</td></tr>';
     $('emptyState').classList.add('hidden');
     document.querySelector('.table-wrap').classList.remove('hidden');
     $('tableFooter').classList.remove('hidden');
@@ -498,7 +560,7 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
       }
     } catch (e) {
       console.error('[Estimates] Load error:', e);
-      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell" style="color:#ff4444;">Failed to load estimates: ' + escHtml(e.message) + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell" style="color:#ff4444;">Failed to load estimates: ' + escHtml(e.message) + '</td></tr>';
     }
   }
 
@@ -527,13 +589,16 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
     var tbody = $('tableBody');
 
     if (!items || !items.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No estimates found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No estimates found.</td></tr>';
       return;
     }
 
+    var hasActionable = items.some(function(e) { return isActionable(statusOf(e)); });
+    $('estToolbar').classList.toggle('hidden', !hasActionable);
+
+    // All data is from our own API and escaped via escHtml — safe for innerHTML
     tbody.innerHTML = items.map(function(e, i) {
-      var status = (e.status || 'created').toLowerCase();
-      var statusClass = 'status-' + status;
+      var status = statusOf(e) || 'created';
       var custName = escHtml(truncate(e.customer_name, 40));
       var taskText = e.task_ids && e.task_ids.length
         ? e.task_ids.map(function(id) { return '#' + id; }).join(', ')
@@ -542,17 +607,22 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
       var total = e.qb_total != null ? money(e.qb_total) : (e.total != null ? money(e.total) : '\u2014');
       var created = fmtDate(e.created_at);
 
-      // Action buttons
+      var checkCell = isActionable(status)
+        ? '<td class="td-check"><input type="checkbox" class="est-checkbox" data-est-idx="' + i + '"></td>'
+        : '<td class="td-check"></td>';
+
       var actions = '';
-      if (status === 'created' || status === 'sent') {
+      if (isApprovable(status)) {
         actions += '<button class="btn btn-sm btn-approve" data-action="approve" data-id="' + e.id + '">Approve</button>';
       }
       if (status === 'accepted') {
         actions += '<button class="btn btn-sm btn-convert" data-action="convert" data-id="' + e.id + '">Convert</button>';
       }
 
-      var row = '<tr class="est-row" data-idx="' + i + '">' +
-        '<td><span class="status-badge ' + statusClass + '">' + escHtml(status) + '</span></td>' +
+      var selectedClass = selectedEstimates[i] ? ' selected' : '';
+      var row = '<tr class="est-row' + selectedClass + '" data-idx="' + i + '">' +
+        checkCell +
+        '<td><span class="status-badge status-' + status + '">' + escHtml(status) + '</span></td>' +
         '<td>' + custName + '</td>' +
         '<td>' + taskText + '</td>' +
         '<td>' + escHtml(String(estNum)) + '</td>' +
@@ -561,9 +631,15 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
         '<td><div class="action-cell">' + actions + '</div></td>' +
         '</tr>';
 
-      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="7">' + buildDetail(e) + '</td></tr>';
+      row += '<tr class="detail-row" id="detail-' + i + '"><td colspan="8">' + buildDetail(e) + '</td></tr>';
       return row;
     }).join('');
+
+    // Restore checkbox state after re-render
+    Object.keys(selectedEstimates).forEach(function(idx) {
+      var cb = document.querySelector('.est-checkbox[data-est-idx="' + idx + '"]');
+      if (cb) cb.checked = true;
+    });
   }
 
   /* ===== Build Detail ===== */
@@ -600,7 +676,7 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
     }
 
     // Converted invoice info
-    if ((e.status || '').toLowerCase() === 'converted' && (e.converted_invoice_id || e.converted_invoice_number)) {
+    if (statusOf(e) === 'converted' && (e.converted_invoice_id || e.converted_invoice_number)) {
       html += '<div class="converted-info">Converted to Invoice' +
         (e.converted_invoice_number ? ' <strong>#' + escHtml(String(e.converted_invoice_number)) + '</strong>' : '') +
         (e.converted_invoice_id ? ' (ID: ' + e.converted_invoice_id + ')' : '') +
@@ -753,8 +829,159 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
     }
   }
 
+  /* ===== Selection ===== */
+  function updateEstimateSelection() {
+    var count = Object.keys(selectedEstimates).length;
+    var total = estimates.filter(function(e) { return isActionable(statusOf(e)); }).length;
+
+    $('estSelectedCount').textContent = count + ' of ' + total + ' selected';
+    $('selectAllEstCheck').checked = count > 0 && count === total;
+    $('selectAllEstCheck').indeterminate = count > 0 && count < total;
+
+    var approveCount = 0, convertCount = 0;
+    Object.keys(selectedEstimates).forEach(function(idx) {
+      var s = statusOf(estimates[idx] || {});
+      if (isApprovable(s)) approveCount++;
+      if (s === 'accepted') convertCount++;
+    });
+
+    var approveBtn = $('bulkApproveBtn');
+    var convertBtn = $('bulkConvertBtn');
+    approveBtn.classList.toggle('hidden', approveCount === 0);
+    if (approveCount > 0) approveBtn.textContent = 'Approve Selected (' + approveCount + ')';
+    convertBtn.classList.toggle('hidden', convertCount === 0);
+    if (convertCount > 0) convertBtn.textContent = 'Convert Selected (' + convertCount + ')';
+  }
+
+  function toggleSelectAllEstimates(checked) {
+    selectedEstimates = {};
+    estimates.forEach(function(e, i) {
+      if (checked && isActionable(statusOf(e))) selectedEstimates[i] = true;
+    });
+    document.querySelectorAll('.est-checkbox').forEach(function(cb) { cb.checked = checked; });
+    document.querySelectorAll('.est-row').forEach(function(row) {
+      var idx = Number(row.getAttribute('data-idx'));
+      row.classList.toggle('selected', !!selectedEstimates[idx]);
+    });
+    updateEstimateSelection();
+  }
+
+  // Delegated checkbox handler
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'selectAllEstCheck') {
+      toggleSelectAllEstimates(e.target.checked);
+      return;
+    }
+    if (e.target.classList.contains('est-checkbox')) {
+      var idx = Number(e.target.getAttribute('data-est-idx'));
+      if (e.target.checked) {
+        selectedEstimates[idx] = true;
+      } else {
+        delete selectedEstimates[idx];
+      }
+      var row = e.target.closest('.est-row');
+      if (row) row.classList.toggle('selected', e.target.checked);
+      updateEstimateSelection();
+    }
+  });
+
+  /* ===== Confirm Dialog ===== */
+  function showConfirm(title, message, taskListHtml, goText, onConfirm) {
+    $('confirmTitle').textContent = title;
+    $('confirmMessage').innerHTML = message;
+    $('confirmTasks').innerHTML = taskListHtml;
+    $('confirmGo').textContent = goText;
+    $('confirmOverlay').classList.remove('hidden');
+    confirmAction = onConfirm;
+  }
+
+  function hideConfirm() {
+    $('confirmOverlay').classList.add('hidden');
+    confirmAction = null;
+  }
+
+  $('confirmCancel').addEventListener('click', hideConfirm);
+  $('confirmOverlay').addEventListener('click', function(e) {
+    if (e.target === this) hideConfirm();
+  });
+  $('confirmGo').addEventListener('click', function() {
+    if (confirmAction) confirmAction();
+  });
+
+  /* ===== Bulk Action Helper ===== */
+  function getSelectedByStatus(filterFn) {
+    return Object.keys(selectedEstimates).map(Number).map(function(i) { return estimates[i]; }).filter(function(e) {
+      return e && filterFn(statusOf(e));
+    });
+  }
+
+  function buildConfirmList(items) {
+    return items.map(function(e) {
+      return '<div class="confirm-task-row"><span>' + escHtml(e.customer_name || '\u2014') + ' \u2014 #' + escHtml(String(e.qb_doc_number || '?')) + '</span><span>' + money(e.qb_total || e.total) + '</span></div>';
+    }).join('');
+  }
+
+  function executeBulkAction(items, endpoint, progressLabel, successMsg, failMsg) {
+    var goBtn = $('confirmGo');
+    var cancelBtn = $('confirmCancel');
+    var originalText = goBtn.textContent;
+    goBtn.disabled = true;
+    goBtn.textContent = progressLabel + '...';
+    cancelBtn.style.display = 'none';
+
+    var ids = items.map(function(e) { return e.id; });
+    var done = 0, failed = 0;
+
+    Promise.all(ids.map(function(id) {
+      return api('/v2/estimate/' + id + '/' + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true })
+      }).then(function() { done++; }).catch(function() { failed++; });
+    })).then(function() {
+      hideConfirm();
+      if (done > 0) showToast(successMsg.replace('{n}', done), 'success');
+      if (failed > 0) showToast(failMsg.replace('{n}', failed), 'error');
+      selectedEstimates = {};
+      updateEstimateSelection();
+      loadEstimates();
+    }).finally(function() {
+      goBtn.disabled = false;
+      goBtn.textContent = originalText;
+      cancelBtn.style.display = '';
+    });
+  }
+
+  /* ===== Bulk Approve ===== */
+  $('bulkApproveBtn').addEventListener('click', function() {
+    var items = getSelectedByStatus(isApprovable);
+    if (!items.length) return;
+    showConfirm(
+      'Approve ' + items.length + ' Estimate(s)?',
+      'This will mark <strong>' + items.length + '</strong> estimate(s) as accepted.',
+      buildConfirmList(items),
+      'Yes, Approve ' + items.length,
+      function() { executeBulkAction(items, 'approve', 'Approving', 'Approved {n} estimate(s)', '{n} failed to approve'); }
+    );
+  });
+
+  /* ===== Bulk Convert ===== */
+  $('bulkConvertBtn').addEventListener('click', function() {
+    var items = getSelectedByStatus(function(s) { return s === 'accepted'; });
+    if (!items.length) return;
+    showConfirm(
+      'Convert ' + items.length + ' Estimate(s) to Invoices?',
+      'This will convert <strong>' + items.length + '</strong> accepted estimate(s) into invoices. This action cannot be undone.',
+      buildConfirmList(items),
+      'Yes, Convert ' + items.length,
+      function() { executeBulkAction(items, 'convert', 'Converting', 'Converted {n} estimate(s) to invoices', '{n} failed to convert'); }
+    );
+  });
+
   /* ===== Refresh ===== */
   $('refreshBtn').addEventListener('click', function() {
+    selectedEstimates = {};
+    updateEstimateSelection();
     loadEstimates();
   });
 
@@ -778,7 +1005,7 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
       var data = await api('/v2/estimate/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: 30 })
+        body: JSON.stringify({ days: 60 })
       });
 
       // Extract estimates array from preview response
@@ -792,8 +1019,6 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
           '<p style="text-align:center;color:rgba(255,255,255,0.6);padding:20px 0;">No estimate-eligible tasks found. All tasks have already been processed or do not qualify.</p>';
         return;
       }
-
-      var totalAmount = items.reduce(function(sum, t) { return sum + (t.total || 0); }, 0);
 
       var validCount = 0;
       var validAmount = 0;
@@ -875,7 +1100,14 @@ body.light-theme .toast { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
   });
 
   /* ===== Page Ready ===== */
-  window.onPageReady = function(user, roles) {
+  window.onPageReady = function(user, roles, customerId) {
+    // Pipeline proxy enforces Admin role; this is defense-in-depth
+    if (roles && roles.indexOf('Admin') === -1) {
+      document.querySelector('.page-wrapper').innerHTML =
+        '<div class="empty-state"><p>Admin access required for Estimate Management.</p><a href="/pipeline/" class="back-btn">&larr; Back to Pipeline</a></div>';
+      return;
+    }
+    selectedEstimates = {};
     loadEstimates();
   };
 })();
