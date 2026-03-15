@@ -24,45 +24,45 @@ const CUSTOMER_PATHS = {
 const PUBLIC_PAGES = ['/service/', '/service'];
 
 const PAGE_ACCESS = {
-  '/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/command/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/command': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/parts/': { roles: ['Admin', 'Tech'] },
-  '/tech/parts': { roles: ['Admin', 'Tech'] },
-  '/tech/manuals/': { roles: ['Admin', 'Tech'] },
-  '/tech/manuals': { roles: ['Admin', 'Tech'] },
-  '/tech/doors/': { roles: ['Admin', 'Tech'] },
-  '/tech/doors': { roles: ['Admin', 'Tech'] },
-  '/tech/summary/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/summary': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/pricing/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/tech/pricing': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/door/': { roles: ['Admin', 'Tech', 'Customer'] },
-  '/door': { roles: ['Admin', 'Tech', 'Customer'] },
-  '/customer/command/': { roles: ['Admin', 'Customer'] },
-  '/customer/command': { roles: ['Admin', 'Customer'] },
-  '/customer/': { roles: ['Admin', 'Customer'] },
-  '/customer': { roles: ['Admin', 'Customer'] },
-  '/westbank/': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
-  '/westbank': { roles: ['Admin', 'Customer'], customerId: 'westbank' },
-  '/mannings/': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
-  '/mannings': { roles: ['Admin', 'Customer'], customerId: 'mannings' },
-  '/umc/': { roles: ['Admin', 'Customer'], customerId: 'umc' },
-  '/umc': { roles: ['Admin', 'Customer'], customerId: 'umc' },
-  '/pipeline': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/customers': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/customers/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/parts': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/parts/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/preview': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/preview/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/log': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/log/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/rates': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/rates/': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/estimates': { roles: ['Admin'], redirect: '/tech/parts/' },
-  '/pipeline/estimates/': { roles: ['Admin'], redirect: '/tech/parts/' },
+  '/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/tech/command/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/tech/command': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/tech/parts/': { roles: ['admin', 'tech'] },
+  '/tech/parts': { roles: ['admin', 'tech'] },
+  '/tech/manuals/': { roles: ['admin', 'tech'] },
+  '/tech/manuals': { roles: ['admin', 'tech'] },
+  '/tech/doors/': { roles: ['admin', 'tech'] },
+  '/tech/doors': { roles: ['admin', 'tech'] },
+  '/tech/summary/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/tech/summary': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/tech/pricing/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/tech/pricing': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/door/': { roles: ['admin', 'tech', 'customer'] },
+  '/door': { roles: ['admin', 'tech', 'customer'] },
+  '/customer/command/': { roles: ['admin', 'customer'] },
+  '/customer/command': { roles: ['admin', 'customer'] },
+  '/customer/': { roles: ['admin', 'customer'] },
+  '/customer': { roles: ['admin', 'customer'] },
+  '/westbank/': { roles: ['admin', 'customer'], customerId: 'westbank' },
+  '/westbank': { roles: ['admin', 'customer'], customerId: 'westbank' },
+  '/mannings/': { roles: ['admin', 'customer'], customerId: 'mannings' },
+  '/mannings': { roles: ['admin', 'customer'], customerId: 'mannings' },
+  '/umc/': { roles: ['admin', 'customer'], customerId: 'umc' },
+  '/umc': { roles: ['admin', 'customer'], customerId: 'umc' },
+  '/pipeline': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/customers': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/customers/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/parts': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/parts/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/preview': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/preview/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/log': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/log/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/rates': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/rates/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/estimates': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/estimates/': { roles: ['admin'], redirect: '/tech/parts/' },
 };
 
 let auth0Client = null;
@@ -110,12 +110,12 @@ function isPublicPage() {
 }
 
 function getDefaultPage(roles, customerId) {
-  if (roles.includes('Admin')) return '/';
-  if (roles.includes('Customer')) {
+  if (roles.includes('admin')) return '/';
+  if (roles.includes('customer')) {
     if (customerId && CUSTOMER_PATHS[customerId]) return CUSTOMER_PATHS[customerId];
     return '/customer/command/';
   }
-  if (roles.includes('Tech')) return '/tech/parts/';
+  if (roles.includes('tech')) return '/tech/parts/';
   return '/tech/parts/';
 }
 
@@ -125,7 +125,7 @@ function checkPageAccess(roles, customerId) {
 
   const hasRole = access.roles.some(r => roles.includes(r));
   let allowed = hasRole;
-  if (hasRole && access.customerId && !roles.includes('Admin')) {
+  if (hasRole && access.customerId && !roles.includes('admin')) {
     allowed = customerId === access.customerId ||
               CUSTOMER_PATHS[customerId] === path ||
               CUSTOMER_PATHS[customerId] === path.replace(/\/$/, '') + '/';
@@ -297,7 +297,8 @@ async function getUserRoles() {
   if (!client) return [];
   try {
     const claims = await client.getIdTokenClaims();
-    return claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
+    const rawRoles = claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
+    return rawRoles.map(r => r.toLowerCase());
   } catch { return []; }
 }
 
@@ -344,19 +345,21 @@ async function handleAuth() {
     return;
   }
 
-  // Get user and roles
+  // Get user and roles (normalize to lowercase for consistent checks everywhere)
   const user = await client.getUser();
   const claims = await client.getIdTokenClaims();
-  const roles = claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
+  const rawRoles = claims?.[AUTH_CONFIG.namespace + '/roles'] || [];
+  const roles = rawRoles.map(r => r.toLowerCase());
   const customerId = claims?.[AUTH_CONFIG.namespace + '/customer_id'] || null;
+  const limbleUserId = claims?.[AUTH_CONFIG.namespace + '/limble_user_id'] || null;
   const role = roles[0] || '';
 
-  console.log('[Auth] User:', user?.email, 'Roles:', roles, 'Customer:', customerId);
+  console.log('[Auth] User:', user?.email, 'Roles:', roles, 'Customer:', customerId, 'LimbleUser:', limbleUserId);
 
   // Add role classes to body (for CSS-based visibility)
-  if (roles.includes('Admin')) document.body.classList.add('is-admin');
-  if (roles.includes('Tech')) document.body.classList.add('is-tech');
-  if (roles.includes('Customer')) document.body.classList.add('is-customer');
+  if (roles.includes('admin')) document.body.classList.add('is-admin');
+  if (roles.includes('tech')) document.body.classList.add('is-tech');
+  if (roles.includes('customer')) document.body.classList.add('is-customer');
 
   // Check page access
   const { allowed, redirect } = checkPageAccess(roles, customerId);
@@ -366,6 +369,9 @@ async function handleAuth() {
     return;
   }
 
+  // Expose limbleUserId globally
+  window.AASAuth.limbleUserId = limbleUserId;
+
   // Success - create user menu and show page
   createUserMenu(user, roles);
   updateAuthOverlay('authenticated');
@@ -373,7 +379,7 @@ async function handleAuth() {
   // Call page-specific init if defined
   if (typeof window.onPageReady === 'function') {
     try {
-      window.onPageReady(user, roles, customerId);
+      window.onPageReady(user, roles, customerId, limbleUserId);
     } catch (e) {
       console.error('[Auth] onPageReady error:', e);
     }
@@ -381,7 +387,7 @@ async function handleAuth() {
 }
 
 // Export for global use
-window.AASAuth = { login, logout, getUserRoles, getToken, initAuth };
+window.AASAuth = { login, logout, getUserRoles, getToken, initAuth, limbleUserId: null };
 
 // Run on load
 if (document.readyState === 'loading') {

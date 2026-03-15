@@ -26,7 +26,8 @@ function getRolesFromToken(authHeader: string | null): string[] {
     const parts = authHeader.substring(7).split(".");
     if (parts.length !== 3) return [];
     const payload = JSON.parse(base64UrlDecode(parts[1]));
-    return payload["https://aas-portal.com/roles"] || [];
+    const rawRoles: string[] = payload["https://aas-portal.com/roles"] || [];
+    return rawRoles.map((r: string) => r.toLowerCase());
   } catch { return []; }
 }
 
@@ -111,8 +112,20 @@ export default async function handler(req: Request, context: Context): Promise<R
   }
 
   const roles = getRolesFromToken(req.headers.get("Authorization"));
-  if (!roles.includes("Admin")) {
-    return new Response(JSON.stringify({ error: "Admin role required" }), {
+
+  // Tech can access task-context (read) and task write endpoints (parts/tags/findings)
+  const TECH_ALLOWED_PATTERNS = [
+    /\/pipeline\/v2\/task-context\//,
+    /\/pipeline\/v2\/task\/\d+\/parts/,
+    /\/pipeline\/v2\/task\/\d+\/tags/,
+    /\/pipeline\/v2\/task\/\d+\/findings/,
+  ];
+  const isTechRoute = TECH_ALLOWED_PATTERNS.some(p => p.test(dropletPath));
+  const isAdmin = roles.includes("admin");
+  const isTech = roles.includes("tech");
+
+  if (!isAdmin && !(isTech && isTechRoute)) {
+    return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
       status: 403, headers: baseHeaders(),
     });
   }

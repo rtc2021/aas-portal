@@ -2398,9 +2398,9 @@ body.light-theme #aasPartsFinder .pf-toast--info {
   });
   el('pfClearTask')?.addEventListener('click', clearTask);
 
-  // ── Auth gate: show task features when authenticated as admin ──
+  // ── Auth gate: show task features for Admin and Tech roles ──
   window.onPageReady = function(user, roles) {
-    if (roles && roles.includes('admin')) {
+    if (roles && (roles.includes('admin') || roles.includes('tech'))) {
       const wrap = el('pfTaskWrap');
       if (wrap) wrap.style.display = 'flex';
     }
