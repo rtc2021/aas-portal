@@ -24,7 +24,7 @@ const CUSTOMER_PATHS = {
 const PUBLIC_PAGES = ['/service/', '/service'];
 
 const PAGE_ACCESS = {
-  '/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/': { roles: ['admin', 'tech'] },
   '/tech/command/': { roles: ['admin'], redirect: '/tech/parts/' },
   '/tech/command': { roles: ['admin'], redirect: '/tech/parts/' },
   '/tech/parts/': { roles: ['admin', 'tech'] },

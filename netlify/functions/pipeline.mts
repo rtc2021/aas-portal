@@ -119,6 +119,7 @@ export default async function handler(req: Request, context: Context): Promise<R
     /\/pipeline\/v2\/task\/\d+\/parts/,
     /\/pipeline\/v2\/task\/\d+\/tags/,
     /\/pipeline\/v2\/task\/\d+\/findings/,
+    /\/pipeline\/v2\/tech\/tasks/,
   ];
   const isTechRoute = TECH_ALLOWED_PATTERNS.some(p => p.test(dropletPath));
   const isAdmin = roles.includes("admin");
