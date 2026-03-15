@@ -770,27 +770,27 @@
     }
 
     async checkAccess() {
-      // Wait for AASAuth to be available
+      // Wait for AASAuth to be available AND auth flow to complete
       let attempts = 0;
-      while (!window.AASAuth && attempts < 20) {
-        await new Promise(r => setTimeout(r, 100));
+      while (attempts < 40) {
+        if (window.AASAuth) {
+          try {
+            const roles = await window.AASAuth.getUserRoles();
+            if (roles && roles.length > 0) {
+              const hasRole = CONFIG.allowedRoles.some(r => roles.includes(r));
+              console.log('[Copilot] User roles:', roles, 'Has access:', hasRole);
+              return hasRole;
+            }
+          } catch (e) {
+            // Auth not ready yet, keep waiting
+          }
+        }
+        await new Promise(r => setTimeout(r, 150));
         attempts++;
       }
-      
-      if (!window.AASAuth) {
-        console.log('[Copilot] AASAuth not found - showing copilot anyway');
-        return true; // Show anyway if no auth
-      }
-      
-      try {
-        const roles = await window.AASAuth.getUserRoles();
-        const hasRole = CONFIG.allowedRoles.some(r => roles.includes(r));
-        console.log('[Copilot] User roles:', roles, 'Has access:', hasRole);
-        return hasRole;
-      } catch (e) {
-        console.error('[Copilot] Error checking roles:', e);
-        return false;
-      }
+
+      console.log('[Copilot] Auth timeout - no roles found');
+      return false;
     }
 
     injectStyles() {
