@@ -2204,6 +2204,10 @@ body.light-theme #aasPartsFinder .pf-toast--info {
       }
 
       window._pfTask = await resp.json();
+      // Ensure task.id is set (backend may return task_id instead)
+      if (window._pfTask.task && !window._pfTask.task.id) {
+        window._pfTask.task.id = window._pfTask.task.task_id || taskId;
+      }
       _partsAdded = [];
       renderTaskPanel();
       renderAssetHistory();
