@@ -74,6 +74,10 @@
         <kbd class="pf-kbd">⌘K</kbd>
       </div>
       <select id="pfMfr" class="pf-select" aria-label="Manufacturer filter"></select>
+      <div class="pf-task-wrap" id="pfTaskWrap" style="display:none">
+        <input id="pfTaskId" class="pf-task-input" type="text" placeholder="Task ID" inputmode="numeric" />
+        <button id="pfLoadTask" class="pf-btn pf-btn--task" type="button">Load Task</button>
+      </div>
     </div>
   </div>
 
@@ -86,6 +90,28 @@
     <div id="pfStatus" class="pf-status"></div>
   </div>
   
+  <!-- Task Context Panel -->
+  <div id="pfTaskPanel" class="pf-task-panel" style="display:none">
+    <div class="pf-task-header">
+      <div class="pf-task-info">
+        <strong id="pfTaskName"></strong>
+        <span id="pfTaskCustomer" class="pf-task-customer"></span>
+        <div class="pf-task-meta"><span id="pfTaskAsset"></span> · <span id="pfTaskStatus"></span></div>
+      </div>
+      <button id="pfClearTask" class="pf-btn pf-btn--mini" type="button" title="Clear task">✕</button>
+    </div>
+    <div id="pfPartsOnTask" class="pf-parts-on-task" style="display:none">
+      <h4 class="pf-section-title">Parts on Task</h4>
+      <div id="pfPartsOnTaskList"></div>
+    </div>
+  </div>
+
+  <!-- Commonly Used Parts on Asset -->
+  <div id="pfAssetHistory" class="pf-asset-history" style="display:none">
+    <h4 class="pf-section-title">Commonly Used on This Asset</h4>
+    <div id="pfAssetHistoryList" class="pf-asset-history-list"></div>
+  </div>
+
   <div id="pfGrid" class="pf-grid" role="list" aria-label="Parts list"></div>
 
   <div class="pf-footer">
@@ -118,6 +144,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Toast notification -->
+  <div id="pfToast" class="pf-toast" style="display:none"></div>
 </div>
 
 <style>
@@ -197,7 +226,8 @@
 }
 
 #aasPartsFinder .pf-search,
-#aasPartsFinder .pf-select {
+#aasPartsFinder .pf-select,
+#aasPartsFinder .pf-task-input {
   border-radius: var(--pf-radius);
   border: 1px solid var(--pf-border);
   background: var(--pf-bg);
@@ -219,7 +249,8 @@
   box-shadow: 0 0 0 3px rgba(31,111,235,.15), 0 0 20px rgba(31,111,235,.1);
 }
 
-#aasPartsFinder .pf-search::placeholder {
+#aasPartsFinder .pf-search::placeholder,
+#aasPartsFinder .pf-task-input::placeholder {
   color: var(--pf-text-dim);
 }
 
@@ -825,30 +856,54 @@
   #aasPartsFinder .pf-search {
     min-width: 100%;
   }
-  
+
   #aasPartsFinder .pf-select {
     min-width: 100%;
   }
-  
+
   #aasPartsFinder .pf-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
-  
+
   #aasPartsFinder .pf-kbd {
     display: none;
   }
-  
+
   #aasPartsFinder .pf-row {
     flex-direction: column;
   }
-  
+
   #aasPartsFinder .pf-btn {
     width: 100%;
   }
-  
+
   /* Reduce reserved space on mobile */
   #aasPartsFinder .pf-recent-wrap {
     min-height: 32px;
+  }
+
+  /* Task context mobile */
+  #aasPartsFinder .pf-task-wrap {
+    width: 100%;
+  }
+
+  #aasPartsFinder .pf-task-input {
+    flex: 1;
+    width: auto;
+  }
+
+  #aasPartsFinder .pf-task-header {
+    flex-direction: column;
+  }
+
+  #aasPartsFinder .pf-asset-history-list {
+    flex-direction: column;
+  }
+
+  #aasPartsFinder .pf-toast {
+    left: 12px;
+    right: 12px;
+    max-width: none;
   }
 }
 
@@ -889,9 +944,6 @@ body.light-theme #aasPartsFinder {
   --pf-highlight: rgba(37,99,235,0.12);
   --pf-highlight-text: #1d4ed8;
   --pf-success: #059669;
-  --pf-radius: 14px;
-  --pf-radius-lg: 18px;
-  --pf-blur: blur(12px);
   color: var(--pf-text);
 }
 
@@ -1061,6 +1113,330 @@ body.light-theme #aasPartsFinder ::-webkit-scrollbar-thumb {
 body.light-theme #aasPartsFinder ::-webkit-scrollbar-thumb:hover {
   background: rgba(15,23,42,0.2);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TASK CONTEXT — Phase 3 Enhancement
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Task ID input group */
+#aasPartsFinder .pf-task-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#aasPartsFinder .pf-task-input {
+  width: 110px;
+  font-size: 14px;
+}
+
+#aasPartsFinder .pf-task-input:focus {
+  border-color: var(--pf-accent-glow);
+  box-shadow: 0 0 0 3px rgba(31,111,235,.15);
+}
+
+#aasPartsFinder .pf-btn--task {
+  border-color: rgba(34,197,94,.35);
+  background: linear-gradient(180deg, rgba(34,197,94,.18), rgba(34,197,94,.08));
+  white-space: nowrap;
+}
+
+#aasPartsFinder .pf-btn--task:hover {
+  border-color: rgba(34,197,94,.55);
+}
+
+#aasPartsFinder .pf-btn--task.is-loading {
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* Task context panel */
+#aasPartsFinder .pf-task-panel {
+  border-radius: var(--pf-radius-lg);
+  border: 1px solid rgba(34,197,94,.25);
+  background: rgba(34,197,94,.06);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  backdrop-filter: var(--pf-blur);
+  -webkit-backdrop-filter: var(--pf-blur);
+}
+
+#aasPartsFinder .pf-task-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+#aasPartsFinder .pf-task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+#aasPartsFinder .pf-task-info strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+#aasPartsFinder .pf-task-customer {
+  display: block;
+  color: var(--pf-text-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+#aasPartsFinder .pf-task-meta {
+  color: var(--pf-text-dim);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+#aasPartsFinder .pf-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--pf-text-muted);
+  margin: 12px 0 8px;
+}
+
+#aasPartsFinder .pf-parts-on-task {
+  border-top: 1px solid var(--pf-border);
+  margin-top: 10px;
+  padding-top: 4px;
+}
+
+#aasPartsFinder .pf-pot-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--pf-text-muted);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+
+#aasPartsFinder .pf-pot-item:last-child {
+  border-bottom: none;
+}
+
+#aasPartsFinder .pf-pot-qty {
+  font-weight: 700;
+  color: var(--pf-text-dim);
+  font-size: 12px;
+}
+
+/* Asset history section */
+#aasPartsFinder .pf-asset-history {
+  border-radius: var(--pf-radius-lg);
+  border: 1px solid var(--pf-border);
+  background: var(--pf-bg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  backdrop-filter: var(--pf-blur);
+  -webkit-backdrop-filter: var(--pf-blur);
+}
+
+#aasPartsFinder .pf-asset-history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#aasPartsFinder .pf-ah-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--pf-border);
+  background: rgba(255,255,255,.04);
+  font-size: 13px;
+  transition: border-color .15s ease;
+}
+
+#aasPartsFinder .pf-ah-item:hover {
+  border-color: var(--pf-border-hover);
+}
+
+#aasPartsFinder .pf-ah-name {
+  font-weight: 700;
+}
+
+#aasPartsFinder .pf-ah-count {
+  color: var(--pf-text-dim);
+  font-size: 11px;
+}
+
+#aasPartsFinder .pf-ah-add {
+  background: rgba(31,111,235,.15);
+  border: 1px solid rgba(31,111,235,.3);
+  color: var(--pf-accent-soft);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .12s ease;
+}
+
+#aasPartsFinder .pf-ah-add:hover {
+  background: rgba(31,111,235,.25);
+  border-color: rgba(31,111,235,.5);
+}
+
+/* Add to Task button in part cards */
+#aasPartsFinder .pf-btn--add {
+  border-color: rgba(34,197,94,.3);
+  background: linear-gradient(180deg, rgba(34,197,94,.15), rgba(34,197,94,.06));
+}
+
+#aasPartsFinder .pf-btn--add:hover:not(:disabled) {
+  border-color: rgba(34,197,94,.5);
+}
+
+#aasPartsFinder .pf-btn--add:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+#aasPartsFinder .pf-btn--add.pf-btn--added {
+  border-color: rgba(34,197,94,.5);
+  background: linear-gradient(180deg, rgba(34,197,94,.25), rgba(34,197,94,.12));
+}
+
+/* Toast notification */
+#aasPartsFinder .pf-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10002;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 400px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.4);
+  animation: pf-toast-in .25s ease;
+  backdrop-filter: var(--pf-blur);
+  -webkit-backdrop-filter: var(--pf-blur);
+}
+
+@keyframes pf-toast-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#aasPartsFinder .pf-toast--success {
+  background: rgba(34,197,94,.15);
+  border: 1px solid rgba(34,197,94,.4);
+  color: #4ade80;
+}
+
+#aasPartsFinder .pf-toast--error {
+  background: rgba(239,68,68,.15);
+  border: 1px solid rgba(239,68,68,.4);
+  color: #f87171;
+}
+
+#aasPartsFinder .pf-toast--info {
+  background: rgba(59,130,246,.15);
+  border: 1px solid rgba(59,130,246,.4);
+  color: #60a5fa;
+}
+
+/* Light theme — Task Context */
+body.light-theme #aasPartsFinder .pf-task-input {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(15,23,42,0.1);
+}
+
+body.light-theme #aasPartsFinder .pf-task-input:focus {
+  border-color: rgba(37,99,235,0.4);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+body.light-theme #aasPartsFinder .pf-task-input::placeholder {
+  color: rgba(15,23,42,0.35);
+}
+
+body.light-theme #aasPartsFinder .pf-btn--task {
+  border-color: rgba(5,150,105,.3);
+  background: rgba(5,150,105,.08);
+}
+
+body.light-theme #aasPartsFinder .pf-btn--task:hover {
+  border-color: rgba(5,150,105,.5);
+}
+
+body.light-theme #aasPartsFinder .pf-task-panel {
+  border-color: rgba(5,150,105,.2);
+  background: rgba(5,150,105,.04);
+  backdrop-filter: none;
+}
+
+body.light-theme #aasPartsFinder .pf-parts-on-task {
+  border-top-color: rgba(15,23,42,0.06);
+}
+
+body.light-theme #aasPartsFinder .pf-pot-item {
+  border-bottom-color: rgba(15,23,42,0.04);
+}
+
+body.light-theme #aasPartsFinder .pf-asset-history {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(15,23,42,0.08);
+  backdrop-filter: none;
+}
+
+body.light-theme #aasPartsFinder .pf-ah-item {
+  background: rgba(15,23,42,0.03);
+  border-color: rgba(15,23,42,0.08);
+}
+
+body.light-theme #aasPartsFinder .pf-ah-item:hover {
+  border-color: rgba(15,23,42,0.16);
+}
+
+body.light-theme #aasPartsFinder .pf-ah-add {
+  background: rgba(37,99,235,.08);
+  border-color: rgba(37,99,235,.25);
+  color: #2563eb;
+}
+
+body.light-theme #aasPartsFinder .pf-ah-add:hover {
+  background: rgba(37,99,235,.15);
+  border-color: rgba(37,99,235,.4);
+}
+
+body.light-theme #aasPartsFinder .pf-btn--add {
+  border-color: rgba(5,150,105,.25);
+  background: rgba(5,150,105,.06);
+}
+
+body.light-theme #aasPartsFinder .pf-btn--add:hover:not(:disabled) {
+  border-color: rgba(5,150,105,.4);
+}
+
+body.light-theme #aasPartsFinder .pf-toast--success {
+  background: rgba(5,150,105,.08);
+  border-color: rgba(5,150,105,.3);
+  color: #059669;
+}
+
+body.light-theme #aasPartsFinder .pf-toast--error {
+  background: rgba(220,38,38,.08);
+  border-color: rgba(220,38,38,.3);
+  color: #dc2626;
+}
+
+body.light-theme #aasPartsFinder .pf-toast--info {
+  background: rgba(37,99,235,.08);
+  border-color: rgba(37,99,235,.3);
+  color: #2563eb;
+}
+
 </style>
 
 <script>
@@ -1517,6 +1893,7 @@ body.light-theme #aasPartsFinder ::-webkit-scrollbar-thumb:hover {
           <button type="button" class="pf-btn" data-a="qr">QR</button>
           <button type="button" class="pf-btn pf-btn--share" data-a="copy">Copy</button>
           <a href="${CONFIG.LIMBLE_URL}" target="_blank" rel="noopener" class="pf-btn pf-btn--limble">Limble</a>
+          <button type="button" class="pf-btn pf-btn--add" data-add-part data-key="${escapeHtml(p.key)}" data-mfg="${escapeHtml(p.mfg_part || '')}" data-manufacturer="${escapeHtml(p.manufacturer || '')}" ${window._pfTask ? '' : 'disabled'} title="${window._pfTask ? 'Add to task #' + window._pfTask.task.id : 'Load a task first'}">+ Task</button>
         </div>
       </div>`;
 
@@ -1768,6 +2145,266 @@ body.light-theme #aasPartsFinder ::-webkit-scrollbar-thumb:hover {
   window.addEventListener("popstate", () => { loadURL(); recompute(); });
 
   init();
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TASK CONTEXT — Phase 3 Enhancement (requires auth)
+// ═══════════════════════════════════════════════════════════════════════════
+(function() {
+  "use strict";
+
+  const el = (id) => document.getElementById(id);
+
+  const STATUS_LABELS = { 0: 'Open', 1: 'In Progress', 2: 'Complete', 2969: 'Parts Needed', 3100: 'Work Complete' };
+  const TOAST_DURATION = 4000;
+
+  window._pfTask = null;
+  let _toastTimer = null;
+  let _partsAdded = [];
+
+  // ── Toast ──
+  function showToast(msg, type) {
+    const t = el('pfToast');
+    if (!t) return;
+    clearTimeout(_toastTimer);
+    t.textContent = msg;
+    t.className = 'pf-toast pf-toast--' + (type || 'info');
+    t.style.display = 'block';
+    _toastTimer = setTimeout(function() { t.style.display = 'none'; }, TOAST_DURATION);
+  }
+
+  // ── Reset a button to its default state ──
+  function resetButton(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = '+ Task';
+  }
+
+  // ── Load task context ──
+  async function loadTask() {
+    const input = el('pfTaskId');
+    const taskId = (input ? input.value : '').trim();
+    if (!taskId || isNaN(taskId)) {
+      showToast('Enter a valid Task ID', 'error');
+      return;
+    }
+
+    const btn = el('pfLoadTask');
+    if (btn) btn.classList.add('is-loading');
+
+    try {
+      const token = await window.AASAuth.getToken();
+      const resp = await fetch('/api/pipeline/v2/task-context/' + taskId, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (!resp.ok) {
+        showToast('Task ' + taskId + ' not found', 'error');
+        return;
+      }
+
+      window._pfTask = await resp.json();
+      _partsAdded = [];
+      renderTaskPanel();
+      renderAssetHistory();
+      updateAddButtons();
+      showToast('Task #' + taskId + ' loaded', 'success');
+    } catch (e) {
+      showToast('Failed to load task: ' + e.message, 'error');
+    } finally {
+      if (btn) btn.classList.remove('is-loading');
+    }
+  }
+
+  // ── Clear task ──
+  function clearTask() {
+    window._pfTask = null;
+    _partsAdded = [];
+    el('pfTaskPanel').style.display = 'none';
+    el('pfAssetHistory').style.display = 'none';
+    el('pfTaskId').value = '';
+    updateAddButtons();
+  }
+
+  // ── Render task panel ──
+  function renderTaskPanel() {
+    const ctx = window._pfTask;
+    if (!ctx) return;
+    const task = ctx.task || {};
+    const customer = ctx.customer || {};
+
+    el('pfTaskName').textContent = task.name || 'Task #' + task.id;
+    el('pfTaskCustomer').textContent = customer.name || '';
+    el('pfTaskAsset').textContent = ctx.asset ? 'Asset: ' + (ctx.asset.name || ctx.asset.id) : '';
+    el('pfTaskStatus').textContent = STATUS_LABELS[task.statusID] || 'Status ' + (task.statusID || '?');
+
+    el('pfTaskPanel').style.display = 'block';
+    renderPartsOnTask();
+  }
+
+  // ── Render parts added to task (DOM API for XSS safety) ──
+  function renderPartsOnTask() {
+    const container = el('pfPartsOnTask');
+    const list = el('pfPartsOnTaskList');
+
+    if (!_partsAdded.length) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    list.textContent = '';
+    for (const p of _partsAdded) {
+      const row = document.createElement('div');
+      row.className = 'pf-pot-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = p.part_name;
+
+      const qtySpan = document.createElement('span');
+      qtySpan.className = 'pf-pot-qty';
+      qtySpan.textContent = p.quantity + 'x ';
+
+      const badge = document.createElement('span');
+      badge.style.color = p.qb_mapped ? 'var(--pf-success)' : '#f59e0b';
+      badge.textContent = p.qb_mapped ? 'QB \u2713' : '\u26A0 Not mapped';
+      qtySpan.appendChild(badge);
+
+      row.appendChild(nameSpan);
+      row.appendChild(qtySpan);
+      list.appendChild(row);
+    }
+  }
+
+  // ── Render commonly used parts on asset (DOM API for XSS safety) ──
+  function renderAssetHistory() {
+    const section = el('pfAssetHistory');
+    const list = el('pfAssetHistoryList');
+    const history = window._pfTask?.asset_parts_history || [];
+
+    if (!history.length) {
+      section.style.display = 'none';
+      return;
+    }
+
+    history.sort(function(a, b) { return (b.count || 0) - (a.count || 0); });
+
+    section.style.display = 'block';
+    list.textContent = '';
+    for (const h of history) {
+      const partName = h.part_name || h.name || '';
+
+      const item = document.createElement('div');
+      item.className = 'pf-ah-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'pf-ah-name';
+      nameSpan.textContent = partName;
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'pf-ah-count';
+      countSpan.textContent = (h.count || 0) + 'x';
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'pf-ah-add';
+      addBtn.textContent = '+ Add';
+      addBtn.dataset.ahAdd = '';
+      addBtn.dataset.partName = partName;
+      addBtn.dataset.partNumber = h.part_number || '';
+      addBtn.dataset.manufacturer = h.manufacturer || '';
+
+      item.appendChild(nameSpan);
+      item.appendChild(countSpan);
+      item.appendChild(addBtn);
+      list.appendChild(item);
+    }
+  }
+
+  // ── Add part to task via API ──
+  async function addPart(partName, partNumber, manufacturer, btn) {
+    if (!window._pfTask) {
+      showToast('Load a task first', 'error');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '...';
+    }
+
+    try {
+      const token = await window.AASAuth.getToken();
+      const resp = await fetch('/api/pipeline/v2/task/' + window._pfTask.task.id + '/parts', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parts: [{ part_name: partName, part_number: partNumber, manufacturer: manufacturer, quantity: 1 }]
+        })
+      });
+
+      if (!resp.ok) {
+        let errText = '';
+        try { errText = (await resp.json()).detail || ''; } catch (ignored) {}
+        showToast('Failed to add part' + (errText ? ': ' + errText : ''), 'error');
+        resetButton(btn);
+        return;
+      }
+
+      const data = await resp.json();
+      const mapped = data.mapping_status?.[0]?.qb_mapped || false;
+      _partsAdded.push({ part_name: partName, quantity: 1, qb_mapped: mapped });
+      renderPartsOnTask();
+      showToast('Added ' + partName + (mapped ? ' \u2014 QB Mapped \u2713' : ' \u2014 \u26A0 Not Mapped'), mapped ? 'success' : 'info');
+      if (btn) {
+        btn.textContent = '\u2713 Added';
+        btn.classList.add('pf-btn--added');
+      }
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+      resetButton(btn);
+    }
+  }
+
+  // ── Update all Add to Task buttons ──
+  function updateAddButtons() {
+    const task = window._pfTask;
+    document.querySelectorAll('#pfGrid [data-add-part]').forEach(function(btn) {
+      btn.disabled = !task;
+      btn.title = task ? 'Add to task #' + task.task.id : 'Load a task first';
+      if (!task) {
+        btn.textContent = '+ Task';
+        btn.classList.remove('pf-btn--added');
+      }
+    });
+  }
+
+  // ── Event delegation ──
+  el('pfGrid')?.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-add-part]');
+    if (!btn || btn.disabled) return;
+    addPart(btn.dataset.key || '', btn.dataset.mfg || '', btn.dataset.manufacturer || '', btn);
+  });
+
+  el('pfAssetHistoryList')?.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-ah-add]');
+    if (!btn) return;
+    addPart(btn.dataset.partName || '', btn.dataset.partNumber || '', btn.dataset.manufacturer || '', btn);
+  });
+
+  el('pfLoadTask')?.addEventListener('click', loadTask);
+  el('pfTaskId')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') loadTask();
+  });
+  el('pfClearTask')?.addEventListener('click', clearTask);
+
+  // ── Auth gate: show task features when authenticated as admin ──
+  window.onPageReady = function(user, roles) {
+    if (roles && roles.includes('admin')) {
+      const wrap = el('pfTaskWrap');
+      if (wrap) wrap.style.display = 'flex';
+    }
+  };
 })();
 </script>  </div>
   <!-- Hamburger Button -->
