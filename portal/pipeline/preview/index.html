@@ -130,10 +130,15 @@
       </div>
 
       <div class="tab-content" id="tab-splits" role="tabpanel">
+        <div class="invoice-toolbar hidden" id="splitToolbar">
+          <label class="select-all-label"><input type="checkbox" id="selectAllSplitsCheck"> Select All</label>
+          <span id="splitSelectedCount" class="selected-count">0 selected</span>
+          <button id="splitProcessBtn" type="button" class="split-process-btn hidden">Process Selected Splits</button>
+        </div>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr><th>Task Name</th><th>Customer</th><th>Reason</th></tr></thead>
-            <tbody id="splitBody"><tr><td colspan="3" class="loading-cell">Run dry-run to see split tasks</td></tr></tbody>
+            <thead><tr><th class="th-check"></th><th>Task ID</th><th>Task Name</th><th>Customer</th><th>Reason</th></tr></thead>
+            <tbody id="splitBody"><tr><td colspan="5" class="loading-cell">Run dry-run to see split tasks</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -358,6 +363,21 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .copy-json-btn { padding: 2px 10px; font-size: 0.7rem; font-weight: 600; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; }
 .copy-json-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
 .qb-json-pre { margin: 8px 0 0; white-space: pre-wrap; color: rgba(255,255,255,0.6); font-size: 0.72rem; max-height: 300px; overflow-y: auto; }
+.qb-preview-header { display: flex; align-items: center; justify-content: space-between; }
+.qb-preview-header h4 { margin: 0; }
+.split-process-btn { padding: 8px 18px; background: #ff8800; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; margin-left: auto; }
+.split-process-btn:hover { filter: brightness(1.1); }
+.split-process-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.split-preview-card { padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; }
+.split-preview-card:last-child { margin-bottom: 0; }
+.split-preview-name { font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
+.split-preview-customer { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
+.split-preview-amounts { display: flex; gap: 24px; font-size: 0.82rem; color: rgba(255,255,255,0.7); flex-wrap: wrap; }
+.split-preview-amounts strong { color: #00ff88; }
+.split-preview-error { border-color: rgba(255,68,68,0.3); }
+.split-preview-error-msg { color: #ff4444; font-size: 0.82rem; }
+.split-preview-totals { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; color: rgba(255,255,255,0.7); text-align: right; }
+.split-preview-totals strong { color: #00ff88; }
 .recent-docs-title { font-size: 1rem; font-weight: 700; margin: 0; }
 .recent-docs { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--ui-border, rgba(255,255,255,0.07)); }
 .view-all-link { font-size: 0.82rem; color: var(--ui-accent, #4f8cff); text-decoration: none; }
@@ -462,6 +482,16 @@ body.light-theme .missing-customer { color: #b47c00; }
 body.light-theme .copy-json-btn { background: rgba(0,0,0,0.04); color: rgba(26,26,46,0.6); border-color: rgba(0,0,0,0.1); }
 body.light-theme .copy-json-btn:hover { background: rgba(0,0,0,0.08); color: rgba(26,26,46,0.8); }
 body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
+body.light-theme .split-process-btn { background: #cc6e00; color: #fff; }
+body.light-theme .split-preview-card { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.1); }
+body.light-theme .split-preview-name { color: rgba(26,26,46,0.9); }
+body.light-theme .split-preview-customer { color: rgba(26,26,46,0.5); }
+body.light-theme .split-preview-amounts { color: rgba(26,26,46,0.7); }
+body.light-theme .split-preview-amounts strong { color: #008844; }
+body.light-theme .split-preview-error { border-color: rgba(200,40,40,0.3); }
+body.light-theme .split-preview-error-msg { color: #cc2828; }
+body.light-theme .split-preview-totals { border-top-color: rgba(0,0,0,0.08); color: rgba(26,26,46,0.7); }
+body.light-theme .split-preview-totals strong { color: #008844; }
 </style>
 
 <script>
@@ -487,6 +517,7 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
   var API_BASE = '/api/pipeline';
   var cachedDryRun = null;
   var selectedInvoices = {};
+  var selectedSplits = {};
   var confirmAction = null;
 
   function api(path, opts) {
@@ -597,6 +628,10 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
       toggleSelectAll(e.target.checked);
       return;
     }
+    if (e.target.id === 'selectAllSplitsCheck') {
+      toggleSelectAllSplits(e.target.checked);
+      return;
+    }
     if (e.target.classList.contains('inv-checkbox')) {
       var idx = parseInt(e.target.getAttribute('data-inv-idx'));
       if (e.target.checked) {
@@ -607,6 +642,17 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
       var row = e.target.closest('.result-row');
       if (row) row.classList.toggle('selected', e.target.checked);
       updateSelection();
+    }
+    if (e.target.classList.contains('split-checkbox')) {
+      var idx = parseInt(e.target.getAttribute('data-split-idx'));
+      if (e.target.checked) {
+        selectedSplits[idx] = true;
+      } else {
+        delete selectedSplits[idx];
+      }
+      var row = e.target.closest('.result-row');
+      if (row) row.classList.toggle('selected', e.target.checked);
+      updateSplitSelection();
     }
   });
 
@@ -620,6 +666,180 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
       }
     });
     return taskIds;
+  }
+
+  // ---- Split selection ----
+  function updateSplitSelection() {
+    var splits = cachedDryRun ? (cachedDryRun.splits || []) : [];
+    var count = Object.keys(selectedSplits).length;
+    var toolbar = $('splitToolbar');
+    var processBtn = $('splitProcessBtn');
+
+    if (splits.length > 0) toolbar.classList.remove('hidden');
+
+    if (count > 0) {
+      processBtn.textContent = 'Process Selected Splits (' + count + ')';
+      processBtn.classList.remove('hidden');
+    } else {
+      processBtn.classList.add('hidden');
+    }
+
+    $('splitSelectedCount').textContent = count + ' of ' + splits.length + ' selected';
+
+    var selectAllCheck = $('selectAllSplitsCheck');
+    selectAllCheck.checked = count === splits.length && splits.length > 0;
+    selectAllCheck.indeterminate = count > 0 && count < splits.length;
+  }
+
+  function toggleSelectAllSplits(checked) {
+    var splits = cachedDryRun ? (cachedDryRun.splits || []) : [];
+    selectedSplits = {};
+    if (checked) {
+      splits.forEach(function(s, i) { selectedSplits[i] = true; });
+    }
+    document.querySelectorAll('.split-checkbox').forEach(function(cb) { cb.checked = checked; });
+    document.querySelectorAll('.result-row[data-idx^="split-"]').forEach(function(row) {
+      row.classList.toggle('selected', checked);
+    });
+    updateSplitSelection();
+  }
+
+  function processSelectedSplits() {
+    var splits = cachedDryRun ? (cachedDryRun.splits || []) : [];
+    var selectedIdxs = Object.keys(selectedSplits).map(Number);
+    if (!selectedIdxs.length) return;
+
+    var selectedItems = selectedIdxs.map(function(i) { return splits[i]; }).filter(Boolean);
+    var taskIds = selectedItems.map(function(s) { return s.limble_task_id; });
+
+    var btn = $('splitProcessBtn');
+    btn.disabled = true;
+    btn.textContent = 'Loading preview...';
+
+    api('/v2/split/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task_ids: taskIds })
+    }).then(function(data) {
+      btn.disabled = false;
+      btn.textContent = 'Process Selected Splits (' + selectedIdxs.length + ')';
+
+      if (!data.results || !data.results.length) {
+        showToast('No preview data returned', 'error');
+        return;
+      }
+
+      var results = data.results;
+      var totalInv = 0, totalEst = 0;
+      var errorCount = 0;
+
+      var cardsHtml = results.map(function(r) {
+        if (r.status === 'error') {
+          errorCount++;
+          return '<div class="split-preview-card split-preview-error">' +
+            '<div class="split-preview-name">' + esc(r.task_name || 'Task ' + r.limble_task_id) + '</div>' +
+            '<div class="split-preview-error-msg">' + esc(r.error) + '</div>' +
+            '</div>';
+        }
+        var invTotal = r.invoice_preview ? r.invoice_preview.total : 0;
+        var estTotal = r.estimate_preview ? r.estimate_preview.total : 0;
+        totalInv += invTotal;
+        totalEst += estTotal;
+        return '<div class="split-preview-card">' +
+          '<div class="split-preview-name">' + esc(r.task_name) + '</div>' +
+          '<div class="split-preview-customer">' + esc(r.customer_name) + '</div>' +
+          '<div class="split-preview-amounts">' +
+            '<span>Invoice: <strong>' + money(invTotal) + '</strong>' + (r.invoice_preview ? ' (' + r.invoice_preview.billed_hours + ' hrs)' : '') + '</span>' +
+            '<span>Estimate: <strong>' + money(estTotal) + '</strong>' + (r.estimate_preview ? ' (' + r.estimate_preview.hours + ' hrs)' : '') + '</span>' +
+          '</div>' +
+          '</div>';
+      }).join('');
+
+      if (errorCount === results.length) {
+        showToast('All splits failed preview: ' + results[0].error, 'error');
+        return;
+      }
+
+      var validCount = results.length - errorCount;
+      var totalsHtml = '<div class="split-preview-totals">' +
+        'Total Invoices: <strong>' + money(totalInv) + '</strong> | Total Estimates: <strong>' + money(totalEst) + '</strong>' +
+        '</div>';
+
+      showConfirm(
+        'Process ' + validCount + ' Split(s)',
+        'For each split task, this will create:<br>' +
+        '&bull; QB Invoice for incurred costs (billed now)<br>' +
+        '&bull; QB Estimate for return trip (admin adjusts in QB)<br>' +
+        '&bull; New Limble quote task with estimate number',
+        cardsHtml + totalsHtml,
+        'Confirm & Process ' + validCount + ' Split(s)',
+        function() {
+          var goBtn = $('confirmGo');
+          var cancelBtn = $('confirmCancel');
+          goBtn.disabled = true;
+          goBtn.textContent = 'Processing...';
+          cancelBtn.style.display = 'none';
+
+          api('/v2/split/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_ids: taskIds, confirm: true })
+          }).then(function(result) {
+            hideConfirm();
+
+            var processed = result.results || [];
+            var okCount = 0, failCount = 0;
+            var totalInvAmt = 0, totalEstAmt = 0;
+
+            processed.forEach(function(r) {
+              if (r.status === 'error' || (r.errors && r.errors.length)) {
+                failCount++;
+              } else {
+                okCount++;
+                if (r.invoice) totalInvAmt += r.invoice.total || 0;
+                if (r.estimate) totalEstAmt += r.estimate.total || 0;
+              }
+            });
+
+            if (okCount === 1) {
+              var r = processed.find(function(p) { return p.status !== 'error' && (!p.errors || !p.errors.length); });
+              if (r) {
+                showToast('Split processed: Invoice #' + (r.invoice ? r.invoice.qb_doc_number : '?') +
+                  ' (' + money(r.invoice ? r.invoice.total : 0) + ') + Estimate #' +
+                  (r.estimate ? r.estimate.qb_doc_number : '?') +
+                  ' (' + money(r.estimate ? r.estimate.total : 0) + ')' +
+                  (r.quote_task ? ' — Quote task #' + r.quote_task.task_id + ' created' : ''), 'success');
+              }
+            } else if (okCount > 1) {
+              showToast(okCount + ' splits processed: ' + okCount + ' invoices (' + money(totalInvAmt) + ') + ' +
+                okCount + ' estimates (' + money(totalEstAmt) + ')', 'success');
+            }
+
+            if (failCount > 0) {
+              var errMsg = processed.filter(function(r) { return r.status === 'error' || (r.errors && r.errors.length); })
+                .map(function(r) { return r.error || (r.errors || []).join(', '); })[0];
+              showToast(failCount + ' split(s) failed: ' + errMsg, 'error');
+            }
+
+            selectedSplits = {};
+            updateSplitSelection();
+            runDryRun();
+            loadDocuments();
+          }).catch(function(e) {
+            hideConfirm();
+            showToast('Split processing failed: ' + e.message, 'error');
+          }).finally(function() {
+            goBtn.disabled = false;
+            goBtn.textContent = 'Confirm & Process';
+            cancelBtn.style.display = '';
+          });
+        }
+      );
+    }).catch(function(e) {
+      btn.disabled = false;
+      btn.textContent = 'Process Selected Splits (' + selectedIdxs.length + ')';
+      showToast('Split preview failed: ' + e.message, 'error');
+    });
   }
 
   // ---- Sync ----
@@ -696,13 +916,15 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
     btn.disabled = true;
     btn.textContent = 'Running...';
     $('processBtn').classList.add('hidden');
+    $('splitProcessBtn').classList.add('hidden');
     $('processResults').classList.add('hidden');
     $('emptyState').classList.add('hidden');
     selectedInvoices = {};
+    selectedSplits = {};
 
     setHTML($('invoiceBody'), '<tr><td colspan="7" class="loading-cell">Running dry-run...</td></tr>');
     setHTML($('estimateBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
-    setHTML($('splitBody'), '<tr><td colspan="3" class="loading-cell">Running...</td></tr>');
+    setHTML($('splitBody'), '<tr><td colspan="5" class="loading-cell">Running...</td></tr>');
     setHTML($('existsBody'), '<tr><td colspan="4" class="loading-cell">Running...</td></tr>');
     setHTML($('holdBody'), '<tr><td colspan="3" class="loading-cell">Running...</td></tr>');
     setHTML($('skipBody'), '<tr><td colspan="2" class="loading-cell">Running...</td></tr>');
@@ -757,7 +979,9 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
     renderNeedsReview(needs_review);
 
     selectedInvoices = {};
+    selectedSplits = {};
     updateSelection();
+    updateSplitSelection();
 
     if (!s.total_tasks) {
       $('emptyState').classList.remove('hidden');
@@ -835,7 +1059,7 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
 
     if (inv.qb_invoice_preview) {
       var jsonStr = JSON.stringify(inv.qb_invoice_preview, null, 2);
-      html += '<div class="detail-section"><div style="display:flex;align-items:center;justify-content:space-between;"><h4 style="margin:0;">QB Preview</h4><button class="copy-json-btn" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},1500)}.bind(this))" type="button">Copy</button></div><pre class="qb-json-pre">' +
+      html += '<div class="detail-section"><div class="qb-preview-header"><h4>QB Preview</h4><button class="copy-json-btn" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},1500)}.bind(this))" type="button">Copy</button></div><pre class="qb-json-pre">' +
         esc(jsonStr) + '</pre></div>';
     }
 
@@ -894,13 +1118,18 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
   // ---- Render Splits ----
   function renderSplits(splits) {
     var tbody = $('splitBody');
+    var toolbar = $('splitToolbar');
     if (!splits.length) {
-      setHTML(tbody, '<tr><td colspan="3" class="loading-cell">No split tasks.</td></tr>');
+      setHTML(tbody, '<tr><td colspan="5" class="loading-cell">No split tasks.</td></tr>');
+      toolbar.classList.add('hidden');
       return;
     }
-    setHTML(tbody, splits.map(function(s) {
+    toolbar.classList.remove('hidden');
+    setHTML(tbody, splits.map(function(s, i) {
       var custCell = s.customer_name ? esc(s.customer_name) : '<span class="missing-customer" title="Customer not mapped">\u26a0 Missing</span>';
-      return '<tr>' +
+      return '<tr class="result-row" data-idx="split-' + i + '">' +
+        '<td class="td-check"><input type="checkbox" class="split-checkbox" data-split-idx="' + i + '"></td>' +
+        '<td>' + esc(String(s.limble_task_id || '\u2014')) + '</td>' +
         '<td>' + esc(truncate(s.task_name, 60)) + '</td>' +
         '<td>' + custCell + '</td>' +
         '<td><span class="split-reason">' + esc((s.reason || '\u2014').replace(/_/g, ' ')) + '</span></td>' +
@@ -1091,6 +1320,9 @@ body.light-theme .qb-json-pre { color: rgba(26,26,46,0.6); }
       }
     );
   });
+
+  // ---- Process Selected Splits ----
+  $('splitProcessBtn').addEventListener('click', processSelectedSplits);
 
   // ---- Recent Documents ----
   function loadDocuments() {
