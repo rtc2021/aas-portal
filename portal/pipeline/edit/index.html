@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAS Pipeline — Billing Workbench</title>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: var(--font-family, 'Plus Jakarta Sans', -apple-system, sans-serif); background: var(--ui-bg, #0b0f19); color: var(--ui-text, rgba(235,240,255,0.95)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #4f8cff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #4f8cff, #6366f1); color: #fff; border: none; padding: 14px 32px; border-radius: 14px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.07); border-top-color: #4f8cff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <!-- AUTH OVERLAY -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access the Billing Workbench</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <!-- NAV TOGGLE + PANEL -->
+  <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
+    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+  </button>
+
+  <div class="nav-panel__overlay" id="navOverlay" onclick="toggleNav()"></div>
+
+  <nav class="nav-panel" id="navPanel">
+    <a href="/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>Dashboard</a>
+    <div class="nav-panel__section">Tools</div>
+    <a href="/tech/command/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Command Center</a>
+    <a href="/tech/parts/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>Parts Finder</a>
+    <a href="/tech/manuals/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>Tech Manuals</a>
+    <a href="/tech/doors/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" /></svg>Door Browser</a>
+    <a href="/tech/summary/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Work Summary</a>
+    <a href="/pipeline/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>Invoice Pipeline</a>
+    <a href="/pipeline/triage/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>Triage Board</a>
+    <a href="/pipeline/ledger/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>Billing Ledger</a>
+    <div class="nav-panel__divider"></div>
+    <a href="https://app.limblecmms.com" target="_blank" rel="noopener" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>Open Limble</a>
+  </nav>
+
+  <!-- FLOATING USER -->
+  <div class="floating-user" id="floatingUser" style="display:none;">
+    <div class="floating-user__info">
+      <div class="floating-user__name" id="floatingUserName">User</div>
+      <div class="floating-user__role" id="floatingUserRole">-</div>
+    </div>
+    <button class="floating-user__logout" onclick="window.AASAuth?.logout()" title="Sign Out">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+    </button>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div id="pageContent" class="page-content" data-admin-only>
+    <div id="billingWorkbench">
+
+      <!-- Back link + task info bar -->
+      <div class="bw-topbar">
+        <a href="/pipeline/triage/" class="bw-back-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          Back to Triage
+        </a>
+        <div class="bw-task-info" id="bwTaskInfo">
+          <span class="bw-task-id" id="bwTaskId">--</span>
+          <span class="bw-task-name" id="bwTaskName">Loading task...</span>
+          <span class="bw-task-status" id="bwTaskStatus"></span>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="bw-loading" id="bwLoading">
+        <div class="bw-loading-spinner"></div>
+        <p>Loading task context...</p>
+      </div>
+
+      <!-- Error State -->
+      <div class="bw-error" id="bwError" style="display:none;">
+        <p class="bw-error-msg" id="bwErrorMsg">Failed to load task</p>
+        <button class="bw-retry-btn" onclick="retryLoad()">Retry</button>
+      </div>
+
+      <!-- Split Panel -->
+      <div class="bw-split" id="bwSplit" style="display:none;">
+
+        <!-- LEFT: Editor Panel -->
+        <div class="bw-editor">
+          <h2 class="bw-section-title">Edit Details</h2>
+
+          <!-- Doc Type Toggle -->
+          <div class="bw-field-group">
+            <label class="bw-label">Document Type</label>
+            <div class="bw-toggle-group">
+              <button class="bw-toggle-btn active" data-doctype="invoice" onclick="setDocType('invoice')">Invoice</button>
+              <button class="bw-toggle-btn" data-doctype="estimate" onclick="setDocType('estimate')">Estimate</button>
+            </div>
+          </div>
+
+          <!-- Customer -->
+          <div class="bw-field-group">
+            <label class="bw-label">Customer</label>
+            <div class="bw-customer-display" id="bwCustomerDisplay">
+              <div class="bw-customer-info">
+                <span class="bw-customer-name" id="bwCustomerName">--</span>
+                <span class="bw-customer-qb-badge" id="bwCustomerQbBadge"></span>
+              </div>
+              <button class="bw-change-btn" onclick="toggleCustomerSearch()">Change</button>
+            </div>
+            <div class="bw-customer-search" id="bwCustomerSearch" style="display:none;">
+              <div class="bw-search-input-wrap">
+                <input type="text" class="bw-search-input" id="bwCustomerSearchInput" placeholder="Search QB customers..." oninput="debounceCustomerSearch()" />
+                <button class="bw-search-close" onclick="toggleCustomerSearch()">&times;</button>
+              </div>
+              <div class="bw-search-results" id="bwCustomerResults"></div>
+            </div>
+          </div>
+
+          <!-- Labor -->
+          <div class="bw-field-row">
+            <div class="bw-field-group bw-field-half">
+              <label class="bw-label" for="bwLaborHours">Labor Hours</label>
+              <input type="number" class="bw-input" id="bwLaborHours" min="0" step="0.25" value="0" oninput="renderPreview()" />
+            </div>
+            <div class="bw-field-group bw-field-half">
+              <label class="bw-label" for="bwLaborRate">Labor Rate ($/hr)</label>
+              <input type="number" class="bw-input" id="bwLaborRate" min="0" step="5" value="125" oninput="renderPreview()" />
+            </div>
+          </div>
+
+          <!-- Rate Tier -->
+          <div class="bw-field-group">
+            <label class="bw-label" for="bwRateTier">Rate Tier</label>
+            <select class="bw-select" id="bwRateTier" onchange="applyRateTier()">
+              <option value="standard">Standard ($125/hr)</option>
+              <option value="emergency">Emergency ($185/hr)</option>
+              <option value="contract">Contract ($95/hr)</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          <!-- Parts -->
+          <div class="bw-field-group">
+            <label class="bw-label">Parts</label>
+            <div class="bw-parts-list" id="bwPartsList">
+              <p class="bw-parts-empty" id="bwPartsEmpty">No parts on this task</p>
+            </div>
+            <div class="bw-parts-add">
+              <div class="bw-search-input-wrap">
+                <input type="text" class="bw-search-input" id="bwPartsSearchInput" placeholder="Search QB products to add..." oninput="debouncePartsSearch()" />
+              </div>
+              <div class="bw-search-results" id="bwPartsResults"></div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="bw-field-group">
+            <label class="bw-label" for="bwNotes">Service Notes</label>
+            <textarea class="bw-textarea" id="bwNotes" rows="4" placeholder="Notes to include on the invoice/estimate..." oninput="renderPreview()"></textarea>
+          </div>
+        </div>
+
+        <!-- RIGHT: Invoice Preview -->
+        <div class="bw-preview">
+          <h2 class="bw-section-title">Live Preview</h2>
+          <div class="bw-preview-paper" id="bwPreviewPaper">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="bw-action-bar" id="bwActionBar" style="display:none;">
+        <div class="bw-action-left">
+          <button class="bw-action-btn bw-action-hold" onclick="holdTask()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Hold
+          </button>
+        </div>
+        <div class="bw-action-right">
+          <button class="bw-action-btn bw-action-draft" onclick="saveDraft()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+            Save Draft
+          </button>
+          <button class="bw-action-btn bw-action-send" onclick="sendToQB()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Approve &amp; Send to QB
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hold Reason Modal -->
+  <div class="bw-modal-overlay" id="bwHoldModal" style="display:none;">
+    <div class="bw-modal">
+      <div class="bw-modal-header">
+        <h3 class="bw-modal-title">Hold Task</h3>
+        <button class="bw-modal-close" onclick="closeHoldModal()">&times;</button>
+      </div>
+      <div class="bw-modal-body">
+        <p class="bw-modal-desc">Why is this task being held? This note will be visible on the triage board.</p>
+        <textarea class="bw-textarea" id="bwHoldReason" rows="3" placeholder="e.g. Waiting on customer approval, need part pricing..."></textarea>
+      </div>
+      <div class="bw-modal-footer">
+        <button class="bw-modal-cancel" onclick="closeHoldModal()">Cancel</button>
+        <button class="bw-modal-confirm bw-modal-confirm-hold" id="bwHoldConfirm" onclick="confirmHold()">Put on Hold</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Send Modal -->
+  <div class="bw-modal-overlay" id="bwSendModal" style="display:none;">
+    <div class="bw-modal">
+      <div class="bw-modal-header">
+        <h3 class="bw-modal-title">Confirm Send to QuickBooks</h3>
+        <button class="bw-modal-close" onclick="closeSendModal()">&times;</button>
+      </div>
+      <div class="bw-modal-body" id="bwSendBody">
+        <p class="bw-modal-desc">This will create a <strong id="bwSendDocType">invoice</strong> in QuickBooks Online.</p>
+        <div class="bw-send-summary" id="bwSendSummary"></div>
+      </div>
+      <div class="bw-modal-footer">
+        <button class="bw-modal-cancel" onclick="closeSendModal()">Cancel</button>
+        <button class="bw-modal-confirm bw-modal-confirm-send" id="bwSendConfirm" onclick="confirmSend()">Send to QuickBooks</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="bw-modal-overlay" id="bwSuccessModal" style="display:none;">
+    <div class="bw-modal">
+      <div class="bw-modal-header">
+        <h3 class="bw-modal-title bw-success-title">Sent Successfully</h3>
+        <button class="bw-modal-close" onclick="closeSuccessModal()">&times;</button>
+      </div>
+      <div class="bw-modal-body" id="bwSuccessBody">
+        <!-- Filled by JS -->
+      </div>
+      <div class="bw-modal-footer">
+        <button class="bw-modal-cancel" onclick="closeSuccessModal()">Stay Here</button>
+        <a href="/pipeline/triage/" class="bw-modal-confirm bw-modal-confirm-send" style="text-decoration:none;text-align:center;">Back to Triage</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="bw-toast" id="bwToast"></div>
+
+<style>
+/* ====================================================================
+   BILLING WORKBENCH -- #billingWorkbench namespace, --bw-* prefix
+   ==================================================================== */
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(79,140,255,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.03) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+
+#billingWorkbench {
+  --bw-accent: #4f8cff;
+  --bw-accent-alt: #6366f1;
+  --bw-surface: var(--ui-surface, rgba(14,22,42,0.94));
+  --bw-border: var(--ui-border, rgba(255,255,255,0.07));
+  --bw-border-hover: var(--ui-border-hover, rgba(79,140,255,0.4));
+  --bw-radius: var(--radius-lg, 14px);
+  --bw-radius-sm: 8px;
+  --bw-glass: var(--glass-backdrop, blur(24px) saturate(180%));
+  --bw-text-muted: rgba(255,255,255,0.55);
+  --bw-text-secondary: rgba(255,255,255,0.7);
+  --bw-green: #22c55e;
+  --bw-amber: #f59e0b;
+  --bw-red: #ef4444;
+  position: relative; z-index: 1;
+  max-width: 1400px; margin: 0 auto; padding: 24px 24px 120px;
+}
+
+/* Top Bar */
+.bw-topbar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.bw-back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--bw-text-muted); font-size: 0.82rem; font-weight: 600; text-decoration: none;
+  transition: color 200ms;
+}
+.bw-back-link:hover { color: var(--bw-accent); }
+.bw-task-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.bw-task-id {
+  font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+  background: rgba(79,140,255,0.12); color: var(--bw-accent); white-space: nowrap;
+}
+.bw-task-name {
+  font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1; min-width: 0;
+}
+.bw-task-status {
+  font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
+}
+
+/* Loading */
+.bw-loading { text-align: center; padding: 80px 20px; }
+.bw-loading-spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.07); border-top-color: var(--bw-accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+.bw-loading p { color: var(--bw-text-muted); font-size: 0.9rem; }
+
+/* Error */
+.bw-error { text-align: center; padding: 60px 20px; }
+.bw-error-msg { color: var(--bw-red); margin: 0 0 16px; }
+.bw-retry-btn { padding: 8px 20px; border-radius: var(--bw-radius-sm); border: 1px solid var(--bw-border); background: var(--bw-surface); color: var(--ui-text, rgba(235,240,255,0.95)); cursor: pointer; font-weight: 600; }
+.bw-retry-btn:hover { border-color: var(--bw-border-hover); }
+
+/* Split Layout */
+.bw-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Editor Panel */
+.bw-editor {
+  background: var(--bw-surface);
+  border: 1px solid var(--bw-border);
+  border-radius: var(--bw-radius);
+  backdrop-filter: var(--bw-glass);
+  padding: 24px;
+}
+
+/* Preview Panel */
+.bw-preview {
+  position: sticky;
+  top: 24px;
+}
+
+.bw-section-title {
+  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em;
+  margin: 0 0 20px;
+  color: var(--bw-accent);
+}
+
+/* Form Fields */
+.bw-field-group { margin-bottom: 20px; }
+.bw-field-row { display: flex; gap: 16px; }
+.bw-field-half { flex: 1; }
+.bw-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--bw-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.bw-input, .bw-select, .bw-textarea {
+  width: 100%; padding: 10px 12px; border-radius: var(--bw-radius-sm);
+  border: 1px solid var(--bw-border); background: rgba(255,255,255,0.04);
+  color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.88rem;
+  font-family: inherit; transition: border-color 200ms;
+  box-sizing: border-box;
+}
+.bw-input:focus, .bw-select:focus, .bw-textarea:focus { outline: none; border-color: var(--bw-accent); }
+.bw-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.5)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
+.bw-textarea { resize: vertical; min-height: 80px; }
+
+/* Doc Type Toggle */
+.bw-toggle-group { display: flex; gap: 0; border-radius: var(--bw-radius-sm); overflow: hidden; border: 1px solid var(--bw-border); }
+.bw-toggle-btn {
+  flex: 1; padding: 10px 16px; border: none;
+  background: transparent; color: var(--bw-text-muted);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: all 200ms;
+}
+.bw-toggle-btn.active {
+  background: linear-gradient(135deg, var(--bw-accent), var(--bw-accent-alt));
+  color: #fff;
+}
+.bw-toggle-btn:not(.active):hover { background: rgba(255,255,255,0.04); color: var(--ui-text, rgba(235,240,255,0.95)); }
+
+/* Customer Display */
+.bw-customer-display {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; border-radius: var(--bw-radius-sm);
+  border: 1px solid var(--bw-border); background: rgba(255,255,255,0.04);
+}
+.bw-customer-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.bw-customer-name { font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bw-customer-qb-badge {
+  font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px;
+  text-transform: uppercase; letter-spacing: 0.02em; white-space: nowrap;
+}
+.bw-customer-qb-badge.mapped { background: rgba(34,197,94,0.15); color: var(--bw-green); }
+.bw-customer-qb-badge.unmapped { background: rgba(245,158,11,0.15); color: var(--bw-amber); }
+.bw-change-btn {
+  padding: 5px 12px; border-radius: 6px; border: 1px solid var(--bw-border);
+  background: transparent; color: var(--bw-accent); font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  transition: border-color 200ms;
+  white-space: nowrap;
+}
+.bw-change-btn:hover { border-color: var(--bw-accent); }
+
+/* Search Input + Results */
+.bw-customer-search { margin-top: 8px; }
+.bw-search-input-wrap { display: flex; align-items: center; gap: 0; position: relative; }
+.bw-search-input {
+  width: 100%; padding: 9px 12px; border-radius: var(--bw-radius-sm);
+  border: 1px solid var(--bw-border); background: rgba(255,255,255,0.04);
+  color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.85rem; font-family: inherit;
+  box-sizing: border-box;
+}
+.bw-search-input:focus { outline: none; border-color: var(--bw-accent); }
+.bw-search-close {
+  position: absolute; right: 8px; background: none; border: none;
+  color: var(--bw-text-muted); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 2px;
+}
+.bw-search-close:hover { color: var(--ui-text, rgba(235,240,255,0.95)); }
+.bw-search-results {
+  max-height: 200px; overflow-y: auto; margin-top: 4px;
+  border-radius: var(--bw-radius-sm); border: 1px solid var(--bw-border);
+  background: var(--bw-surface);
+  display: none;
+}
+.bw-search-results.has-results { display: block; }
+.bw-search-result-item {
+  padding: 8px 12px; font-size: 0.82rem; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 150ms;
+}
+.bw-search-result-item:hover { background: rgba(79,140,255,0.08); }
+.bw-search-result-item:last-child { border-bottom: none; }
+.bw-search-result-sub { font-size: 0.72rem; color: var(--bw-text-muted); margin-top: 2px; }
+.bw-search-loading { padding: 12px; text-align: center; font-size: 0.8rem; color: var(--bw-text-muted); }
+
+/* Parts List */
+.bw-parts-list { margin-bottom: 10px; }
+.bw-parts-empty { margin: 0; padding: 10px 0; font-size: 0.82rem; color: var(--bw-text-muted); font-style: italic; }
+.bw-part-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--bw-radius-sm);
+  border: 1px solid var(--bw-border); margin-bottom: 6px;
+  background: rgba(255,255,255,0.02);
+  transition: border-color 150ms;
+}
+.bw-part-item:hover { border-color: var(--bw-border-hover); }
+.bw-part-name { flex: 1; font-size: 0.82rem; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bw-part-qty {
+  width: 50px; padding: 4px 6px; border-radius: 4px; border: 1px solid var(--bw-border);
+  background: rgba(255,255,255,0.04); color: var(--ui-text, rgba(235,240,255,0.95));
+  font-size: 0.78rem; text-align: center; font-family: inherit;
+}
+.bw-part-qty:focus { outline: none; border-color: var(--bw-accent); }
+.bw-part-price { font-size: 0.78rem; font-weight: 600; white-space: nowrap; min-width: 60px; text-align: right; }
+.bw-part-badge {
+  font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 99px;
+  text-transform: uppercase; white-space: nowrap;
+}
+.bw-part-badge.mapped { background: rgba(34,197,94,0.15); color: var(--bw-green); }
+.bw-part-badge.unmapped { background: rgba(245,158,11,0.15); color: var(--bw-amber); }
+.bw-part-remove {
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; border: none; background: rgba(239,68,68,0.1);
+  color: var(--bw-red); cursor: pointer; font-size: 1rem; line-height: 1;
+  transition: background 150ms;
+  flex-shrink: 0;
+}
+.bw-part-remove:hover { background: rgba(239,68,68,0.25); }
+
+/* Parts Add */
+.bw-parts-add { margin-top: 6px; }
+
+/* Preview Paper */
+.bw-preview-paper {
+  background: #fff;
+  color: #1a1a2e;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15);
+  padding: 40px 36px;
+  position: relative;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 500px;
+}
+.bw-preview-watermark {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 72px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.06);
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+.bw-preview-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+.bw-preview-company { }
+.bw-preview-company-name { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 4px; letter-spacing: -0.02em; }
+.bw-preview-company-addr { font-size: 11px; color: #64748b; margin: 0; line-height: 1.6; }
+.bw-preview-doc-label {
+  font-size: 28px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 2px; text-align: right;
+}
+.bw-preview-doc-label.invoice-label { color: #0f172a; }
+.bw-preview-doc-label.estimate-label { color: #4f8cff; }
+.bw-preview-meta { display: flex; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0; }
+.bw-preview-billto {}
+.bw-preview-billto-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.06em; margin: 0 0 4px; }
+.bw-preview-billto-name { font-size: 14px; font-weight: 700; color: #0f172a; margin: 0; }
+.bw-preview-details { text-align: right; }
+.bw-preview-detail-row { display: flex; justify-content: flex-end; gap: 12px; font-size: 11px; margin-bottom: 2px; }
+.bw-preview-detail-label { color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+.bw-preview-detail-value { color: #0f172a; font-weight: 600; min-width: 100px; text-align: left; }
+
+/* Preview Table */
+.bw-preview-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.bw-preview-table th {
+  text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  color: #64748b; letter-spacing: 0.06em; padding: 8px 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.bw-preview-table th:last-child { text-align: right; }
+.bw-preview-table td {
+  padding: 10px; font-size: 12px; color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+.bw-preview-table td:last-child { text-align: right; font-weight: 600; }
+.bw-preview-table tr:nth-child(even) td { background: #f8fafc; }
+.bw-preview-table tr.bw-preview-unmapped td { color: #94a3b8; font-style: italic; }
+.bw-preview-table .bw-unmapped-note { font-size: 10px; color: #f59e0b; font-style: italic; }
+
+/* Totals */
+.bw-preview-totals { display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 24px; }
+.bw-preview-total-row { display: flex; gap: 24px; padding: 4px 0; font-size: 12px; }
+.bw-preview-total-label { color: #64748b; min-width: 80px; text-align: right; }
+.bw-preview-total-value { font-weight: 600; color: #0f172a; min-width: 80px; text-align: right; }
+.bw-preview-total-row.grand { padding-top: 8px; margin-top: 4px; border-top: 2px solid #0f172a; font-size: 14px; }
+.bw-preview-total-row.grand .bw-preview-total-label { font-weight: 700; color: #0f172a; }
+.bw-preview-total-row.grand .bw-preview-total-value { font-weight: 900; }
+
+/* Notes in preview */
+.bw-preview-notes { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+.bw-preview-notes-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.06em; margin: 0 0 6px; }
+.bw-preview-notes-text { font-size: 11px; color: #475569; line-height: 1.6; margin: 0; white-space: pre-wrap; }
+
+/* Action Bar */
+.bw-action-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--bw-surface);
+  border-top: 1px solid var(--bw-border);
+  backdrop-filter: var(--bw-glass);
+  z-index: 100;
+}
+.bw-action-left, .bw-action-right { display: flex; gap: 10px; }
+.bw-action-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: var(--bw-radius-sm);
+  font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  transition: opacity 200ms, transform 150ms;
+  border: none;
+}
+.bw-action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.bw-action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.bw-action-hold {
+  background: transparent; border: 1px solid var(--bw-border);
+  color: var(--bw-text-secondary);
+}
+.bw-action-hold:hover { border-color: var(--bw-border-hover); }
+.bw-action-draft {
+  background: rgba(79,140,255,0.12);
+  color: var(--bw-accent);
+}
+.bw-action-send {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+
+/* Modals */
+.bw-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.bw-modal {
+  background: var(--bw-surface); border: 1px solid var(--bw-border); border-radius: var(--bw-radius);
+  backdrop-filter: var(--bw-glass);
+  width: 100%; max-width: 480px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.bw-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--bw-border); }
+.bw-modal-title { font-weight: 700; font-size: 1rem; margin: 0; }
+.bw-modal-close { background: none; border: none; color: var(--bw-text-muted); font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0; }
+.bw-modal-close:hover { color: var(--ui-text, rgba(235,240,255,0.95)); }
+.bw-modal-body { padding: 20px; }
+.bw-modal-desc { margin: 0 0 12px; font-size: 0.85rem; color: var(--bw-text-secondary); line-height: 1.5; }
+.bw-modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--bw-border); }
+.bw-modal-cancel {
+  padding: 8px 16px; border-radius: var(--bw-radius-sm); border: 1px solid var(--bw-border);
+  background: transparent; color: var(--ui-text, rgba(235,240,255,0.95)); font-weight: 600; font-size: 0.82rem; cursor: pointer;
+}
+.bw-modal-cancel:hover { border-color: var(--bw-border-hover); }
+.bw-modal-confirm {
+  padding: 8px 16px; border-radius: var(--bw-radius-sm); border: none;
+  font-weight: 700; font-size: 0.82rem; cursor: pointer;
+  transition: opacity 200ms;
+}
+.bw-modal-confirm:hover { opacity: 0.9; }
+.bw-modal-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+.bw-modal-confirm-hold { background: var(--bw-amber); color: #fff; }
+.bw-modal-confirm-send { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+.bw-success-title { color: var(--bw-green); }
+
+/* Send summary in modal */
+.bw-send-summary {
+  padding: 12px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--bw-border); border-radius: var(--bw-radius-sm);
+  margin-top: 8px;
+}
+.bw-send-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.82rem; }
+.bw-send-label { color: var(--bw-text-muted); }
+.bw-send-value { font-weight: 600; }
+
+/* Toast */
+.bw-toast {
+  position: fixed; bottom: 80px; right: 24px; z-index: 10001;
+  padding: 14px 20px; border-radius: var(--bw-radius-sm);
+  background: rgba(14,22,42,0.95); border: 1px solid var(--bw-border);
+  backdrop-filter: var(--bw-glass);
+  font-size: 0.85rem; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  transform: translateY(80px); opacity: 0; transition: all 300ms ease;
+  pointer-events: none;
+}
+.bw-toast.visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.bw-toast.success { border-color: rgba(34,197,94,0.3); color: var(--bw-green); }
+.bw-toast.error { border-color: rgba(239,68,68,0.3); color: var(--bw-red); }
+
+/* Responsive: stack below 900px */
+@media (max-width: 900px) {
+  .bw-split { grid-template-columns: 1fr; }
+  .bw-preview { position: static; }
+  #billingWorkbench { padding: 16px 12px 120px; }
+  .bw-preview-paper { padding: 24px 20px; }
+  .bw-action-bar { padding: 10px 12px; }
+  .bw-action-btn { padding: 8px 14px; font-size: 0.78rem; }
+}
+@media (max-width: 480px) {
+  .bw-field-row { flex-direction: column; gap: 0; }
+  .bw-topbar { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .bw-task-info { flex-wrap: wrap; }
+  .bw-action-right { flex-wrap: wrap; }
+  .bw-preview-header { flex-direction: column; gap: 12px; }
+  .bw-preview-doc-label { text-align: left; }
+  .bw-preview-meta { flex-direction: column; gap: 12px; }
+  .bw-preview-details { text-align: left; }
+  .bw-preview-detail-row { justify-content: flex-start; }
+}
+
+/* ====================================================================
+   LIGHT THEME OVERRIDES
+   ==================================================================== */
+body.light-theme::before { opacity: 0; }
+body.light-theme .auth-overlay { background: rgba(247,248,252,0.98); }
+body.light-theme .auth-card { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); }
+body.light-theme .auth-subtitle { color: rgba(15,23,42,0.55); }
+body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
+
+body.light-theme .bw-editor { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bw-input, body.light-theme .bw-select, body.light-theme .bw-textarea {
+  background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.12); color: rgba(15,23,42,0.95);
+}
+body.light-theme .bw-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(0,0,0,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); }
+body.light-theme .bw-toggle-group { border-color: rgba(0,0,0,0.12); }
+body.light-theme .bw-toggle-btn:not(.active) { color: rgba(26,26,46,0.55); }
+body.light-theme .bw-toggle-btn:not(.active):hover { background: rgba(0,0,0,0.03); color: rgba(15,23,42,0.95); }
+body.light-theme .bw-customer-display { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.12); }
+body.light-theme .bw-customer-name { color: rgba(15,23,42,0.95); }
+body.light-theme .bw-change-btn { border-color: rgba(0,0,0,0.12); }
+body.light-theme .bw-change-btn:hover { border-color: var(--bw-accent); }
+body.light-theme .bw-search-input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.12); color: rgba(15,23,42,0.95); }
+body.light-theme .bw-search-results { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bw-search-result-item { border-bottom-color: rgba(0,0,0,0.05); }
+body.light-theme .bw-search-result-item:hover { background: rgba(37,99,235,0.06); }
+body.light-theme .bw-part-item { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bw-part-item:hover { border-color: rgba(37,99,235,0.35); }
+body.light-theme .bw-part-name { color: rgba(15,23,42,0.95); }
+body.light-theme .bw-part-qty { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.12); color: rgba(15,23,42,0.95); }
+body.light-theme .bw-part-price { color: rgba(15,23,42,0.85); }
+body.light-theme .bw-back-link { color: rgba(26,26,46,0.5); }
+body.light-theme .bw-back-link:hover { color: var(--bw-accent); }
+body.light-theme .bw-task-name { color: rgba(15,23,42,0.95); }
+body.light-theme .bw-label { color: rgba(26,26,46,0.55); }
+body.light-theme .bw-parts-empty { color: rgba(26,26,46,0.45); }
+body.light-theme .bw-action-bar { background: rgba(255,255,255,0.95); border-top-color: rgba(0,0,0,0.08); }
+body.light-theme .bw-action-hold { border-color: rgba(0,0,0,0.12); color: rgba(26,26,46,0.7); }
+body.light-theme .bw-action-hold:hover { border-color: rgba(37,99,235,0.35); }
+body.light-theme .bw-modal { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bw-modal-header { border-bottom-color: rgba(0,0,0,0.08); }
+body.light-theme .bw-modal-footer { border-top-color: rgba(0,0,0,0.08); }
+body.light-theme .bw-modal-close { color: rgba(26,26,46,0.4); }
+body.light-theme .bw-modal-close:hover { color: rgba(15,23,42,0.95); }
+body.light-theme .bw-modal-body { color: rgba(26,26,46,0.7); }
+body.light-theme .bw-modal-cancel { border-color: rgba(0,0,0,0.1); color: rgba(15,23,42,0.95); }
+body.light-theme .bw-modal-cancel:hover { border-color: rgba(37,99,235,0.35); }
+body.light-theme .bw-send-summary { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.08); }
+body.light-theme .bw-send-label { color: rgba(26,26,46,0.5); }
+body.light-theme .bw-send-value { color: rgba(15,23,42,0.95); }
+body.light-theme .bw-toast { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bw-loading-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
+body.light-theme .bw-loading p { color: rgba(26,26,46,0.55); }
+body.light-theme .bw-retry-btn { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); color: rgba(15,23,42,0.95); }
+body.light-theme .bw-error-msg { color: #dc2626; }
+body.light-theme .bw-preview-paper { box-shadow: 0 4px 24px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); }
+body.light-theme .bw-search-close { color: rgba(26,26,46,0.4); }
+body.light-theme .bw-search-close:hover { color: rgba(15,23,42,0.95); }
+body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
+</style>
+
+<script>
+  /* Nav toggle */
+  function toggleNav() {
+    document.getElementById('navToggle').classList.toggle('active');
+    document.getElementById('navPanel').classList.toggle('open');
+    document.getElementById('navOverlay').classList.toggle('open');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.nav-panel__link').forEach(function(link) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+      if (href === path || (href !== '/' && path.startsWith(href))) link.classList.add('active');
+    });
+  });
+</script>
+
+<script>
+(function() {
+  'use strict';
+
+  // ====================================================================
+  // SAFE DOM HELPER — clears all children without innerHTML
+  // ====================================================================
+  function clearChildren(el) {
+    while (el.firstChild) el.removeChild(el.firstChild);
+  }
+
+  // ====================================================================
+  // API HELPERS
+  // ====================================================================
+  async function api(method, path, body) {
+    var token = window.AASAuth && window.AASAuth.getToken ? await window.AASAuth.getToken() : null;
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    var opts = { method: method, headers: headers };
+    if (body) opts.body = JSON.stringify(body);
+    var res = await fetch('/api/pipeline' + path, opts);
+    if (!res.ok) {
+      var errText = '';
+      try { errText = await res.text(); } catch(e) { /* ignore */ }
+      throw new Error('API ' + res.status + (errText ? ': ' + errText : ''));
+    }
+    return res.json();
+  }
+
+  async function qbApi(path) {
+    var token = window.AASAuth && window.AASAuth.getToken ? await window.AASAuth.getToken() : null;
+    var headers = {};
+    if (token) headers.Authorization = 'Bearer ' + token;
+    var res = await fetch('/api/qb' + path, { headers: headers });
+    if (!res.ok) {
+      var errText = '';
+      try { errText = await res.text(); } catch(e) { /* ignore */ }
+      throw new Error('QB API ' + res.status + (errText ? ': ' + errText : ''));
+    }
+    return res.json();
+  }
+
+  // ====================================================================
+  // STATE
+  // ====================================================================
+  var currentTaskId = null;
+  var currentDocType = 'invoice';
+  var currentParts = [];         // { name, qty, price, qb_product_id, mapped }
+  var currentCustomer = null;    // { name, qb_customer_id, mapped }
+  var replacingDocId = null;
+  var customerSearchTimer = null;
+  var partsSearchTimer = null;
+
+  // ====================================================================
+  // ON PAGE READY — called by auth.js
+  // ====================================================================
+  window.onPageReady = function(user, roles, customerId) {
+    // Admin-only — redirect non-admins
+    var normalizedRoles = (roles || []).map(function(r) { return String(r).toLowerCase(); });
+    if (normalizedRoles.indexOf('admin') === -1) {
+      window.location.href = '/tech/parts/';
+      return;
+    }
+
+    // Show floating user info
+    var fu = document.getElementById('floatingUser');
+    if (fu) fu.style.display = '';
+    var nameEl = document.getElementById('floatingUserName');
+    if (nameEl && user) nameEl.textContent = user.name || user.email || 'Admin';
+    var roleEl = document.getElementById('floatingUserRole');
+    if (roleEl) roleEl.textContent = 'Admin';
+
+    // Read task ID from URL
+    var params = new URLSearchParams(window.location.search);
+    currentTaskId = params.get('task');
+    replacingDocId = params.get('replacing_doc_id') || null;
+
+    if (!currentTaskId) {
+      showError('No task ID provided. Use ?task=123');
+      return;
+    }
+
+    loadTask(currentTaskId);
+  };
+
+  // ====================================================================
+  // TASK 9: LOAD TASK CONTEXT
+  // ====================================================================
+  async function loadTask(taskId) {
+    var loading = document.getElementById('bwLoading');
+    var error = document.getElementById('bwError');
+    var split = document.getElementById('bwSplit');
+    var actionBar = document.getElementById('bwActionBar');
+
+    loading.style.display = '';
+    error.style.display = 'none';
+    split.style.display = 'none';
+    actionBar.style.display = 'none';
+
+    try {
+      var result = await api('GET', '/v2/task-context/' + taskId);
+
+      // Normalize: response may be { task: {...} } or flat object
+      var task = result.task || result;
+      task.id = task.id || task.task_id || taskId;
+      window._task = task;
+
+      populateFields(task);
+      renderPreview();
+
+      loading.style.display = 'none';
+      split.style.display = '';
+      actionBar.style.display = '';
+    } catch (e) {
+      console.error('Load task failed:', e);
+      showError('Failed to load task: ' + e.message);
+    }
+  }
+
+  window.retryLoad = function() {
+    if (currentTaskId) loadTask(currentTaskId);
+  };
+
+  function showError(msg) {
+    document.getElementById('bwLoading').style.display = 'none';
+    document.getElementById('bwError').style.display = '';
+    document.getElementById('bwErrorMsg').textContent = msg;
+  }
+
+  // ====================================================================
+  // POPULATE FIELDS FROM TASK CONTEXT
+  // ====================================================================
+  function populateFields(task) {
+    // Task info bar
+    var idEl = document.getElementById('bwTaskId');
+    idEl.textContent = '#' + task.id;
+
+    var nameEl = document.getElementById('bwTaskName');
+    nameEl.textContent = task.task_name || task.name || 'Task #' + task.id;
+
+    var statusEl = document.getElementById('bwTaskStatus');
+    var classification = task.classification || task.status || '';
+    if (classification) {
+      statusEl.textContent = classification.replace(/_/g, ' ');
+      statusEl.style.background = classificationColor(classification) + '22';
+      statusEl.style.color = classificationColor(classification);
+    }
+
+    // Doc type
+    var docType = task.doc_type || task.classification || 'invoice';
+    if (docType === 'invoice_ready' || docType === 'invoice') {
+      setDocType('invoice');
+    } else if (docType === 'estimate' || docType === 'quote') {
+      setDocType('estimate');
+    } else {
+      setDocType('invoice');
+    }
+
+    // Labor
+    var laborHours = task.labor_hours || task.total_hours || 0;
+    document.getElementById('bwLaborHours').value = laborHours;
+
+    var laborRate = task.labor_rate || task.rate || 125;
+    document.getElementById('bwLaborRate').value = laborRate;
+
+    // Rate tier
+    var tierSelect = document.getElementById('bwRateTier');
+    if (laborRate == 125) tierSelect.value = 'standard';
+    else if (laborRate == 185) tierSelect.value = 'emergency';
+    else if (laborRate == 95) tierSelect.value = 'contract';
+    else tierSelect.value = 'custom';
+
+    // Customer
+    var customerName = task.customer_name || task.customer || 'Unknown';
+    var customerQbId = task.customer_qb_id || task.qb_customer_id || null;
+    currentCustomer = {
+      name: customerName,
+      qb_customer_id: customerQbId,
+      mapped: !!customerQbId
+    };
+    renderCustomer();
+
+    // Parts
+    currentParts = [];
+    var parts = task.parts_on_task || task.parts || [];
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      currentParts.push({
+        name: p.name || p.description || p.part_name || 'Unknown Part',
+        qty: p.qty || p.quantity || 1,
+        price: p.price || p.unit_price || p.rate || 0,
+        qb_product_id: p.qb_product_id || p.qb_item_id || null,
+        mapped: !!(p.qb_product_id || p.qb_item_id || p.mapped)
+      });
+    }
+    renderPartsList();
+
+    // Notes
+    var notes = task.notes || task.service_notes || task.description || '';
+    document.getElementById('bwNotes').value = notes;
+  }
+
+  function classificationColor(cls) {
+    var map = {
+      invoice_ready: '#22c55e', invoice: '#22c55e',
+      estimate: '#4f8cff', quote: '#4f8cff',
+      split: '#f59e0b',
+      hold: '#ef4444',
+      needs_review: '#a855f7', review: '#a855f7',
+      skip: '#6b7280'
+    };
+    return map[(cls || '').toLowerCase()] || '#6b7280';
+  }
+
+  // ====================================================================
+  // DOC TYPE TOGGLE
+  // ====================================================================
+  window.setDocType = function(type) {
+    currentDocType = type;
+    var btns = document.querySelectorAll('.bw-toggle-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-doctype') === type);
+    }
+    renderPreview();
+  };
+
+  // ====================================================================
+  // RATE TIER
+  // ====================================================================
+  window.applyRateTier = function() {
+    var tier = document.getElementById('bwRateTier').value;
+    var rateInput = document.getElementById('bwLaborRate');
+    if (tier === 'standard') rateInput.value = 125;
+    else if (tier === 'emergency') rateInput.value = 185;
+    else if (tier === 'contract') rateInput.value = 95;
+    // 'custom' leaves value unchanged
+    renderPreview();
+  };
+
+  // ====================================================================
+  // TASK 11: CUSTOMER RESOLUTION
+  // ====================================================================
+  function renderCustomer() {
+    var nameEl = document.getElementById('bwCustomerName');
+    var badgeEl = document.getElementById('bwCustomerQbBadge');
+
+    nameEl.textContent = currentCustomer ? currentCustomer.name : '--';
+
+    if (currentCustomer && currentCustomer.mapped) {
+      badgeEl.textContent = 'QB Mapped';
+      badgeEl.className = 'bw-customer-qb-badge mapped';
+    } else {
+      badgeEl.textContent = 'Unmapped';
+      badgeEl.className = 'bw-customer-qb-badge unmapped';
+    }
+  }
+
+  window.toggleCustomerSearch = function() {
+    var searchEl = document.getElementById('bwCustomerSearch');
+    var isHidden = searchEl.style.display === 'none';
+    searchEl.style.display = isHidden ? '' : 'none';
+    if (isHidden) {
+      document.getElementById('bwCustomerSearchInput').value = '';
+      clearChildren(document.getElementById('bwCustomerResults'));
+      document.getElementById('bwCustomerResults').classList.remove('has-results');
+      document.getElementById('bwCustomerSearchInput').focus();
+    }
+  };
+
+  window.debounceCustomerSearch = function() {
+    clearTimeout(customerSearchTimer);
+    customerSearchTimer = setTimeout(searchCustomers, 350);
+  };
+
+  async function searchCustomers() {
+    var query = document.getElementById('bwCustomerSearchInput').value.trim();
+    var resultsEl = document.getElementById('bwCustomerResults');
+
+    if (query.length < 2) {
+      clearChildren(resultsEl);
+      resultsEl.classList.remove('has-results');
+      return;
+    }
+
+    clearChildren(resultsEl);
+    var loadingDiv = document.createElement('div');
+    loadingDiv.className = 'bw-search-loading';
+    loadingDiv.textContent = 'Searching...';
+    resultsEl.appendChild(loadingDiv);
+    resultsEl.classList.add('has-results');
+
+    try {
+      var data = await qbApi('/customers?search=' + encodeURIComponent(query));
+      var customers = Array.isArray(data) ? data : (data.data || data.customers || []);
+
+      clearChildren(resultsEl);
+      if (customers.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'bw-search-loading';
+        empty.textContent = 'No customers found';
+        resultsEl.appendChild(empty);
+        return;
+      }
+
+      for (var i = 0; i < customers.length; i++) {
+        (function(cust) {
+          var item = document.createElement('div');
+          item.className = 'bw-search-result-item';
+
+          var nameSpan = document.createElement('div');
+          nameSpan.textContent = cust.DisplayName || cust.name || cust.display_name || 'Unknown';
+          item.appendChild(nameSpan);
+
+          if (cust.PrimaryEmailAddr || cust.email) {
+            var sub = document.createElement('div');
+            sub.className = 'bw-search-result-sub';
+            sub.textContent = (cust.PrimaryEmailAddr && cust.PrimaryEmailAddr.Address) || cust.email || '';
+            item.appendChild(sub);
+          }
+
+          item.addEventListener('click', function() {
+            currentCustomer = {
+              name: cust.DisplayName || cust.name || cust.display_name || 'Unknown',
+              qb_customer_id: String(cust.Id || cust.id || cust.qb_id || ''),
+              mapped: true
+            };
+            renderCustomer();
+            toggleCustomerSearch();
+            renderPreview();
+          });
+          resultsEl.appendChild(item);
+        })(customers[i]);
+      }
+    } catch (e) {
+      console.error('Customer search failed:', e);
+      clearChildren(resultsEl);
+      var errDiv = document.createElement('div');
+      errDiv.className = 'bw-search-loading';
+      errDiv.textContent = 'Search failed: ' + e.message;
+      resultsEl.appendChild(errDiv);
+    }
+  }
+
+  // ====================================================================
+  // TASK 10: PARTS MANAGEMENT
+  // ====================================================================
+  function renderPartsList() {
+    var listEl = document.getElementById('bwPartsList');
+    var emptyEl = document.getElementById('bwPartsEmpty');
+
+    // Remove all part items (keep the empty message)
+    var existingItems = listEl.querySelectorAll('.bw-part-item');
+    for (var i = 0; i < existingItems.length; i++) {
+      existingItems[i].remove();
+    }
+
+    if (currentParts.length === 0) {
+      emptyEl.style.display = '';
+      renderPreview();
+      return;
+    }
+
+    emptyEl.style.display = 'none';
+
+    for (var j = 0; j < currentParts.length; j++) {
+      (function(idx) {
+        var part = currentParts[idx];
+        var item = document.createElement('div');
+        item.className = 'bw-part-item';
+
+        // Name
+        var nameEl = document.createElement('span');
+        nameEl.className = 'bw-part-name';
+        nameEl.textContent = part.name;
+        item.appendChild(nameEl);
+
+        // QB Badge
+        var badge = document.createElement('span');
+        badge.className = 'bw-part-badge ' + (part.mapped ? 'mapped' : 'unmapped');
+        badge.textContent = part.mapped ? 'QB' : 'Unmapped';
+        item.appendChild(badge);
+
+        // Qty input
+        var qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.className = 'bw-part-qty';
+        qtyInput.min = '1';
+        qtyInput.value = part.qty;
+        qtyInput.addEventListener('input', function() {
+          currentParts[idx].qty = parseInt(qtyInput.value) || 1;
+          renderPreview();
+        });
+        item.appendChild(qtyInput);
+
+        // Price
+        var priceEl = document.createElement('span');
+        priceEl.className = 'bw-part-price';
+        priceEl.textContent = '$' + Number(part.price).toFixed(2);
+        item.appendChild(priceEl);
+
+        // Remove button
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'bw-part-remove';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.title = 'Remove part';
+        removeBtn.addEventListener('click', function() {
+          currentParts.splice(idx, 1);
+          renderPartsList();
+        });
+        item.appendChild(removeBtn);
+
+        listEl.appendChild(item);
+      })(j);
+    }
+
+    renderPreview();
+  }
+
+  window.debouncePartsSearch = function() {
+    clearTimeout(partsSearchTimer);
+    partsSearchTimer = setTimeout(searchParts, 350);
+  };
+
+  async function searchParts() {
+    var query = document.getElementById('bwPartsSearchInput').value.trim();
+    var resultsEl = document.getElementById('bwPartsResults');
+
+    if (query.length < 2) {
+      clearChildren(resultsEl);
+      resultsEl.classList.remove('has-results');
+      return;
+    }
+
+    clearChildren(resultsEl);
+    var loadingDiv = document.createElement('div');
+    loadingDiv.className = 'bw-search-loading';
+    loadingDiv.textContent = 'Searching QB products...';
+    resultsEl.appendChild(loadingDiv);
+    resultsEl.classList.add('has-results');
+
+    try {
+      var data = await qbApi('/products?search=' + encodeURIComponent(query));
+      var products = Array.isArray(data) ? data : (data.data || data.products || data.items || []);
+
+      clearChildren(resultsEl);
+      if (products.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'bw-search-loading';
+        empty.textContent = 'No products found';
+        resultsEl.appendChild(empty);
+        return;
+      }
+
+      for (var i = 0; i < products.length; i++) {
+        (function(prod) {
+          var item = document.createElement('div');
+          item.className = 'bw-search-result-item';
+
+          var nameDiv = document.createElement('div');
+          nameDiv.textContent = prod.Name || prod.name || 'Product';
+          item.appendChild(nameDiv);
+
+          var sub = document.createElement('div');
+          sub.className = 'bw-search-result-sub';
+          var price = prod.UnitPrice || prod.unit_price || prod.price || 0;
+          sub.textContent = '$' + Number(price).toFixed(2);
+          if (prod.Description || prod.description) {
+            sub.textContent += ' \u2014 ' + (prod.Description || prod.description);
+          }
+          item.appendChild(sub);
+
+          item.addEventListener('click', function() {
+            currentParts.push({
+              name: prod.Name || prod.name || 'Product',
+              qty: 1,
+              price: prod.UnitPrice || prod.unit_price || prod.price || 0,
+              qb_product_id: String(prod.Id || prod.id || ''),
+              mapped: true
+            });
+            renderPartsList();
+            document.getElementById('bwPartsSearchInput').value = '';
+            clearChildren(resultsEl);
+            resultsEl.classList.remove('has-results');
+          });
+          resultsEl.appendChild(item);
+        })(products[i]);
+      }
+    } catch (e) {
+      console.error('Parts search failed:', e);
+      clearChildren(resultsEl);
+      var errDiv = document.createElement('div');
+      errDiv.className = 'bw-search-loading';
+      errDiv.textContent = 'Search failed: ' + e.message;
+      resultsEl.appendChild(errDiv);
+    }
+  }
+
+  // ====================================================================
+  // TASK 12: RENDERED INVOICE PREVIEW (XSS-safe — createElement only)
+  // ====================================================================
+  window.renderPreview = function() {
+    var paper = document.getElementById('bwPreviewPaper');
+    if (!paper) return;
+
+    // Clear previous content safely
+    clearChildren(paper);
+
+    // DRAFT watermark
+    var watermark = document.createElement('div');
+    watermark.className = 'bw-preview-watermark';
+    watermark.textContent = 'DRAFT';
+    paper.appendChild(watermark);
+
+    // Header row: company info + doc type label
+    var header = document.createElement('div');
+    header.className = 'bw-preview-header';
+
+    // Company info
+    var companyDiv = document.createElement('div');
+    companyDiv.className = 'bw-preview-company';
+
+    var companyName = document.createElement('p');
+    companyName.className = 'bw-preview-company-name';
+    companyName.textContent = 'Automatic Access Solutions';
+    companyDiv.appendChild(companyName);
+
+    var companyAddr = document.createElement('p');
+    companyAddr.className = 'bw-preview-company-addr';
+    companyAddr.textContent = '2323 Bainbridge St, Kenner, LA 70062';
+    companyDiv.appendChild(companyAddr);
+
+    var companyPhone = document.createElement('p');
+    companyPhone.className = 'bw-preview-company-addr';
+    companyPhone.textContent = '(504) 336-4422';
+    companyDiv.appendChild(companyPhone);
+
+    header.appendChild(companyDiv);
+
+    // Doc type label
+    var docLabel = document.createElement('div');
+    docLabel.className = 'bw-preview-doc-label ' + (currentDocType === 'estimate' ? 'estimate-label' : 'invoice-label');
+    docLabel.textContent = currentDocType === 'estimate' ? 'ESTIMATE' : 'INVOICE';
+    header.appendChild(docLabel);
+
+    paper.appendChild(header);
+
+    // Meta: bill-to + details
+    var meta = document.createElement('div');
+    meta.className = 'bw-preview-meta';
+
+    // Bill-to
+    var billTo = document.createElement('div');
+    billTo.className = 'bw-preview-billto';
+
+    var billToLabel = document.createElement('p');
+    billToLabel.className = 'bw-preview-billto-label';
+    billToLabel.textContent = 'Bill To';
+    billTo.appendChild(billToLabel);
+
+    var billToName = document.createElement('p');
+    billToName.className = 'bw-preview-billto-name';
+    billToName.textContent = currentCustomer ? currentCustomer.name : '--';
+    billTo.appendChild(billToName);
+
+    meta.appendChild(billTo);
+
+    // Details (date, ref)
+    var details = document.createElement('div');
+    details.className = 'bw-preview-details';
+
+    // Date row
+    var dateRow = document.createElement('div');
+    dateRow.className = 'bw-preview-detail-row';
+    var dateLabel = document.createElement('span');
+    dateLabel.className = 'bw-preview-detail-label';
+    dateLabel.textContent = 'Date';
+    dateRow.appendChild(dateLabel);
+    var dateValue = document.createElement('span');
+    dateValue.className = 'bw-preview-detail-value';
+    dateValue.textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    dateRow.appendChild(dateValue);
+    details.appendChild(dateRow);
+
+    // Task ref row
+    var refRow = document.createElement('div');
+    refRow.className = 'bw-preview-detail-row';
+    var refLabel = document.createElement('span');
+    refLabel.className = 'bw-preview-detail-label';
+    refLabel.textContent = 'Task Ref';
+    refRow.appendChild(refLabel);
+    var refValue = document.createElement('span');
+    refValue.className = 'bw-preview-detail-value';
+    refValue.textContent = '#' + (currentTaskId || '--');
+    refRow.appendChild(refValue);
+    details.appendChild(refRow);
+
+    meta.appendChild(details);
+    paper.appendChild(meta);
+
+    // Line items table
+    var table = document.createElement('table');
+    table.className = 'bw-preview-table';
+
+    // Table head
+    var thead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+    var headers = ['Description', 'Qty', 'Rate', 'Amount'];
+    for (var h = 0; h < headers.length; h++) {
+      var th = document.createElement('th');
+      th.textContent = headers[h];
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    // Table body
+    var tbody = document.createElement('tbody');
+    var laborHours = parseFloat(document.getElementById('bwLaborHours').value) || 0;
+    var laborRate = parseFloat(document.getElementById('bwLaborRate').value) || 0;
+    var laborTotal = laborHours * laborRate;
+    var subtotal = 0;
+
+    // Labor row
+    if (laborHours > 0) {
+      var laborRow = document.createElement('tr');
+
+      var laborDesc = document.createElement('td');
+      laborDesc.textContent = 'Service Labor';
+      laborRow.appendChild(laborDesc);
+
+      var laborQty = document.createElement('td');
+      laborQty.textContent = laborHours.toFixed(2);
+      laborRow.appendChild(laborQty);
+
+      var laborRateCell = document.createElement('td');
+      laborRateCell.textContent = '$' + laborRate.toFixed(2);
+      laborRow.appendChild(laborRateCell);
+
+      var laborAmt = document.createElement('td');
+      laborAmt.textContent = '$' + laborTotal.toFixed(2);
+      laborRow.appendChild(laborAmt);
+
+      tbody.appendChild(laborRow);
+      subtotal += laborTotal;
+    }
+
+    // Part rows
+    for (var p = 0; p < currentParts.length; p++) {
+      var part = currentParts[p];
+      var partRow = document.createElement('tr');
+      if (!part.mapped) partRow.className = 'bw-preview-unmapped';
+
+      var partDesc = document.createElement('td');
+      partDesc.textContent = part.name;
+      if (!part.mapped) {
+        var unmappedNote = document.createElement('span');
+        unmappedNote.className = 'bw-unmapped-note';
+        unmappedNote.textContent = ' (unmapped)';
+        partDesc.appendChild(unmappedNote);
+      }
+      partRow.appendChild(partDesc);
+
+      var partQty = document.createElement('td');
+      partQty.textContent = String(part.qty);
+      partRow.appendChild(partQty);
+
+      var partRate = document.createElement('td');
+      partRate.textContent = '$' + Number(part.price).toFixed(2);
+      partRow.appendChild(partRate);
+
+      var partAmt = document.createElement('td');
+      var partTotal = part.qty * part.price;
+      partAmt.textContent = '$' + partTotal.toFixed(2);
+      partRow.appendChild(partAmt);
+
+      tbody.appendChild(partRow);
+      subtotal += partTotal;
+    }
+
+    // Empty state
+    if (laborHours === 0 && currentParts.length === 0) {
+      var emptyRow = document.createElement('tr');
+      var emptyCell = document.createElement('td');
+      emptyCell.colSpan = 4;
+      emptyCell.textContent = 'No line items yet';
+      emptyCell.style.textAlign = 'center';
+      emptyCell.style.color = '#94a3b8';
+      emptyCell.style.fontStyle = 'italic';
+      emptyRow.appendChild(emptyCell);
+      tbody.appendChild(emptyRow);
+    }
+
+    table.appendChild(tbody);
+    paper.appendChild(table);
+
+    // Totals
+    var totals = document.createElement('div');
+    totals.className = 'bw-preview-totals';
+
+    // Subtotal
+    var subRow = document.createElement('div');
+    subRow.className = 'bw-preview-total-row';
+    var subLabel = document.createElement('span');
+    subLabel.className = 'bw-preview-total-label';
+    subLabel.textContent = 'Subtotal';
+    subRow.appendChild(subLabel);
+    var subValue = document.createElement('span');
+    subValue.className = 'bw-preview-total-value';
+    subValue.textContent = '$' + subtotal.toFixed(2);
+    subRow.appendChild(subValue);
+    totals.appendChild(subRow);
+
+    // Grand total
+    var grandRow = document.createElement('div');
+    grandRow.className = 'bw-preview-total-row grand';
+    var grandLabel = document.createElement('span');
+    grandLabel.className = 'bw-preview-total-label';
+    grandLabel.textContent = 'Total';
+    grandRow.appendChild(grandLabel);
+    var grandValue = document.createElement('span');
+    grandValue.className = 'bw-preview-total-value';
+    grandValue.textContent = '$' + subtotal.toFixed(2);
+    grandRow.appendChild(grandValue);
+    totals.appendChild(grandRow);
+
+    paper.appendChild(totals);
+
+    // Notes section
+    var notesText = document.getElementById('bwNotes').value.trim();
+    if (notesText) {
+      var notesSection = document.createElement('div');
+      notesSection.className = 'bw-preview-notes';
+
+      var notesLabel = document.createElement('p');
+      notesLabel.className = 'bw-preview-notes-label';
+      notesLabel.textContent = 'Notes';
+      notesSection.appendChild(notesLabel);
+
+      var notesPara = document.createElement('p');
+      notesPara.className = 'bw-preview-notes-text';
+      notesPara.textContent = notesText;
+      notesSection.appendChild(notesPara);
+
+      paper.appendChild(notesSection);
+    }
+  };
+
+  // ====================================================================
+  // TASK 13: ACTIONS — HOLD
+  // ====================================================================
+  window.holdTask = function() {
+    document.getElementById('bwHoldModal').style.display = '';
+    document.getElementById('bwHoldReason').value = '';
+    document.getElementById('bwHoldReason').focus();
+  };
+
+  window.closeHoldModal = function() {
+    document.getElementById('bwHoldModal').style.display = 'none';
+  };
+
+  window.confirmHold = async function() {
+    var reason = document.getElementById('bwHoldReason').value.trim();
+    if (!reason) {
+      document.getElementById('bwHoldReason').style.borderColor = '#ef4444';
+      document.getElementById('bwHoldReason').focus();
+      return;
+    }
+
+    var btn = document.getElementById('bwHoldConfirm');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      await api('PATCH', '/v2/task/' + currentTaskId + '/classify', {
+        classification: 'hold',
+        reason: reason
+      });
+      closeHoldModal();
+      showToast('Task put on hold', 'success');
+      setTimeout(function() { window.location.href = '/pipeline/triage/'; }, 1200);
+    } catch (e) {
+      console.error('Hold failed:', e);
+      showToast('Failed to hold: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Put on Hold';
+    }
+  };
+
+  // ====================================================================
+  // TASK 13: ACTIONS — SAVE DRAFT
+  // ====================================================================
+  window.saveDraft = async function() {
+    var btn = document.querySelector('.bw-action-draft');
+    btn.disabled = true;
+
+    var payload = buildPayload();
+
+    try {
+      await api('PATCH', '/v2/task/' + currentTaskId + '/draft', payload);
+      showToast('Draft saved successfully', 'success');
+    } catch (e) {
+      console.error('Save draft failed:', e);
+      showToast('Failed to save draft: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // ====================================================================
+  // TASK 13: ACTIONS — SEND TO QB
+  // ====================================================================
+  window.sendToQB = function() {
+    var payload = buildPayload();
+    var laborTotal = (parseFloat(document.getElementById('bwLaborHours').value) || 0) * (parseFloat(document.getElementById('bwLaborRate').value) || 0);
+    var partsTotal = 0;
+    for (var i = 0; i < currentParts.length; i++) {
+      partsTotal += currentParts[i].qty * currentParts[i].price;
+    }
+    var total = laborTotal + partsTotal;
+
+    // Update send modal doc type
+    document.getElementById('bwSendDocType').textContent = currentDocType;
+
+    // Build summary using safe DOM API
+    var summaryEl = document.getElementById('bwSendSummary');
+    clearChildren(summaryEl);
+
+    var rows = [
+      ['Customer', currentCustomer ? currentCustomer.name : '--'],
+      ['Doc Type', currentDocType.charAt(0).toUpperCase() + currentDocType.slice(1)],
+      ['Labor', '$' + laborTotal.toFixed(2)],
+      ['Parts (' + currentParts.length + ')', '$' + partsTotal.toFixed(2)],
+      ['Total', '$' + total.toFixed(2)]
+    ];
+
+    for (var r = 0; r < rows.length; r++) {
+      var row = document.createElement('div');
+      row.className = 'bw-send-row';
+      var label = document.createElement('span');
+      label.className = 'bw-send-label';
+      label.textContent = rows[r][0];
+      row.appendChild(label);
+      var value = document.createElement('span');
+      value.className = 'bw-send-value';
+      value.textContent = rows[r][1];
+      row.appendChild(value);
+      summaryEl.appendChild(row);
+    }
+
+    // Unmapped warnings
+    var unmappedParts = currentParts.filter(function(pp) { return !pp.mapped; });
+    if (unmappedParts.length > 0 || (currentCustomer && !currentCustomer.mapped)) {
+      var warnDiv = document.createElement('div');
+      warnDiv.style.marginTop = '10px';
+      warnDiv.style.padding = '8px';
+      warnDiv.style.background = 'rgba(245,158,11,0.1)';
+      warnDiv.style.borderRadius = '6px';
+      warnDiv.style.fontSize = '0.78rem';
+      warnDiv.style.color = '#f59e0b';
+      warnDiv.style.fontWeight = '600';
+      var warns = [];
+      if (currentCustomer && !currentCustomer.mapped) warns.push('Customer not mapped to QB');
+      if (unmappedParts.length > 0) warns.push(unmappedParts.length + ' unmapped part(s)');
+      warnDiv.textContent = 'Warning: ' + warns.join(', ');
+      summaryEl.appendChild(warnDiv);
+    }
+
+    document.getElementById('bwSendModal').style.display = '';
+  };
+
+  window.closeSendModal = function() {
+    document.getElementById('bwSendModal').style.display = 'none';
+  };
+
+  window.confirmSend = async function() {
+    var btn = document.getElementById('bwSendConfirm');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    var payload = buildPayload();
+    if (replacingDocId) {
+      payload.replacing_doc_id = replacingDocId;
+    }
+
+    try {
+      var result = await api('POST', '/v2/task/' + currentTaskId + '/send', payload);
+      closeSendModal();
+
+      // Show success modal using safe DOM API
+      var successBody = document.getElementById('bwSuccessBody');
+      clearChildren(successBody);
+
+      var docId = result.qb_doc_id || result.qb_invoice_id || result.qb_estimate_id || result.id || '--';
+      var successMsg = document.createElement('p');
+      successMsg.className = 'bw-modal-desc';
+      successMsg.textContent = currentDocType.charAt(0).toUpperCase() + currentDocType.slice(1) +
+        ' created successfully in QuickBooks.';
+      successBody.appendChild(successMsg);
+
+      var idRow = document.createElement('div');
+      idRow.className = 'bw-send-summary';
+      var idRowInner = document.createElement('div');
+      idRowInner.className = 'bw-send-row';
+      var idLabel = document.createElement('span');
+      idLabel.className = 'bw-send-label';
+      idLabel.textContent = 'QB Doc ID';
+      idRowInner.appendChild(idLabel);
+      var idValue = document.createElement('span');
+      idValue.className = 'bw-send-value';
+      idValue.textContent = String(docId);
+      idValue.style.color = '#22c55e';
+      idRowInner.appendChild(idValue);
+      idRow.appendChild(idRowInner);
+      successBody.appendChild(idRow);
+
+      document.getElementById('bwSuccessModal').style.display = '';
+    } catch (e) {
+      console.error('Send failed:', e);
+      showToast('Failed to send: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send to QuickBooks';
+    }
+  };
+
+  window.closeSuccessModal = function() {
+    document.getElementById('bwSuccessModal').style.display = 'none';
+  };
+
+  // ====================================================================
+  // BUILD PAYLOAD
+  // ====================================================================
+  function buildPayload() {
+    var laborHours = parseFloat(document.getElementById('bwLaborHours').value) || 0;
+    var laborRate = parseFloat(document.getElementById('bwLaborRate').value) || 0;
+    var notes = document.getElementById('bwNotes').value.trim();
+
+    var parts = [];
+    for (var i = 0; i < currentParts.length; i++) {
+      parts.push({
+        name: currentParts[i].name,
+        qty: currentParts[i].qty,
+        price: currentParts[i].price,
+        qb_product_id: currentParts[i].qb_product_id || null
+      });
+    }
+
+    return {
+      doc_type: currentDocType,
+      labor_hours: laborHours,
+      labor_rate: laborRate,
+      parts: parts,
+      customer_qb_id: currentCustomer ? currentCustomer.qb_customer_id : null,
+      notes: notes
+    };
+  }
+
+  // ====================================================================
+  // TOAST
+  // ====================================================================
+  var toastTimer = null;
+  function showToast(msg, type) {
+    var toast = document.getElementById('bwToast');
+    toast.textContent = msg;
+    toast.className = 'bw-toast ' + (type || 'success') + ' visible';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() {
+      toast.classList.remove('visible');
+    }, 3500);
+  }
+
+})();
+</script>
+
+</body>
+</html>
