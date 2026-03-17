@@ -172,6 +172,36 @@
   status = 200
 
 [[redirects]]
+  from = "/pipeline/triage"
+  to = "/pipeline/triage/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/triage/*"
+  to = "/pipeline/triage/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/edit"
+  to = "/pipeline/edit/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/edit/*"
+  to = "/pipeline/edit/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/ledger"
+  to = "/pipeline/ledger/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pipeline/ledger/*"
+  to = "/pipeline/ledger/index.html"
+  status = 200
+
+[[redirects]]
   from = "/pipeline/customers"
   to = "/pipeline/customers/index.html"
   status = 200
