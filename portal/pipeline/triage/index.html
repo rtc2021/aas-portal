@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAS Pipeline — Triage Board</title>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: var(--font-family, 'Plus Jakarta Sans', -apple-system, sans-serif); background: var(--ui-bg, #0b0f19); color: var(--ui-text, rgba(235,240,255,0.95)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #4f8cff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #4f8cff, #6366f1); color: #fff; border: none; padding: 14px 32px; border-radius: 14px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.07); border-top-color: #4f8cff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <!-- AUTH OVERLAY -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access the Triage Board</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <!-- NAV TOGGLE + PANEL -->
+  <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
+    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+  </button>
+
+  <div class="nav-panel__overlay" id="navOverlay" onclick="toggleNav()"></div>
+
+  <nav class="nav-panel" id="navPanel">
+    <a href="/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>Dashboard</a>
+    <div class="nav-panel__section">Tools</div>
+    <a href="/tech/command/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Command Center</a>
+    <a href="/tech/parts/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>Parts Finder</a>
+    <a href="/tech/manuals/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>Tech Manuals</a>
+    <a href="/tech/doors/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" /></svg>Door Browser</a>
+    <a href="/tech/summary/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Work Summary</a>
+    <a href="/pipeline/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>Invoice Pipeline</a>
+    <a href="/pipeline/triage/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>Triage Board</a>
+    <a href="/pipeline/ledger/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>Billing Ledger</a>
+    <div class="nav-panel__divider"></div>
+    <a href="https://app.limblecmms.com" target="_blank" rel="noopener" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>Open Limble</a>
+  </nav>
+
+  <!-- FLOATING USER -->
+  <div class="floating-user" id="floatingUser" style="display:none;">
+    <div class="floating-user__info">
+      <div class="floating-user__name" id="floatingUserName">User</div>
+      <div class="floating-user__role" id="floatingUserRole">-</div>
+    </div>
+    <button class="floating-user__logout" onclick="window.AASAuth?.logout()" title="Sign Out">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+    </button>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div id="pageContent" class="page-content" data-admin-only>
+    <div id="triageBoard">
+
+      <!-- Header -->
+      <div class="tb-header">
+        <div class="tb-header-left">
+          <h1 class="tb-title">Triage <span>Board</span></h1>
+          <p class="tb-subtitle">Classify Limble tasks for billing</p>
+        </div>
+        <div class="tb-header-right">
+          <button class="tb-sync-btn" id="tbSyncBtn" onclick="loadBoard(true)">
+            <svg class="tb-sync-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span class="tb-sync-label">Sync</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Bar -->
+      <div class="tb-summary" id="tbSummary">
+        <div class="tb-summary-item">
+          <span class="tb-summary-count" id="tbTotalCount">0</span>
+          <span class="tb-summary-label">Total</span>
+        </div>
+        <div class="tb-summary-divider"></div>
+        <div class="tb-summary-item" data-col="invoice_ready">
+          <span class="tb-summary-dot" style="background:#22c55e"></span>
+          <span class="tb-summary-count" id="tbCountInvoice">0</span>
+          <span class="tb-summary-label">Invoice</span>
+        </div>
+        <div class="tb-summary-item" data-col="estimate">
+          <span class="tb-summary-dot" style="background:#4f8cff"></span>
+          <span class="tb-summary-count" id="tbCountEstimate">0</span>
+          <span class="tb-summary-label">Estimate</span>
+        </div>
+        <div class="tb-summary-item" data-col="split">
+          <span class="tb-summary-dot" style="background:#f59e0b"></span>
+          <span class="tb-summary-count" id="tbCountSplit">0</span>
+          <span class="tb-summary-label">Split</span>
+        </div>
+        <div class="tb-summary-item" data-col="hold">
+          <span class="tb-summary-dot" style="background:#ef4444"></span>
+          <span class="tb-summary-count" id="tbCountHold">0</span>
+          <span class="tb-summary-label">Hold</span>
+        </div>
+        <div class="tb-summary-item" data-col="needs_review">
+          <span class="tb-summary-dot" style="background:#a855f7"></span>
+          <span class="tb-summary-count" id="tbCountReview">0</span>
+          <span class="tb-summary-label">Review</span>
+        </div>
+        <div class="tb-summary-item" data-col="skip">
+          <span class="tb-summary-dot" style="background:#6b7280"></span>
+          <span class="tb-summary-count" id="tbCountSkip">0</span>
+          <span class="tb-summary-label">Skip</span>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="tb-loading" id="tbLoading">
+        <div class="tb-loading-spinner"></div>
+        <p>Classifying tasks...</p>
+      </div>
+
+      <!-- Error State -->
+      <div class="tb-error" id="tbError" style="display:none;">
+        <p class="tb-error-msg" id="tbErrorMsg">Failed to load tasks</p>
+        <button class="tb-retry-btn" onclick="loadBoard(false)">Retry</button>
+      </div>
+
+      <!-- Kanban Columns -->
+      <div class="tb-board" id="tbBoard" style="display:none;">
+        <div class="tb-column" data-classification="invoice_ready">
+          <div class="tb-column-header" style="--col-accent:#22c55e">
+            <span class="tb-column-dot"></span>
+            <span class="tb-column-title">Invoice Ready</span>
+            <span class="tb-column-count" data-count-for="invoice_ready">0</span>
+          </div>
+          <div class="tb-column-body" data-drop="invoice_ready"></div>
+        </div>
+        <div class="tb-column" data-classification="estimate">
+          <div class="tb-column-header" style="--col-accent:#4f8cff">
+            <span class="tb-column-dot"></span>
+            <span class="tb-column-title">Estimate</span>
+            <span class="tb-column-count" data-count-for="estimate">0</span>
+          </div>
+          <div class="tb-column-body" data-drop="estimate"></div>
+        </div>
+        <div class="tb-column" data-classification="split">
+          <div class="tb-column-header" style="--col-accent:#f59e0b">
+            <span class="tb-column-dot"></span>
+            <span class="tb-column-title">Split</span>
+            <span class="tb-column-count" data-count-for="split">0</span>
+          </div>
+          <div class="tb-column-body" data-drop="split"></div>
+        </div>
+        <div class="tb-column" data-classification="hold">
+          <div class="tb-column-header" style="--col-accent:#ef4444">
+            <span class="tb-column-dot"></span>
+            <span class="tb-column-title">Hold</span>
+            <span class="tb-column-count" data-count-for="hold">0</span>
+          </div>
+          <div class="tb-column-body" data-drop="hold"></div>
+        </div>
+        <div class="tb-column" data-classification="needs_review">
+          <div class="tb-column-header" style="--col-accent:#a855f7">
+            <span class="tb-column-dot"></span>
+            <span class="tb-column-title">Needs Review</span>
+            <span class="tb-column-count" data-count-for="needs_review">0</span>
+          </div>
+          <div class="tb-column-body" data-drop="needs_review"></div>
+        </div>
+        <div class="tb-column" data-classification="skip">
+          <div class="tb-column-header" style="--col-accent:#6b7280">
+            <span class="tb-column-dot"></span>
+            <span class="tb-column-title">Skip</span>
+            <span class="tb-column-count" data-count-for="skip">0</span>
+          </div>
+          <div class="tb-column-body" data-drop="skip"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<!-- Quick Ship Modal -->
+<div class="tb-modal-overlay" id="tbQuickShipModal" style="display:none;">
+  <div class="tb-modal">
+    <div class="tb-modal-header">
+      <h3 class="tb-modal-title">Quick Ship</h3>
+      <button class="tb-modal-close" onclick="closeQuickShip()">&times;</button>
+    </div>
+    <div class="tb-modal-body" id="tbQuickShipBody">
+      <div class="tb-loading-spinner"></div>
+      <p>Checking task context...</p>
+    </div>
+    <div class="tb-modal-footer" id="tbQuickShipFooter" style="display:none;">
+      <button class="tb-modal-cancel" onclick="closeQuickShip()">Cancel</button>
+      <button class="tb-modal-confirm" id="tbQuickShipConfirm">Send to QuickBooks</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ====================================================================
+   TRIAGE BOARD — #triageBoard namespace, --tb-* prefix
+   ==================================================================== */
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(79,140,255,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.03) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+
+#triageBoard {
+  --tb-accent: #4f8cff;
+  --tb-accent-alt: #6366f1;
+  --tb-surface: var(--ui-surface, rgba(14,22,42,0.94));
+  --tb-border: var(--ui-border, rgba(255,255,255,0.07));
+  --tb-border-hover: var(--ui-border-hover, rgba(79,140,255,0.4));
+  --tb-radius: var(--radius-lg, 14px);
+  --tb-radius-sm: 8px;
+  --tb-glass: var(--glass-backdrop, blur(24px) saturate(180%));
+  --tb-text-muted: rgba(255,255,255,0.55);
+  --tb-text-secondary: rgba(255,255,255,0.7);
+  --tb-col-invoice: #22c55e;
+  --tb-col-estimate: #4f8cff;
+  --tb-col-split: #f59e0b;
+  --tb-col-hold: #ef4444;
+  --tb-col-review: #a855f7;
+  --tb-col-skip: #6b7280;
+  position: relative; z-index: 1;
+  max-width: 1600px; margin: 0 auto; padding: 24px 24px 48px;
+}
+
+/* Header */
+.tb-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+.tb-header-left { flex: 1; min-width: 200px; }
+.tb-title { font-family: var(--font-display, 'Outfit', sans-serif); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.tb-title span { color: var(--tb-accent); }
+.tb-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--tb-text-muted); }
+.tb-header-right { display: flex; gap: 10px; align-items: center; padding-top: 6px; }
+
+/* Sync Button */
+.tb-sync-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--tb-radius-sm); border: 1px solid var(--tb-border);
+  background: var(--tb-surface); backdrop-filter: var(--tb-glass);
+  color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+.tb-sync-btn:hover { border-color: var(--tb-border-hover); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.tb-sync-btn.syncing .tb-sync-icon { animation: spin 0.8s linear infinite; }
+.tb-sync-icon { width: 16px; height: 16px; }
+
+/* Summary Bar */
+.tb-summary {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 20px; margin-bottom: 20px;
+  background: var(--tb-surface); border: 1px solid var(--tb-border); border-radius: var(--tb-radius);
+  backdrop-filter: var(--tb-glass);
+}
+.tb-summary-item { display: flex; align-items: center; gap: 6px; }
+.tb-summary-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tb-summary-count { font-weight: 700; font-size: 1rem; }
+.tb-summary-label { font-size: 0.78rem; color: var(--tb-text-muted); }
+.tb-summary-divider { width: 1px; height: 24px; background: var(--tb-border); }
+
+/* Loading */
+.tb-loading { text-align: center; padding: 80px 20px; }
+.tb-loading-spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.07); border-top-color: var(--tb-accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+.tb-loading p { color: var(--tb-text-muted); font-size: 0.9rem; }
+
+/* Error */
+.tb-error { text-align: center; padding: 60px 20px; }
+.tb-error-msg { color: var(--tb-col-hold); margin: 0 0 16px; }
+.tb-retry-btn { padding: 8px 20px; border-radius: var(--tb-radius-sm); border: 1px solid var(--tb-border); background: var(--tb-surface); color: var(--ui-text, rgba(235,240,255,0.95)); cursor: pointer; font-weight: 600; }
+.tb-retry-btn:hover { border-color: var(--tb-border-hover); }
+
+/* Board Grid */
+.tb-board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(220px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+/* Column */
+.tb-column {
+  background: rgba(14,22,42,0.5);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  display: flex; flex-direction: column;
+  min-height: 300px;
+  overflow: hidden;
+}
+.tb-column-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--tb-border);
+  flex-shrink: 0;
+}
+.tb-column-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--col-accent); flex-shrink: 0; }
+.tb-column-title { font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; flex: 1; }
+.tb-column-count {
+  font-size: 0.72rem; font-weight: 700;
+  min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.06); border-radius: 99px;
+  color: var(--tb-text-secondary);
+}
+.tb-column-body {
+  flex: 1; padding: 8px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: background 150ms;
+}
+.tb-column-body.tb-drop-target {
+  background: rgba(79,140,255,0.06);
+  outline: 2px dashed rgba(79,140,255,0.35);
+  outline-offset: -2px;
+  border-radius: 0 0 calc(var(--tb-radius) - 1px) calc(var(--tb-radius) - 1px);
+}
+
+/* Card */
+.tb-card {
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius-sm);
+  padding: 12px;
+  cursor: grab;
+  transition: border-color 200ms, transform 150ms, box-shadow 150ms;
+  position: relative;
+}
+.tb-card:hover { border-color: var(--tb-border-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+.tb-card[draggable]:active { opacity: 0.4; cursor: grabbing; }
+.tb-card-name {
+  font-weight: 600; font-size: 0.82rem; line-height: 1.4;
+  margin-bottom: 6px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tb-card-meta { display: flex; flex-direction: column; gap: 3px; }
+.tb-card-meta-row { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--tb-text-muted); }
+.tb-card-meta-row svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.5; }
+.tb-card-total { font-weight: 700; font-size: 0.85rem; color: var(--tb-col-invoice); margin-top: 8px; }
+
+/* Card Badges */
+.tb-card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.tb-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 99px; font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.tb-badge-amber { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.tb-badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+.tb-badge-blue { background: rgba(79,140,255,0.15); color: #4f8cff; }
+.tb-badge-green { background: rgba(34,197,94,0.15); color: #22c55e; }
+.tb-badge-gray { background: rgba(107,114,128,0.15); color: #9ca3af; }
+
+/* Quick Ship Button (on card) */
+.tb-quick-ship {
+  margin-top: 8px; padding: 5px 10px; border-radius: 6px; border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff;
+  font-size: 0.72rem; font-weight: 700; cursor: pointer;
+  transition: opacity 200ms, transform 150ms;
+  width: 100%;
+}
+.tb-quick-ship:hover { opacity: 0.9; transform: translateY(-1px); }
+.tb-quick-ship:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Quick Ship Modal */
+.tb-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  z-index: 10000; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.tb-modal {
+  background: var(--tb-surface); border: 1px solid var(--tb-border); border-radius: var(--tb-radius);
+  backdrop-filter: var(--tb-glass);
+  width: 100%; max-width: 520px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.tb-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--tb-border); }
+.tb-modal-title { font-weight: 700; font-size: 1rem; margin: 0; }
+.tb-modal-close { background: none; border: none; color: var(--tb-text-muted); font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0; }
+.tb-modal-close:hover { color: var(--ui-text, rgba(235,240,255,0.95)); }
+.tb-modal-body { padding: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--tb-text-secondary); }
+.tb-modal-body .tb-loading-spinner { width: 28px; height: 28px; }
+.tb-modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--tb-border); }
+.tb-modal-cancel {
+  padding: 8px 16px; border-radius: var(--tb-radius-sm); border: 1px solid var(--tb-border);
+  background: transparent; color: var(--ui-text, rgba(235,240,255,0.95)); font-weight: 600; font-size: 0.82rem; cursor: pointer;
+}
+.tb-modal-cancel:hover { border-color: var(--tb-border-hover); }
+.tb-modal-confirm {
+  padding: 8px 16px; border-radius: var(--tb-radius-sm); border: none;
+  background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff;
+  font-weight: 700; font-size: 0.82rem; cursor: pointer;
+  transition: opacity 200ms;
+}
+.tb-modal-confirm:hover { opacity: 0.9; }
+.tb-modal-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Context detail in modal */
+.tb-context-detail { margin: 12px 0 0; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--tb-border); border-radius: var(--tb-radius-sm); }
+.tb-context-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.8rem; }
+.tb-context-label { color: var(--tb-text-muted); }
+.tb-context-value { font-weight: 600; }
+.tb-context-warn { color: var(--tb-col-hold); font-weight: 600; margin-top: 8px; font-size: 0.8rem; }
+.tb-context-ok { color: var(--tb-col-invoice); font-weight: 600; margin-top: 8px; font-size: 0.8rem; }
+
+/* Success toast */
+.tb-toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 10001;
+  padding: 14px 20px; border-radius: var(--tb-radius-sm);
+  background: rgba(14,22,42,0.95); border: 1px solid var(--tb-border);
+  backdrop-filter: var(--tb-glass);
+  font-size: 0.85rem; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  transform: translateY(80px); opacity: 0; transition: all 300ms ease;
+}
+.tb-toast.tb-toast-visible { transform: translateY(0); opacity: 1; }
+.tb-toast-success { border-color: rgba(34,197,94,0.3); color: #22c55e; }
+.tb-toast-error { border-color: rgba(239,68,68,0.3); color: #ef4444; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .tb-board { grid-template-columns: repeat(3, minmax(220px, 1fr)); }
+}
+@media (max-width: 768px) {
+  #triageBoard { padding: 16px 12px 48px; }
+  .tb-board { grid-template-columns: 1fr 1fr; }
+  .tb-summary { gap: 10px; padding: 10px 14px; }
+  .tb-title { font-size: 1.35rem; }
+}
+@media (max-width: 480px) {
+  .tb-board { grid-template-columns: 1fr; }
+}
+
+/* ====================================================================
+   LIGHT THEME OVERRIDES
+   ==================================================================== */
+body.light-theme::before { opacity: 0; }
+body.light-theme .tb-summary,
+body.light-theme .tb-sync-btn { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .tb-sync-btn:hover { border-color: rgba(37,99,235,0.35); }
+body.light-theme .tb-column { background: rgba(247,248,252,0.7); border-color: rgba(0,0,0,0.08); }
+body.light-theme .tb-column-header { border-bottom-color: rgba(0,0,0,0.08); }
+body.light-theme .tb-column-count { background: rgba(0,0,0,0.06); color: rgba(26,26,46,0.6); }
+body.light-theme .tb-card { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); }
+body.light-theme .tb-card:hover { border-color: rgba(37,99,235,0.35); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+body.light-theme .tb-card-name { color: rgba(15,23,42,0.95); }
+body.light-theme .tb-card-meta-row { color: rgba(26,26,46,0.55); }
+body.light-theme .tb-subtitle,
+body.light-theme .tb-summary-label { color: rgba(26,26,46,0.55); }
+body.light-theme .tb-summary-divider { background: rgba(0,0,0,0.1); }
+body.light-theme .tb-column-body.tb-drop-target { background: rgba(37,99,235,0.04); outline-color: rgba(37,99,235,0.25); }
+body.light-theme .tb-loading p,
+body.light-theme .tb-loading-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
+body.light-theme .tb-loading p { color: rgba(26,26,46,0.55); }
+body.light-theme .tb-retry-btn { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); color: rgba(15,23,42,0.95); }
+body.light-theme .tb-modal { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+body.light-theme .tb-modal-header { border-bottom-color: rgba(0,0,0,0.08); }
+body.light-theme .tb-modal-footer { border-top-color: rgba(0,0,0,0.08); }
+body.light-theme .tb-modal-close { color: rgba(26,26,46,0.4); }
+body.light-theme .tb-modal-close:hover { color: rgba(15,23,42,0.95); }
+body.light-theme .tb-modal-body { color: rgba(26,26,46,0.7); }
+body.light-theme .tb-modal-cancel { border-color: rgba(0,0,0,0.1); color: rgba(15,23,42,0.95); }
+body.light-theme .tb-modal-cancel:hover { border-color: rgba(37,99,235,0.35); }
+body.light-theme .tb-context-detail { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.08); }
+body.light-theme .tb-context-label { color: rgba(26,26,46,0.5); }
+body.light-theme .tb-toast { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+
+/* Auth overlay light theme */
+body.light-theme .auth-overlay { background: rgba(247,248,252,0.98); }
+body.light-theme .auth-card { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); }
+body.light-theme .auth-subtitle { color: rgba(15,23,42,0.55); }
+body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
+</style>
+
+<script>
+  /* Nav toggle */
+  function toggleNav() {
+    document.getElementById('navToggle').classList.toggle('active');
+    document.getElementById('navPanel').classList.toggle('open');
+    document.getElementById('navOverlay').classList.toggle('open');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.nav-panel__link').forEach(function(link) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+      if (href === path || (href !== '/' && path.startsWith(href))) link.classList.add('active');
+    });
+  });
+</script>
+
+<script>
+(function() {
+  'use strict';
+
+  // ====================================================================
+  // API HELPER
+  // ====================================================================
+  async function api(method, path, body) {
+    var token = window.AASAuth && window.AASAuth.getToken ? await window.AASAuth.getToken() : null;
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    var opts = { method: method, headers: headers };
+    if (body) opts.body = JSON.stringify(body);
+    var res = await fetch('/api/pipeline' + path, opts);
+    if (!res.ok) {
+      var errText = '';
+      try { errText = await res.text(); } catch(e) { /* ignore */ }
+      throw new Error('API ' + res.status + (errText ? ': ' + errText : ''));
+    }
+    return res.json();
+  }
+
+  // ====================================================================
+  // STATE
+  // ====================================================================
+  var allTasks = [];
+  var taskMap = {};   // id -> task object
+  var quickShipTaskId = null;
+  var quickShipContext = null;
+
+  var CLASSIFICATIONS = ['invoice_ready', 'estimate', 'split', 'hold', 'needs_review', 'skip'];
+
+  var CLASSIFICATION_LABELS = {
+    invoice_ready: 'Invoice Ready',
+    estimate: 'Estimate',
+    split: 'Split',
+    hold: 'Hold',
+    needs_review: 'Needs Review',
+    skip: 'Skip'
+  };
+
+  // ====================================================================
+  // LOAD BOARD
+  // ====================================================================
+  window.loadBoard = async function loadBoard(forceRefresh) {
+    var loading = document.getElementById('tbLoading');
+    var error = document.getElementById('tbError');
+    var board = document.getElementById('tbBoard');
+    var syncBtn = document.getElementById('tbSyncBtn');
+
+    loading.style.display = '';
+    error.style.display = 'none';
+    board.style.display = 'none';
+    syncBtn.classList.add('syncing');
+
+    try {
+      var result = await api('POST', '/v2/classify', {
+        limit: 200,
+        offset: 0,
+        force_refresh: !!forceRefresh
+      });
+
+      // Normalize response: could be { data: [...] } or { tasks: [...] } or [...]
+      var tasks = [];
+      if (Array.isArray(result)) {
+        tasks = result;
+      } else if (result && Array.isArray(result.data)) {
+        tasks = result.data;
+      } else if (result && Array.isArray(result.tasks)) {
+        tasks = result.tasks;
+      }
+
+      allTasks = tasks;
+      taskMap = {};
+      for (var i = 0; i < tasks.length; i++) {
+        var t = tasks[i];
+        var tid = t.task_id || t.id;
+        if (tid) taskMap[tid] = t;
+      }
+
+      renderBoard(tasks);
+      loading.style.display = 'none';
+      board.style.display = '';
+    } catch (e) {
+      console.error('Load board failed:', e);
+      loading.style.display = 'none';
+      error.style.display = '';
+      document.getElementById('tbErrorMsg').textContent = 'Failed to load: ' + e.message;
+    } finally {
+      syncBtn.classList.remove('syncing');
+    }
+  };
+
+  // ====================================================================
+  // RENDER BOARD
+  // ====================================================================
+  function renderBoard(tasks) {
+    // Clear column bodies
+    var bodies = document.querySelectorAll('.tb-column-body');
+    for (var b = 0; b < bodies.length; b++) {
+      while (bodies[b].firstChild) bodies[b].removeChild(bodies[b].firstChild);
+    }
+
+    // Bucket tasks by classification
+    var buckets = {};
+    for (var c = 0; c < CLASSIFICATIONS.length; c++) buckets[CLASSIFICATIONS[c]] = [];
+
+    for (var i = 0; i < tasks.length; i++) {
+      var task = tasks[i];
+      var cls = normalizeClassification(task.classification);
+      if (!buckets[cls]) cls = 'needs_review';
+      buckets[cls].push(task);
+    }
+
+    // Render cards into columns
+    for (var col = 0; col < CLASSIFICATIONS.length; col++) {
+      var classification = CLASSIFICATIONS[col];
+      var body = document.querySelector('[data-drop="' + classification + '"]');
+      var items = buckets[classification];
+
+      for (var j = 0; j < items.length; j++) {
+        var card = createCard(items[j]);
+        body.appendChild(card);
+      }
+    }
+
+    updateCounts();
+  }
+
+  function normalizeClassification(raw) {
+    if (!raw) return 'needs_review';
+    var lower = String(raw).toLowerCase().replace(/[\s-]+/g, '_');
+    // Map common variants
+    if (lower === 'invoice' || lower === 'invoice_ready' || lower === 'ready') return 'invoice_ready';
+    if (lower === 'estimate' || lower === 'quote') return 'estimate';
+    if (lower === 'split' || lower === 'multi' || lower === 'multi_visit') return 'split';
+    if (lower === 'hold' || lower === 'on_hold') return 'hold';
+    if (lower === 'needs_review' || lower === 'review' || lower === 'unknown') return 'needs_review';
+    if (lower === 'skip' || lower === 'skipped' || lower === 'ignore') return 'skip';
+    return 'needs_review';
+  }
+
+  // ====================================================================
+  // CARD BUILDER (XSS-safe — createElement + textContent only)
+  // ====================================================================
+  function createCard(task) {
+    var taskId = task.task_id || task.id;
+    var card = document.createElement('div');
+    card.className = 'tb-card';
+    card.setAttribute('draggable', 'true');
+    card.setAttribute('data-task-id', String(taskId));
+
+    // Task name
+    var nameEl = document.createElement('div');
+    nameEl.className = 'tb-card-name';
+    nameEl.textContent = task.task_name || task.name || 'Task #' + taskId;
+    card.appendChild(nameEl);
+
+    // Meta section
+    var meta = document.createElement('div');
+    meta.className = 'tb-card-meta';
+
+    // Customer row
+    if (task.customer_name || task.customer) {
+      var custRow = createMetaRow(
+        'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8',
+        task.customer_name || task.customer
+      );
+      meta.appendChild(custRow);
+    }
+
+    // Date row
+    var dateStr = task.completed_date || task.date_completed || task.date;
+    if (dateStr) {
+      var dateRow = createMetaRow(
+        'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+        formatDate(dateStr)
+      );
+      meta.appendChild(dateRow);
+    }
+
+    // Tech row
+    var techName = task.technician || task.tech_name || task.assigned_to;
+    if (techName) {
+      var techRow = createMetaRow(
+        'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+        techName
+      );
+      meta.appendChild(techRow);
+    }
+
+    card.appendChild(meta);
+
+    // Estimated total
+    var total = task.estimated_total || task.total;
+    if (total != null && total !== '' && total !== 0) {
+      var totalEl = document.createElement('div');
+      totalEl.className = 'tb-card-total';
+      totalEl.textContent = '$' + Number(total).toFixed(2);
+      card.appendChild(totalEl);
+    }
+
+    // Badges
+    var flags = gatherFlags(task);
+    if (flags.length > 0) {
+      var badgesEl = document.createElement('div');
+      badgesEl.className = 'tb-card-badges';
+      for (var f = 0; f < flags.length; f++) {
+        var badge = document.createElement('span');
+        badge.className = 'tb-badge ' + flags[f].cls;
+        badge.textContent = flags[f].label;
+        badgesEl.appendChild(badge);
+      }
+      card.appendChild(badgesEl);
+    }
+
+    // Quick Ship button (only for invoice_ready cards with no blocking flags)
+    var cls = normalizeClassification(task.classification);
+    var hasBlockingFlags = flags.some(function(fl) {
+      return fl.cls === 'tb-badge-red' || fl.cls === 'tb-badge-amber';
+    });
+    if (cls === 'invoice_ready' && !hasBlockingFlags) {
+      var qsBtn = document.createElement('button');
+      qsBtn.className = 'tb-quick-ship';
+      qsBtn.textContent = 'Quick Ship';
+      qsBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openQuickShip(taskId);
+      });
+      card.appendChild(qsBtn);
+    }
+
+    // Click to navigate to edit page
+    card.addEventListener('click', function() {
+      window.location.href = '/pipeline/edit/?task=' + taskId;
+    });
+
+    // Drag events
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+
+    return card;
+  }
+
+  function createMetaRow(pathD, text) {
+    var row = document.createElement('div');
+    row.className = 'tb-card-meta-row';
+
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('d', pathD);
+    svg.appendChild(path);
+    row.appendChild(svg);
+
+    var span = document.createElement('span');
+    span.textContent = text;
+    row.appendChild(span);
+
+    return row;
+  }
+
+  function formatDate(d) {
+    if (!d) return '';
+    try {
+      var dt = new Date(d);
+      if (isNaN(dt.getTime())) return String(d);
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch(e) { return String(d); }
+  }
+
+  function gatherFlags(task) {
+    var flags = [];
+    // Unmapped parts
+    if (task.unmapped_parts && (Array.isArray(task.unmapped_parts) ? task.unmapped_parts.length > 0 : task.unmapped_parts > 0)) {
+      flags.push({ cls: 'tb-badge-amber', label: 'Unmapped Parts' });
+    }
+    if (task.has_unmapped_parts) {
+      flags.push({ cls: 'tb-badge-amber', label: 'Unmapped Parts' });
+    }
+    // Unmapped customer
+    if (task.unmapped_customer || task.customer_unmapped || task.has_unmapped_customer) {
+      flags.push({ cls: 'tb-badge-red', label: 'No QB Customer' });
+    }
+    // Multi-visit
+    if (task.multi_visit || task.is_multi_visit || task.visit_count > 1) {
+      flags.push({ cls: 'tb-badge-blue', label: 'Multi-visit' });
+    }
+    // Additional flags from classification reasons
+    if (task.flags && Array.isArray(task.flags)) {
+      for (var i = 0; i < task.flags.length; i++) {
+        var fl = task.flags[i];
+        var label = typeof fl === 'string' ? fl : (fl.label || fl.flag || fl.name || '');
+        if (!label) continue;
+        // Deduplicate
+        var dup = flags.some(function(existing) {
+          return existing.label.toLowerCase() === label.toLowerCase();
+        });
+        if (!dup) {
+          flags.push({ cls: 'tb-badge-gray', label: label });
+        }
+      }
+    }
+    return flags;
+  }
+
+  // ====================================================================
+  // COUNT UPDATES
+  // ====================================================================
+  function updateCounts() {
+    var totalCount = 0;
+    for (var c = 0; c < CLASSIFICATIONS.length; c++) {
+      var cls = CLASSIFICATIONS[c];
+      var body = document.querySelector('[data-drop="' + cls + '"]');
+      var count = body ? body.children.length : 0;
+      totalCount += count;
+
+      // Column header count
+      var countEl = document.querySelector('[data-count-for="' + cls + '"]');
+      if (countEl) countEl.textContent = String(count);
+
+      // Summary count
+      var summaryMap = {
+        invoice_ready: 'tbCountInvoice',
+        estimate: 'tbCountEstimate',
+        split: 'tbCountSplit',
+        hold: 'tbCountHold',
+        needs_review: 'tbCountReview',
+        skip: 'tbCountSkip'
+      };
+      var summaryEl = document.getElementById(summaryMap[cls]);
+      if (summaryEl) summaryEl.textContent = String(count);
+    }
+    var totalEl = document.getElementById('tbTotalCount');
+    if (totalEl) totalEl.textContent = String(totalCount);
+  }
+
+  // ====================================================================
+  // DRAG AND DROP
+  // ====================================================================
+  var draggedCard = null;
+  var draggedTaskId = null;
+
+  function handleDragStart(e) {
+    draggedCard = this;
+    draggedTaskId = this.getAttribute('data-task-id');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedTaskId);
+    // Slight delay to let the browser snapshot the card
+    var card = this;
+    setTimeout(function() { card.style.opacity = '0.4'; }, 0);
+  }
+
+  function handleDragEnd() {
+    this.style.opacity = '';
+    draggedCard = null;
+    draggedTaskId = null;
+    // Remove all drop targets
+    var targets = document.querySelectorAll('.tb-drop-target');
+    for (var i = 0; i < targets.length; i++) targets[i].classList.remove('tb-drop-target');
+  }
+
+  // Attach dragover / dragleave / drop to column bodies
+  document.addEventListener('DOMContentLoaded', function() {
+    var columnBodies = document.querySelectorAll('.tb-column-body');
+    for (var i = 0; i < columnBodies.length; i++) {
+      columnBodies[i].addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.classList.add('tb-drop-target');
+      });
+      columnBodies[i].addEventListener('dragleave', function(e) {
+        // Only remove if we actually left the column body
+        if (!this.contains(e.relatedTarget)) {
+          this.classList.remove('tb-drop-target');
+        }
+      });
+      columnBodies[i].addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('tb-drop-target');
+        var targetClassification = this.getAttribute('data-drop');
+        var taskId = e.dataTransfer.getData('text/plain');
+        if (!taskId || !targetClassification) return;
+
+        // Check if dropped in same column
+        var card = draggedCard || document.querySelector('[data-task-id="' + taskId + '"]');
+        if (!card) return;
+        var sourceCol = card.parentElement ? card.parentElement.getAttribute('data-drop') : null;
+        if (sourceCol === targetClassification) return;
+
+        reclassifyTask(taskId, targetClassification, card, this);
+      });
+    }
+  });
+
+  async function reclassifyTask(taskId, newClassification, cardEl, targetBody) {
+    // Optimistically move card
+    targetBody.appendChild(cardEl);
+    updateCounts();
+
+    try {
+      await api('PATCH', '/v2/task/' + taskId + '/classify', {
+        classification: newClassification,
+        reason: 'admin_override'
+      });
+
+      // Update local state
+      if (taskMap[taskId]) {
+        taskMap[taskId].classification = newClassification;
+      }
+
+      showToast('Moved to ' + CLASSIFICATION_LABELS[newClassification], 'success');
+    } catch (e) {
+      console.error('Reclassify failed:', e);
+      showToast('Reclassify failed: ' + e.message, 'error');
+      // Revert: reload the board
+      loadBoard(false);
+    }
+  }
+
+  // ====================================================================
+  // QUICK SHIP
+  // ====================================================================
+  window.openQuickShip = async function openQuickShip(taskId) {
+    quickShipTaskId = taskId;
+    quickShipContext = null;
+
+    var modal = document.getElementById('tbQuickShipModal');
+    var body = document.getElementById('tbQuickShipBody');
+    var footer = document.getElementById('tbQuickShipFooter');
+
+    // Reset modal to loading state
+    while (body.firstChild) body.removeChild(body.firstChild);
+    var spinner = document.createElement('div');
+    spinner.className = 'tb-loading-spinner';
+    body.appendChild(spinner);
+    var loadingText = document.createElement('p');
+    loadingText.textContent = 'Checking task context...';
+    body.appendChild(loadingText);
+    footer.style.display = 'none';
+
+    modal.style.display = '';
+
+    try {
+      var ctx = await api('GET', '/v2/task-context/' + taskId);
+      quickShipContext = ctx;
+
+      // Check mappings
+      var issues = [];
+      if (!ctx.customer_qb_id && !ctx.qb_customer_id) {
+        issues.push('Customer not mapped to QuickBooks');
+      }
+      if (ctx.unmapped_parts && (Array.isArray(ctx.unmapped_parts) ? ctx.unmapped_parts.length > 0 : ctx.unmapped_parts > 0)) {
+        issues.push('Task has unmapped parts');
+      }
+      if (ctx.has_unmapped_parts) {
+        issues.push('Task has unmapped parts');
+      }
+      if (ctx.has_unmapped_customer || ctx.customer_unmapped) {
+        issues.push('Customer not mapped to QuickBooks');
+      }
+
+      // Deduplicate issues
+      issues = issues.filter(function(v, i, a) { return a.indexOf(v) === i; });
+
+      // Clear loading
+      while (body.firstChild) body.removeChild(body.firstChild);
+
+      if (issues.length > 0) {
+        // Unresolvable — show issues and redirect option
+        var warnP = document.createElement('p');
+        warnP.textContent = 'This task cannot be quick-shipped due to unresolved mappings:';
+        body.appendChild(warnP);
+
+        var ul = document.createElement('ul');
+        ul.style.cssText = 'margin: 8px 0; padding-left: 20px;';
+        for (var ii = 0; ii < issues.length; ii++) {
+          var li = document.createElement('li');
+          li.className = 'tb-context-warn';
+          li.textContent = issues[ii];
+          ul.appendChild(li);
+        }
+        body.appendChild(ul);
+
+        var redirectP = document.createElement('p');
+        redirectP.style.marginTop = '12px';
+        redirectP.textContent = 'Open in the workbench to resolve these issues.';
+        body.appendChild(redirectP);
+
+        footer.style.display = '';
+        var confirmBtn = document.getElementById('tbQuickShipConfirm');
+        confirmBtn.textContent = 'Open Workbench';
+        confirmBtn.style.background = 'linear-gradient(135deg, #4f8cff, #6366f1)';
+        confirmBtn.disabled = false;
+        confirmBtn.onclick = function() {
+          window.location.href = '/pipeline/edit/?task=' + taskId;
+        };
+      } else {
+        // All mappings resolved — show context summary
+        var confirmP = document.createElement('p');
+        confirmP.textContent = 'Ready to create a QuickBooks invoice for this task:';
+        body.appendChild(confirmP);
+
+        var detail = document.createElement('div');
+        detail.className = 'tb-context-detail';
+
+        var rows = [
+          ['Task', ctx.task_name || ctx.name || 'Task #' + taskId],
+          ['Customer', ctx.customer_name || ctx.customer || '-'],
+          ['QB Customer', ctx.customer_qb_id || ctx.qb_customer_id || '-'],
+          ['Total', ctx.estimated_total != null ? '$' + Number(ctx.estimated_total).toFixed(2) : (ctx.total != null ? '$' + Number(ctx.total).toFixed(2) : '-')]
+        ];
+
+        for (var r = 0; r < rows.length; r++) {
+          var row = document.createElement('div');
+          row.className = 'tb-context-row';
+          var lbl = document.createElement('span');
+          lbl.className = 'tb-context-label';
+          lbl.textContent = rows[r][0];
+          row.appendChild(lbl);
+          var val = document.createElement('span');
+          val.className = 'tb-context-value';
+          val.textContent = rows[r][1];
+          row.appendChild(val);
+          detail.appendChild(row);
+        }
+        body.appendChild(detail);
+
+        var okP = document.createElement('p');
+        okP.className = 'tb-context-ok';
+        okP.textContent = 'All mappings resolved. Ready to send.';
+        body.appendChild(okP);
+
+        footer.style.display = '';
+        var confirmBtn2 = document.getElementById('tbQuickShipConfirm');
+        confirmBtn2.textContent = 'Send to QuickBooks';
+        confirmBtn2.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+        confirmBtn2.disabled = false;
+        confirmBtn2.onclick = function() { executeQuickShip(taskId); };
+      }
+
+    } catch (e) {
+      console.error('Quick ship context failed:', e);
+      while (body.firstChild) body.removeChild(body.firstChild);
+      var errP = document.createElement('p');
+      errP.className = 'tb-context-warn';
+      errP.textContent = 'Failed to load task context: ' + e.message;
+      body.appendChild(errP);
+      footer.style.display = '';
+      var confirmBtn3 = document.getElementById('tbQuickShipConfirm');
+      confirmBtn3.textContent = 'Open Workbench';
+      confirmBtn3.style.background = 'linear-gradient(135deg, #4f8cff, #6366f1)';
+      confirmBtn3.disabled = false;
+      confirmBtn3.onclick = function() {
+        window.location.href = '/pipeline/edit/?task=' + taskId;
+      };
+    }
+  };
+
+  async function executeQuickShip(taskId) {
+    var confirmBtn = document.getElementById('tbQuickShipConfirm');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Sending...';
+
+    try {
+      var result = await api('POST', '/v2/task/' + taskId + '/send', {});
+
+      closeQuickShip();
+
+      var qbId = result.qb_invoice_id || result.qb_doc_id || result.invoice_id || result.doc_id || '';
+      var msg = 'Invoice created';
+      if (qbId) msg += ' (QB #' + qbId + ')';
+
+      showToast(msg, 'success');
+
+      // Remove card from board
+      var card = document.querySelector('[data-task-id="' + taskId + '"]');
+      if (card && card.parentElement) {
+        card.parentElement.removeChild(card);
+        updateCounts();
+      }
+
+    } catch (e) {
+      console.error('Quick ship send failed:', e);
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Send to QuickBooks';
+      showToast('Send failed: ' + e.message, 'error');
+    }
+  }
+
+  window.closeQuickShip = function closeQuickShip() {
+    var modal = document.getElementById('tbQuickShipModal');
+    modal.style.display = 'none';
+    quickShipTaskId = null;
+    quickShipContext = null;
+  };
+
+  // Close modal on overlay click
+  document.addEventListener('DOMContentLoaded', function() {
+    var modal = document.getElementById('tbQuickShipModal');
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeQuickShip();
+    });
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('tbQuickShipModal');
+      if (modal && modal.style.display !== 'none') closeQuickShip();
+    }
+  });
+
+  // ====================================================================
+  // TOAST NOTIFICATIONS
+  // ====================================================================
+  function showToast(msg, type) {
+    // Remove existing toasts
+    var existing = document.querySelectorAll('.tb-toast');
+    for (var i = 0; i < existing.length; i++) {
+      existing[i].parentElement.removeChild(existing[i]);
+    }
+
+    var toast = document.createElement('div');
+    toast.className = 'tb-toast ' + (type === 'error' ? 'tb-toast-error' : 'tb-toast-success');
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.classList.add('tb-toast-visible');
+      });
+    });
+
+    // Auto-hide
+    setTimeout(function() {
+      toast.classList.remove('tb-toast-visible');
+      setTimeout(function() {
+        if (toast.parentElement) toast.parentElement.removeChild(toast);
+      }, 300);
+    }, 4000);
+  }
+
+  // ====================================================================
+  // PAGE READY — wired by auth.js
+  // ====================================================================
+  window.onPageReady = function(user, roles, customerId, limbleUserId) {
+    if (!roles || !roles.includes('admin')) {
+      window.location.href = '/tech/parts/';
+      return;
+    }
+    loadBoard(false);
+  };
+
+})();
+</script>
+
+</body>
+</html>

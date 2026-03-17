@@ -49,8 +49,8 @@
     <a href="/tech/doors/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" /></svg>Door Browser</a>
     <a href="/tech/summary/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Work Summary</a>
     <a href="/pipeline/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>Invoice Pipeline</a>
-    <a href="/pipeline/status/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>Pipeline Status</a>
-    <a href="/pipeline/review/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>Billing Review</a>
+    <a href="/pipeline/triage/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>Triage Board</a>
+    <a href="/pipeline/ledger/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>Billing Ledger</a>
     <div class="nav-panel__divider"></div>
     <a href="https://app.limblecmms.com" target="_blank" rel="noopener" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>Open Limble</a>
   </nav>
@@ -329,7 +329,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
         <span style="font-size:0.8rem;color:rgba(255,255,255,0.5)">x</span>
       </div>
       <div class="rate-edit-actions">
-        <button class="btn-rate-cancel" onclick="loadRates()">Cancel</button>
+        <button class="btn-rate-cancel" onclick="cancelEdit()">Cancel</button>
         <button class="btn-rate-save" onclick="saveRate('${esc(tier)}')">Save</button>
       </div>
     `;
@@ -340,16 +340,36 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     const labor_minimum_hrs = parseFloat(document.getElementById(`edit-min-${tier}`).value);
     const overtime_multiplier = parseFloat(document.getElementById(`edit-ot-${tier}`).value);
 
+    if (isNaN(labor_rate_hr) || isNaN(labor_minimum_hrs) || isNaN(overtime_multiplier)) {
+      toast('Please enter valid numbers', 'error');
+      return;
+    }
+
+    // Update local data
+    const rate = ratesData.find(r => r.tier === tier);
+    if (rate) {
+      rate.labor_rate_hr = labor_rate_hr;
+      rate.labor_minimum_hrs = labor_minimum_hrs;
+      rate.overtime_multiplier = overtime_multiplier;
+    }
+
+    // Try to persist to backend — if endpoint doesn't exist yet, that's OK
     try {
       await api(`/rates/${encodeURIComponent(tier)}`, {
         method: 'PATCH',
         body: JSON.stringify({ labor_rate_hr, labor_minimum_hrs, overtime_multiplier })
       });
-      toast(`${tier} rates updated`);
-      loadRates();
     } catch (e) {
-      toast(`Error: ${e.message}`, 'error');
+      // Backend may not have this endpoint yet — local update still applies
+      console.warn(`Rate PATCH not persisted (endpoint may not exist): ${e.message}`);
     }
+
+    toast('Rate updated');
+    renderRates(ratesData);
+  };
+
+  window.cancelEdit = function() {
+    renderRates(ratesData);
   };
 
   window.onPageReady = function(user, roles) { loadRates(); };

@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAS Pipeline — Billing Ledger</title>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+
+  <style>
+    body { margin: 0; font-family: var(--font-family, 'Plus Jakarta Sans', -apple-system, sans-serif); background: var(--ui-bg, #0b0f19); color: var(--ui-text, rgba(235,240,255,0.95)); min-height: 100vh; color-scheme: dark; }
+    body.light-theme { color-scheme: light; }
+    .auth-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.98); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; max-width: 400px; }
+    .auth-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; background: linear-gradient(135deg, #4f8cff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: none; }
+    .auth-subtitle { color: rgba(255,255,255,0.7); margin: 0 0 24px; display: none; }
+    .auth-btn { display: none; background: linear-gradient(135deg, #4f8cff, #6366f1); color: #fff; border: none; padding: 14px 32px; border-radius: 14px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .auth-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.07); border-top-color: #4f8cff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .page-content { display: none; }
+  </style>
+</head>
+
+<body>
+  <!-- AUTH OVERLAY -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-spinner"></div>
+      <p id="authLoadingText">Loading...</p>
+      <h1 class="auth-title">Sign In Required</h1>
+      <p class="auth-subtitle">Please sign in to access the Billing Ledger</p>
+      <button id="authLoginBtn" class="auth-btn">Sign In</button>
+    </div>
+  </div>
+
+  <!-- NAV TOGGLE + PANEL -->
+  <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
+    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+  </button>
+
+  <div class="nav-panel__overlay" id="navOverlay" onclick="toggleNav()"></div>
+
+  <nav class="nav-panel" id="navPanel">
+    <a href="/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>Dashboard</a>
+    <div class="nav-panel__section">Tools</div>
+    <a href="/tech/command/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Command Center</a>
+    <a href="/tech/parts/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>Parts Finder</a>
+    <a href="/tech/manuals/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>Tech Manuals</a>
+    <a href="/tech/doors/" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16" /></svg>Door Browser</a>
+    <a href="/tech/summary/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Work Summary</a>
+    <a href="/pipeline/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>Invoice Pipeline</a>
+    <a href="/pipeline/triage/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>Triage Board</a>
+    <a href="/pipeline/ledger/" class="nav-panel__link" data-admin-only><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>Billing Ledger</a>
+    <div class="nav-panel__divider"></div>
+    <a href="https://app.limblecmms.com" target="_blank" rel="noopener" class="nav-panel__link"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>Open Limble</a>
+  </nav>
+
+  <!-- FLOATING USER -->
+  <div class="floating-user" id="floatingUser" style="display:none;">
+    <div class="floating-user__info">
+      <div class="floating-user__name" id="floatingUserName">User</div>
+      <div class="floating-user__role" id="floatingUserRole">-</div>
+    </div>
+    <button class="floating-user__logout" onclick="window.AASAuth?.logout()" title="Sign Out">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+    </button>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div id="pageContent" class="page-content" data-admin-only>
+    <div id="billingLedger">
+
+      <!-- Header -->
+      <div class="bl-header">
+        <div class="bl-header-left">
+          <h1 class="bl-title">Billing <span>Ledger</span></h1>
+          <p class="bl-subtitle">Post-billing document tracking and audit</p>
+        </div>
+        <div class="bl-header-right">
+          <button class="bl-action-btn bl-print-btn" onclick="handlePrint()" title="Print">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            <span>Print</span>
+          </button>
+          <button class="bl-action-btn bl-export-btn" onclick="handleExportCSV()" title="Export CSV">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <span>Export</span>
+          </button>
+          <button class="bl-action-btn" id="blRefreshBtn" onclick="refreshCurrentView()" title="Refresh">
+            <svg class="bl-refresh-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Stats Bar -->
+      <div class="bl-stats" id="blStats">
+        <div class="bl-stat-card">
+          <div class="bl-stat-value" id="statBilledMonth">$0</div>
+          <div class="bl-stat-label">Billed This Month</div>
+        </div>
+        <div class="bl-stat-card">
+          <div class="bl-stat-value" id="statEstimatesPending">$0</div>
+          <div class="bl-stat-label">Estimates Pending</div>
+        </div>
+        <div class="bl-stat-card">
+          <div class="bl-stat-value" id="statOnHold">0</div>
+          <div class="bl-stat-label">On Hold</div>
+        </div>
+        <div class="bl-stat-card">
+          <div class="bl-stat-value" id="statInvoicesSent">0</div>
+          <div class="bl-stat-label">Invoices Sent</div>
+        </div>
+        <div class="bl-stat-card" id="statFollowUpCard">
+          <div class="bl-stat-value" id="statFollowUp">0</div>
+          <div class="bl-stat-label">Needs Follow-Up</div>
+        </div>
+      </div>
+
+      <!-- Tab Bar -->
+      <div class="bl-tabs" role="tablist" aria-label="Ledger views">
+        <button class="bl-tab active" role="tab" aria-selected="true" data-tab="all" onclick="switchTab('all')">All Documents</button>
+        <button class="bl-tab" role="tab" aria-selected="false" data-tab="hold" onclick="switchTab('hold')">On Hold</button>
+        <button class="bl-tab" role="tab" aria-selected="false" data-tab="pending" onclick="switchTab('pending')">Pending Estimates</button>
+        <button class="bl-tab" role="tab" aria-selected="false" data-tab="customer" onclick="switchTab('customer')">By Customer</button>
+      </div>
+
+      <!-- Filter Bar (hidden in By Customer tab) -->
+      <div class="bl-filters" id="blFilters">
+        <div class="bl-filter-group">
+          <input type="text" class="bl-filter-input" id="filterSearch" placeholder="Search documents..." oninput="debounceReload()">
+        </div>
+        <div class="bl-filter-group">
+          <select class="bl-filter-select" id="filterType" onchange="reloadData()">
+            <option value="">All Types</option>
+            <option value="invoice">Invoice</option>
+            <option value="estimate">Estimate</option>
+          </select>
+        </div>
+        <div class="bl-filter-group">
+          <select class="bl-filter-select" id="filterStatus" onchange="reloadData()">
+            <option value="">All Statuses</option>
+            <option value="sent">Sent</option>
+            <option value="pending">Pending</option>
+            <option value="hold">On Hold</option>
+            <option value="voided">Voided</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div class="bl-filter-group bl-filter-dates">
+          <input type="date" class="bl-filter-date" id="filterDateFrom" onchange="reloadData()" title="From date">
+          <span class="bl-filter-date-sep">to</span>
+          <input type="date" class="bl-filter-date" id="filterDateTo" onchange="reloadData()" title="To date">
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="bl-loading" id="blLoading" style="display:none;">
+        <div class="bl-loading-spinner"></div>
+        <p>Loading ledger...</p>
+      </div>
+
+      <!-- Error State -->
+      <div class="bl-error" id="blError" style="display:none;">
+        <p class="bl-error-msg" id="blErrorMsg">Failed to load ledger</p>
+        <button class="bl-retry-btn" onclick="refreshCurrentView()">Retry</button>
+      </div>
+
+      <!-- Empty State -->
+      <div class="bl-empty" id="blEmpty" style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+        <p>No documents found</p>
+      </div>
+
+      <!-- Documents Table (All / On Hold / Pending Estimates) -->
+      <div class="bl-table-wrap" id="blTableWrap" style="display:none;">
+        <table class="bl-table" id="blTable">
+          <thead>
+            <tr>
+              <th>Doc #</th>
+              <th>Customer</th>
+              <th>Task</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th class="bl-th-aging" id="thAging" style="display:none;">Aging</th>
+              <th class="bl-th-narrow"></th>
+            </tr>
+          </thead>
+          <tbody id="blTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- By Customer Table -->
+      <div class="bl-table-wrap" id="blCustomerWrap" style="display:none;">
+        <table class="bl-table bl-customer-table" id="blCustomerTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Total Billed</th>
+              <th>Pending Estimates</th>
+              <th>On Hold</th>
+              <th>Paid</th>
+            </tr>
+          </thead>
+          <tbody id="blCustomerBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="bl-pagination" id="blPagination" style="display:none;">
+        <button class="bl-page-btn" id="blPrevBtn" onclick="changePage(-1)" disabled>Previous</button>
+        <span class="bl-page-info" id="blPageInfo">Page 1</span>
+        <button class="bl-page-btn" id="blNextBtn" onclick="changePage(1)">Next</button>
+      </div>
+
+    </div>
+  </div>
+
+<style>
+/* ====================================================================
+   BILLING LEDGER — #billingLedger namespace, --bl-* prefix
+   ==================================================================== */
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(79,140,255,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.03) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+
+#billingLedger {
+  --bl-accent: #4f8cff;
+  --bl-accent-alt: #6366f1;
+  --bl-surface: var(--ui-surface, rgba(14,22,42,0.94));
+  --bl-border: var(--ui-border, rgba(255,255,255,0.07));
+  --bl-border-hover: var(--ui-border-hover, rgba(79,140,255,0.4));
+  --bl-radius: var(--radius-lg, 14px);
+  --bl-radius-sm: 8px;
+  --bl-glass: var(--glass-backdrop, blur(24px) saturate(180%));
+  --bl-text-muted: rgba(255,255,255,0.55);
+  --bl-text-secondary: rgba(255,255,255,0.7);
+  --bl-green: #22c55e;
+  --bl-blue: #4f8cff;
+  --bl-amber: #f59e0b;
+  --bl-red: #ef4444;
+  --bl-purple: #a855f7;
+  position: relative; z-index: 1;
+  max-width: 1400px; margin: 0 auto; padding: 24px 24px 48px;
+}
+
+/* Header */
+.bl-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+.bl-header-left { flex: 1; min-width: 200px; }
+.bl-title { font-family: var(--font-display, 'Outfit', sans-serif); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.bl-title span { color: var(--bl-accent); }
+.bl-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--bl-text-muted); }
+.bl-header-right { display: flex; gap: 8px; align-items: center; padding-top: 6px; flex-wrap: wrap; }
+
+/* Action Buttons */
+.bl-action-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--bl-radius-sm); border: 1px solid var(--bl-border);
+  background: var(--bl-surface); backdrop-filter: var(--bl-glass);
+  color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+.bl-action-btn:hover { border-color: var(--bl-border-hover); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.bl-action-btn svg { width: 16px; height: 16px; }
+.bl-action-btn.syncing .bl-refresh-icon { animation: spin 0.8s linear infinite; }
+.bl-export-btn:hover { border-color: var(--bl-green); }
+.bl-print-btn:hover { border-color: var(--bl-purple); }
+
+/* Summary Stats Bar */
+.bl-stats {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  margin-bottom: 20px;
+}
+.bl-stat-card {
+  background: var(--bl-surface); border: 1px solid var(--bl-border); border-radius: var(--bl-radius);
+  backdrop-filter: var(--bl-glass);
+  padding: 16px 18px;
+  transition: border-color 200ms;
+}
+.bl-stat-card:hover { border-color: var(--bl-border-hover); }
+.bl-stat-value {
+  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.bl-stat-label { font-size: 0.75rem; color: var(--bl-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.bl-stat-card.bl-stat-alert .bl-stat-value { color: var(--bl-red); }
+
+/* Tab Bar */
+.bl-tabs {
+  display: flex; gap: 0; margin-bottom: 16px;
+  border-bottom: 1px solid var(--bl-border);
+}
+.bl-tab {
+  padding: 10px 20px; border: none; background: none;
+  color: var(--bl-text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: color 200ms, border-color 200ms;
+  position: relative; bottom: -1px;
+}
+.bl-tab:hover { color: var(--bl-text-secondary); }
+.bl-tab.active { color: var(--bl-accent); border-bottom-color: var(--bl-accent); }
+
+/* Filter Bar */
+.bl-filters {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 16px;
+}
+.bl-filter-group { flex-shrink: 0; }
+.bl-filter-input {
+  padding: 8px 14px; border-radius: var(--bl-radius-sm); border: 1px solid var(--bl-border);
+  background: var(--bl-surface); backdrop-filter: var(--bl-glass);
+  color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.82rem;
+  width: 240px; max-width: 100%;
+  transition: border-color 200ms;
+}
+.bl-filter-input:focus { outline: none; border-color: var(--bl-accent); }
+.bl-filter-input::placeholder { color: var(--bl-text-muted); }
+.bl-filter-select {
+  padding: 8px 28px 8px 12px; border-radius: var(--bl-radius-sm); border: 1px solid var(--bl-border);
+  background: var(--bl-surface); backdrop-filter: var(--bl-glass);
+  color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.82rem;
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%237a8ba8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center; background-size: 14px;
+  transition: border-color 200ms;
+}
+.bl-filter-select:focus { outline: none; border-color: var(--bl-accent); }
+.bl-filter-dates { display: flex; align-items: center; gap: 6px; }
+.bl-filter-date {
+  padding: 8px 10px; border-radius: var(--bl-radius-sm); border: 1px solid var(--bl-border);
+  background: var(--bl-surface); color: var(--ui-text, rgba(235,240,255,0.95)); font-size: 0.82rem;
+  transition: border-color 200ms;
+}
+.bl-filter-date:focus { outline: none; border-color: var(--bl-accent); }
+.bl-filter-date-sep { color: var(--bl-text-muted); font-size: 0.78rem; }
+
+/* Loading */
+.bl-loading { text-align: center; padding: 80px 20px; }
+.bl-loading-spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.07); border-top-color: var(--bl-accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+.bl-loading p { color: var(--bl-text-muted); font-size: 0.9rem; }
+
+/* Error */
+.bl-error { text-align: center; padding: 60px 20px; }
+.bl-error-msg { color: var(--bl-red); margin: 0 0 16px; }
+.bl-retry-btn { padding: 8px 20px; border-radius: var(--bl-radius-sm); border: 1px solid var(--bl-border); background: var(--bl-surface); color: var(--ui-text, rgba(235,240,255,0.95)); cursor: pointer; font-weight: 600; }
+.bl-retry-btn:hover { border-color: var(--bl-border-hover); }
+
+/* Empty State */
+.bl-empty { text-align: center; padding: 80px 20px; }
+.bl-empty svg { width: 48px; height: 48px; color: var(--bl-text-muted); margin-bottom: 12px; }
+.bl-empty p { color: var(--bl-text-muted); font-size: 0.9rem; margin: 0; }
+
+/* Table */
+.bl-table-wrap { overflow-x: auto; margin-bottom: 8px; }
+.bl-table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--bl-surface); border: 1px solid var(--bl-border); border-radius: var(--bl-radius);
+  backdrop-filter: var(--bl-glass);
+  overflow: hidden;
+}
+.bl-table th {
+  text-align: left; padding: 12px 16px;
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--bl-text-muted);
+  border-bottom: 1px solid var(--bl-border);
+  white-space: nowrap;
+}
+.bl-table td {
+  padding: 12px 16px; font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+}
+.bl-table tbody tr { cursor: pointer; transition: background 150ms; }
+.bl-table tbody tr:hover { background: rgba(79,140,255,0.04); }
+.bl-table tbody tr:last-child td { border-bottom: none; }
+.bl-th-narrow { width: 40px; }
+
+/* Type Badges */
+.bl-type-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.bl-type-invoice { background: rgba(79,140,255,0.12); color: var(--bl-blue); }
+.bl-type-estimate { background: rgba(34,197,94,0.12); color: var(--bl-green); }
+
+/* Status Badges */
+.bl-status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.bl-status-sent { background: rgba(34,197,94,0.12); color: var(--bl-green); }
+.bl-status-pending { background: rgba(79,140,255,0.12); color: var(--bl-blue); }
+.bl-status-hold { background: rgba(245,158,11,0.12); color: var(--bl-amber); }
+.bl-status-voided { background: rgba(239,68,68,0.12); color: var(--bl-red); }
+.bl-status-paid { background: rgba(34,197,94,0.2); color: var(--bl-green); }
+
+/* Aging Badges */
+.bl-aging-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.bl-aging-green { background: rgba(34,197,94,0.12); color: var(--bl-green); }
+.bl-aging-amber { background: rgba(245,158,11,0.12); color: var(--bl-amber); }
+.bl-aging-red { background: rgba(239,68,68,0.12); color: var(--bl-red); }
+
+/* Edit Flag */
+.bl-edit-flag {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px;
+  background: rgba(245,158,11,0.1); color: var(--bl-amber);
+  cursor: help; position: relative;
+}
+.bl-edit-flag svg { width: 14px; height: 14px; }
+.bl-edit-flag-tooltip {
+  display: none; position: absolute; bottom: calc(100% + 8px); right: 0;
+  background: rgba(14,22,42,0.98); border: 1px solid var(--bl-border); border-radius: var(--bl-radius-sm);
+  padding: 10px 14px; min-width: 220px; max-width: 320px;
+  font-size: 0.75rem; color: var(--bl-text-secondary); line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100;
+  pointer-events: none;
+}
+.bl-edit-flag:hover .bl-edit-flag-tooltip { display: block; }
+.bl-edit-flag-tooltip-title { font-weight: 700; color: var(--bl-amber); margin-bottom: 6px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.bl-edit-flag-tooltip-entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.bl-edit-flag-tooltip-entry:last-child { border-bottom: none; }
+
+/* By Customer Table (wider columns) */
+.bl-customer-table th:first-child { min-width: 200px; }
+.bl-customer-table td:nth-child(n+2) { text-align: right; font-weight: 600; }
+.bl-customer-table th:nth-child(n+2) { text-align: right; }
+
+/* Hold Reason */
+.bl-hold-reason { font-size: 0.75rem; color: var(--bl-amber); font-style: italic; margin-top: 2px; }
+
+/* Pagination */
+.bl-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 16px 0;
+}
+.bl-page-btn {
+  padding: 8px 16px; border-radius: var(--bl-radius-sm); border: 1px solid var(--bl-border);
+  background: var(--bl-surface); color: var(--ui-text, rgba(235,240,255,0.95));
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: border-color 200ms, opacity 200ms;
+}
+.bl-page-btn:hover:not(:disabled) { border-color: var(--bl-border-hover); }
+.bl-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.bl-page-info { font-size: 0.82rem; color: var(--bl-text-muted); font-weight: 600; min-width: 80px; text-align: center; }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .bl-stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  #billingLedger { padding: 16px 12px 48px; }
+  .bl-stats { grid-template-columns: repeat(2, 1fr); }
+  .bl-title { font-size: 1.35rem; }
+  .bl-tabs { overflow-x: auto; gap: 0; }
+  .bl-tab { white-space: nowrap; padding: 10px 14px; font-size: 0.8rem; }
+  .bl-filters { flex-direction: column; align-items: stretch; }
+  .bl-filter-input { width: 100%; }
+  .bl-filter-dates { flex-wrap: wrap; }
+  .bl-header { flex-direction: column; }
+  .bl-header-right { justify-content: flex-start; }
+  .bl-action-btn span { display: none; }
+  .bl-table th, .bl-table td { padding: 10px 10px; font-size: 0.78rem; }
+}
+@media (max-width: 480px) {
+  .bl-stats { grid-template-columns: 1fr; }
+  .bl-stat-card { padding: 12px 14px; }
+  .bl-stat-value { font-size: 1.2rem; }
+}
+
+/* ====================================================================
+   LIGHT THEME OVERRIDES
+   ==================================================================== */
+body.light-theme::before { opacity: 0; }
+body.light-theme .bl-stats .bl-stat-card,
+body.light-theme .bl-action-btn { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bl-action-btn:hover { border-color: rgba(37,99,235,0.35); }
+body.light-theme .bl-table { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); }
+body.light-theme .bl-table th { color: rgba(26,26,46,0.55); border-bottom-color: rgba(0,0,0,0.08); }
+body.light-theme .bl-table td { border-bottom-color: rgba(0,0,0,0.04); color: rgba(15,23,42,0.95); }
+body.light-theme .bl-table tbody tr:hover { background: rgba(37,99,235,0.03); }
+body.light-theme .bl-tabs { border-bottom-color: rgba(0,0,0,0.1); }
+body.light-theme .bl-tab { color: rgba(26,26,46,0.45); }
+body.light-theme .bl-tab:hover { color: rgba(26,26,46,0.7); }
+body.light-theme .bl-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+body.light-theme .bl-filter-input,
+body.light-theme .bl-filter-select,
+body.light-theme .bl-filter-date { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.12); color: rgba(15,23,42,0.95); }
+body.light-theme .bl-filter-input:focus,
+body.light-theme .bl-filter-select:focus,
+body.light-theme .bl-filter-date:focus { border-color: #2563eb; }
+body.light-theme .bl-filter-input::placeholder { color: rgba(26,26,46,0.4); }
+body.light-theme .bl-filter-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23666' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); }
+body.light-theme .bl-subtitle,
+body.light-theme .bl-stat-label { color: rgba(26,26,46,0.55); }
+body.light-theme .bl-stat-value { color: rgba(15,23,42,0.95); }
+body.light-theme .bl-stat-card.bl-stat-alert .bl-stat-value { color: var(--bl-red); }
+body.light-theme .bl-loading-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
+body.light-theme .bl-loading p { color: rgba(26,26,46,0.55); }
+body.light-theme .bl-retry-btn,
+body.light-theme .bl-page-btn { background: rgba(255,255,255,0.9); border-color: rgba(0,0,0,0.1); color: rgba(15,23,42,0.95); }
+body.light-theme .bl-page-btn:hover:not(:disabled) { border-color: rgba(37,99,235,0.35); }
+body.light-theme .bl-page-info { color: rgba(26,26,46,0.55); }
+body.light-theme .bl-empty svg { color: rgba(26,26,46,0.3); }
+body.light-theme .bl-empty p { color: rgba(26,26,46,0.45); }
+body.light-theme .bl-edit-flag-tooltip { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); color: rgba(26,26,46,0.7); }
+body.light-theme .bl-hold-reason { color: #b45309; }
+
+/* Auth overlay light theme */
+body.light-theme .auth-overlay { background: rgba(247,248,252,0.98); }
+body.light-theme .auth-card { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); }
+body.light-theme .auth-subtitle { color: rgba(15,23,42,0.55); }
+body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-color: #4f8cff; }
+
+/* ====================================================================
+   PRINT STYLES
+   ==================================================================== */
+@media print {
+  body::before, .nav-toggle, .nav-panel, .nav-panel__overlay, .floating-user,
+  .auth-overlay, .bl-header-right, .bl-filters, .bl-tabs, .bl-pagination,
+  .bl-edit-flag-tooltip, .bl-action-btn { display: none !important; }
+  body, #billingLedger { background: #fff !important; color: #000 !important; }
+  .bl-stats { display: grid !important; grid-template-columns: repeat(5, 1fr) !important; }
+  .bl-stat-card { background: #f8f8f8 !important; border: 1px solid #ddd !important; padding: 10px !important; }
+  .bl-stat-value { color: #000 !important; font-size: 1.1rem !important; }
+  .bl-stat-label { color: #555 !important; }
+  .bl-stat-card.bl-stat-alert .bl-stat-value { color: #c00 !important; }
+  .bl-table { border: 1px solid #ccc !important; background: #fff !important; }
+  .bl-table th { border-bottom: 2px solid #999 !important; color: #333 !important; }
+  .bl-table td { border-bottom: 1px solid #ddd !important; color: #000 !important; }
+  .bl-table tbody tr:hover { background: none !important; }
+  .bl-type-badge, .bl-status-badge, .bl-aging-badge { border: 1px solid #aaa; background: #f0f0f0 !important; color: #333 !important; }
+  #pageContent { display: block !important; }
+  .bl-table-wrap, .bl-customer-table { display: block !important; }
+  .bl-title span { color: #333 !important; -webkit-text-fill-color: #333 !important; }
+  .page-content { display: block !important; }
+}
+</style>
+
+<script>
+  /* Nav toggle */
+  function toggleNav() {
+    document.getElementById('navToggle').classList.toggle('active');
+    document.getElementById('navPanel').classList.toggle('open');
+    document.getElementById('navOverlay').classList.toggle('open');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.nav-panel__link').forEach(function(link) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+      if (href === path || (href !== '/' && path.startsWith(href))) link.classList.add('active');
+    });
+  });
+</script>
+
+<script>
+(function() {
+  'use strict';
+
+  // ====================================================================
+  // API HELPER
+  // ====================================================================
+  async function api(method, path, body) {
+    var token = window.AASAuth && window.AASAuth.getToken ? await window.AASAuth.getToken() : null;
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    var opts = { method: method, headers: headers };
+    if (body) opts.body = JSON.stringify(body);
+    var res = await fetch('/api/pipeline' + path, opts);
+    if (!res.ok) {
+      var errText = '';
+      try { errText = await res.text(); } catch(e) { /* ignore */ }
+      throw new Error('API ' + res.status + (errText ? ': ' + errText : ''));
+    }
+    return res.json();
+  }
+
+  // ====================================================================
+  // STATE
+  // ====================================================================
+  var currentTab = 'all';
+  var currentPage = 0;
+  var pageSize = 50;
+  var totalDocuments = 0;
+  var lastDocuments = [];     // current visible docs for CSV export
+  var lastCustomerData = [];  // current customer summary for CSV export
+  var debounceTimer = null;
+
+  // ====================================================================
+  // TAB SWITCHING
+  // ====================================================================
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    currentPage = 0;
+
+    // Update tab UI
+    var tabs = document.querySelectorAll('.bl-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      var isActive = tabs[i].getAttribute('data-tab') === tab;
+      tabs[i].classList.toggle('active', isActive);
+      tabs[i].setAttribute('aria-selected', String(isActive));
+    }
+
+    // Show/hide filter bar and aging column
+    var filters = document.getElementById('blFilters');
+    var agingTh = document.getElementById('thAging');
+    if (tab === 'customer') {
+      filters.style.display = 'none';
+    } else {
+      filters.style.display = '';
+    }
+
+    // Show aging column for hold and pending tabs
+    if (tab === 'hold' || tab === 'pending') {
+      agingTh.style.display = '';
+    } else {
+      agingTh.style.display = 'none';
+    }
+
+    reloadData();
+  };
+
+  // ====================================================================
+  // DATA LOADING
+  // ====================================================================
+  window.reloadData = function() {
+    if (currentTab === 'customer') {
+      loadCustomerView();
+    } else {
+      loadLedger();
+    }
+  };
+
+  window.debounceReload = function() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function() { reloadData(); }, 350);
+  };
+
+  window.refreshCurrentView = function() {
+    var refreshBtn = document.getElementById('blRefreshBtn');
+    refreshBtn.classList.add('syncing');
+    reloadData();
+    setTimeout(function() { refreshBtn.classList.remove('syncing'); }, 1200);
+  };
+
+  async function loadLedger() {
+    var loading = document.getElementById('blLoading');
+    var error = document.getElementById('blError');
+    var tableWrap = document.getElementById('blTableWrap');
+    var customerWrap = document.getElementById('blCustomerWrap');
+    var emptyEl = document.getElementById('blEmpty');
+    var pagination = document.getElementById('blPagination');
+
+    loading.style.display = '';
+    error.style.display = 'none';
+    tableWrap.style.display = 'none';
+    customerWrap.style.display = 'none';
+    emptyEl.style.display = 'none';
+    pagination.style.display = 'none';
+
+    try {
+      // Build query params
+      var params = new URLSearchParams();
+      params.set('limit', String(pageSize));
+      params.set('offset', String(currentPage * pageSize));
+
+      var search = document.getElementById('filterSearch').value.trim();
+      if (search) params.set('search', search);
+
+      var type = document.getElementById('filterType').value;
+      var status = document.getElementById('filterStatus').value;
+
+      // Tab-specific overrides
+      if (currentTab === 'hold') {
+        params.set('status', 'hold');
+      } else if (currentTab === 'pending') {
+        params.set('doc_type', 'estimate');
+        params.set('status', 'pending');
+      } else {
+        if (type) params.set('doc_type', type);
+        if (status) params.set('status', status);
+      }
+
+      var dateFrom = document.getElementById('filterDateFrom').value;
+      var dateTo = document.getElementById('filterDateTo').value;
+      if (dateFrom) params.set('date_from', dateFrom);
+      if (dateTo) params.set('date_to', dateTo);
+
+      var result = await api('GET', '/v2/ledger?' + params.toString());
+
+      // Normalize response
+      var docs = [];
+      var total = 0;
+      if (Array.isArray(result)) {
+        docs = result;
+        total = result.length;
+      } else if (result && Array.isArray(result.data)) {
+        docs = result.data;
+        total = result.total || result.count || docs.length;
+      } else if (result && Array.isArray(result.documents)) {
+        docs = result.documents;
+        total = result.total || result.count || docs.length;
+      }
+
+      lastDocuments = docs;
+      totalDocuments = total;
+
+      // Update summary stats from result if available
+      if (result && result.summary) {
+        updateSummaryStats(result.summary);
+      }
+
+      loading.style.display = 'none';
+
+      if (docs.length === 0) {
+        emptyEl.style.display = '';
+      } else {
+        renderDocumentTable(docs);
+        tableWrap.style.display = '';
+        updatePagination();
+        pagination.style.display = '';
+      }
+    } catch (e) {
+      console.error('Ledger load failed:', e);
+      loading.style.display = 'none';
+      error.style.display = '';
+      document.getElementById('blErrorMsg').textContent = 'Failed to load: ' + e.message;
+    }
+  }
+
+  async function loadCustomerView() {
+    var loading = document.getElementById('blLoading');
+    var error = document.getElementById('blError');
+    var tableWrap = document.getElementById('blTableWrap');
+    var customerWrap = document.getElementById('blCustomerWrap');
+    var emptyEl = document.getElementById('blEmpty');
+    var pagination = document.getElementById('blPagination');
+
+    loading.style.display = '';
+    error.style.display = 'none';
+    tableWrap.style.display = 'none';
+    customerWrap.style.display = 'none';
+    emptyEl.style.display = 'none';
+    pagination.style.display = 'none';
+
+    try {
+      var result = await api('GET', '/v2/ledger/by-customer');
+
+      var customers = [];
+      if (Array.isArray(result)) {
+        customers = result;
+      } else if (result && Array.isArray(result.data)) {
+        customers = result.data;
+      } else if (result && Array.isArray(result.customers)) {
+        customers = result.customers;
+      }
+
+      lastCustomerData = customers;
+      loading.style.display = 'none';
+
+      if (customers.length === 0) {
+        emptyEl.style.display = '';
+      } else {
+        renderCustomerTable(customers);
+        customerWrap.style.display = '';
+      }
+    } catch (e) {
+      console.error('Customer view load failed:', e);
+      loading.style.display = 'none';
+      error.style.display = '';
+      document.getElementById('blErrorMsg').textContent = 'Failed to load: ' + e.message;
+    }
+  }
+
+  // ====================================================================
+  // SUMMARY STATS
+  // ====================================================================
+  function updateSummaryStats(summary) {
+    var billed = summary.billed_this_month || summary.billedThisMonth || 0;
+    var estPending = summary.estimates_pending || summary.estimatesPending || 0;
+    var holds = summary.on_hold || summary.onHold || 0;
+    var sent = summary.invoices_sent || summary.invoicesSent || 0;
+    var followUp = summary.needs_follow_up || summary.needsFollowUp || 0;
+
+    document.getElementById('statBilledMonth').textContent = formatCurrency(billed);
+    document.getElementById('statEstimatesPending').textContent = formatCurrency(estPending);
+    document.getElementById('statOnHold').textContent = String(holds);
+    document.getElementById('statInvoicesSent').textContent = String(sent);
+    document.getElementById('statFollowUp').textContent = String(followUp);
+
+    // Red accent on follow-up card if > 0
+    var followUpCard = document.getElementById('statFollowUpCard');
+    if (followUp > 0) {
+      followUpCard.classList.add('bl-stat-alert');
+    } else {
+      followUpCard.classList.remove('bl-stat-alert');
+    }
+  }
+
+  // ====================================================================
+  // RENDER DOCUMENT TABLE (XSS-safe — createElement + textContent)
+  // ====================================================================
+  function renderDocumentTable(docs) {
+    var tbody = document.getElementById('blTableBody');
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+    var showAging = (currentTab === 'hold' || currentTab === 'pending');
+
+    for (var i = 0; i < docs.length; i++) {
+      var doc = docs[i];
+      var tr = document.createElement('tr');
+      var taskId = doc.task_id || doc.taskId || '';
+      var docId = doc.doc_id || doc.docId || doc.id || '';
+
+      // Click handler — open workbench
+      (function(tId, dId) {
+        tr.addEventListener('click', function() {
+          var url = '/pipeline/edit/?task=' + encodeURIComponent(tId);
+          if (dId) url += '&replacing_doc_id=' + encodeURIComponent(dId);
+          window.location.href = url;
+        });
+      })(taskId, docId);
+
+      // Doc #
+      var tdDocNum = document.createElement('td');
+      tdDocNum.textContent = doc.doc_number || doc.docNumber || docId || '-';
+      tdDocNum.style.fontWeight = '600';
+      tr.appendChild(tdDocNum);
+
+      // Customer
+      var tdCustomer = document.createElement('td');
+      tdCustomer.textContent = doc.customer_name || doc.customer || '-';
+      tr.appendChild(tdCustomer);
+
+      // Task
+      var tdTask = document.createElement('td');
+      var taskLabel = doc.task_name || doc.taskName || '';
+      if (!taskLabel && taskId) taskLabel = 'Task #' + taskId;
+      tdTask.textContent = taskLabel || '-';
+      tdTask.style.maxWidth = '200px';
+      tdTask.style.overflow = 'hidden';
+      tdTask.style.textOverflow = 'ellipsis';
+      tdTask.style.whiteSpace = 'nowrap';
+      tr.appendChild(tdTask);
+
+      // Type badge
+      var tdType = document.createElement('td');
+      var typeBadge = document.createElement('span');
+      var docType = (doc.doc_type || doc.docType || doc.type || 'invoice').toLowerCase();
+      typeBadge.className = 'bl-type-badge ' + (docType === 'estimate' ? 'bl-type-estimate' : 'bl-type-invoice');
+      typeBadge.textContent = docType === 'estimate' ? 'Estimate' : 'Invoice';
+      tdType.appendChild(typeBadge);
+      tr.appendChild(tdType);
+
+      // Amount
+      var tdAmount = document.createElement('td');
+      var amount = doc.amount || doc.total || 0;
+      tdAmount.textContent = formatCurrency(amount);
+      tdAmount.style.fontWeight = '600';
+      tr.appendChild(tdAmount);
+
+      // Date
+      var tdDate = document.createElement('td');
+      tdDate.textContent = formatDate(doc.date || doc.created_at || doc.createdAt || '');
+      tdDate.style.whiteSpace = 'nowrap';
+      tr.appendChild(tdDate);
+
+      // Status badge
+      var tdStatus = document.createElement('td');
+      var statusBadge = document.createElement('span');
+      var status = (doc.status || 'pending').toLowerCase();
+      statusBadge.className = 'bl-status-badge bl-status-' + status;
+      statusBadge.textContent = capitalizeFirst(status);
+      tdStatus.appendChild(statusBadge);
+
+      // Hold reason (show under status for hold tab)
+      if (currentTab === 'hold' && doc.hold_reason) {
+        var holdReasonEl = document.createElement('div');
+        holdReasonEl.className = 'bl-hold-reason';
+        holdReasonEl.textContent = doc.hold_reason;
+        tdStatus.appendChild(holdReasonEl);
+      }
+
+      tr.appendChild(tdStatus);
+
+      // Aging badge (only for hold and pending tabs)
+      if (showAging) {
+        var tdAging = document.createElement('td');
+        var daysWaiting = calculateDaysWaiting(doc.date || doc.created_at || doc.createdAt);
+        var agingBadge = createAgingBadge(daysWaiting, currentTab);
+        tdAging.appendChild(agingBadge);
+        tr.appendChild(tdAging);
+      }
+
+      // Edit flag
+      var tdFlag = document.createElement('td');
+      if (doc.edited_after_send || doc.editedAfterSend) {
+        var flagEl = createEditFlag(doc.edit_history || doc.editHistory || []);
+        tdFlag.appendChild(flagEl);
+      }
+      tr.appendChild(tdFlag);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  // ====================================================================
+  // RENDER CUSTOMER TABLE (XSS-safe)
+  // ====================================================================
+  function renderCustomerTable(customers) {
+    var tbody = document.getElementById('blCustomerBody');
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+
+    for (var i = 0; i < customers.length; i++) {
+      var cust = customers[i];
+      var tr = document.createElement('tr');
+
+      var tdName = document.createElement('td');
+      tdName.textContent = cust.customer_name || cust.name || '-';
+      tdName.style.fontWeight = '600';
+      tr.appendChild(tdName);
+
+      var tdBilled = document.createElement('td');
+      tdBilled.textContent = formatCurrency(cust.total_billed || cust.totalBilled || 0);
+      tr.appendChild(tdBilled);
+
+      var tdPending = document.createElement('td');
+      tdPending.textContent = formatCurrency(cust.pending_estimates || cust.pendingEstimates || 0);
+      tr.appendChild(tdPending);
+
+      var tdHold = document.createElement('td');
+      tdHold.textContent = String(cust.on_hold || cust.onHold || 0);
+      tr.appendChild(tdHold);
+
+      var tdPaid = document.createElement('td');
+      tdPaid.textContent = formatCurrency(cust.paid || cust.total_paid || cust.totalPaid || 0);
+      tr.appendChild(tdPaid);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  // ====================================================================
+  // AGING BADGES
+  // ====================================================================
+  function calculateDaysWaiting(dateStr) {
+    if (!dateStr) return 0;
+    try {
+      var created = new Date(dateStr);
+      if (isNaN(created.getTime())) return 0;
+      var now = new Date();
+      var diff = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      return Math.max(0, diff);
+    } catch(e) { return 0; }
+  }
+
+  function createAgingBadge(days, tab) {
+    var badge = document.createElement('span');
+    badge.className = 'bl-aging-badge';
+    badge.textContent = days + 'd';
+
+    if (tab === 'hold') {
+      // Holds: Green < 14, Amber 14-30, Red > 30
+      if (days > 30) {
+        badge.classList.add('bl-aging-red');
+      } else if (days >= 14) {
+        badge.classList.add('bl-aging-amber');
+      } else {
+        badge.classList.add('bl-aging-green');
+      }
+    } else {
+      // Estimates: Green < 30, Amber 30-60, Red > 60
+      if (days > 60) {
+        badge.classList.add('bl-aging-red');
+      } else if (days >= 30) {
+        badge.classList.add('bl-aging-amber');
+      } else {
+        badge.classList.add('bl-aging-green');
+      }
+    }
+
+    return badge;
+  }
+
+  // ====================================================================
+  // EDIT FLAG (XSS-safe)
+  // ====================================================================
+  function createEditFlag(editHistory) {
+    var flag = document.createElement('div');
+    flag.className = 'bl-edit-flag';
+
+    // Warning icon
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('d', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z');
+    svg.appendChild(path);
+    flag.appendChild(svg);
+
+    // Tooltip
+    var tooltip = document.createElement('div');
+    tooltip.className = 'bl-edit-flag-tooltip';
+
+    var title = document.createElement('div');
+    title.className = 'bl-edit-flag-tooltip-title';
+    title.textContent = 'Edited After Send';
+    tooltip.appendChild(title);
+
+    if (editHistory && editHistory.length > 0) {
+      for (var i = 0; i < editHistory.length; i++) {
+        var entry = document.createElement('div');
+        entry.className = 'bl-edit-flag-tooltip-entry';
+        var editDate = editHistory[i].date || editHistory[i].edited_at || '';
+        var editUser = editHistory[i].user || editHistory[i].edited_by || 'Unknown';
+        var editNote = editHistory[i].note || editHistory[i].change || '';
+        entry.textContent = formatDate(editDate) + ' - ' + editUser + (editNote ? ': ' + editNote : '');
+        tooltip.appendChild(entry);
+      }
+    } else {
+      var noData = document.createElement('div');
+      noData.className = 'bl-edit-flag-tooltip-entry';
+      noData.textContent = 'Document was modified after being sent';
+      tooltip.appendChild(noData);
+    }
+
+    flag.appendChild(tooltip);
+    return flag;
+  }
+
+  // ====================================================================
+  // PAGINATION
+  // ====================================================================
+  function updatePagination() {
+    var totalPages = Math.ceil(totalDocuments / pageSize) || 1;
+    var pageNum = currentPage + 1;
+
+    document.getElementById('blPageInfo').textContent = 'Page ' + pageNum + ' of ' + totalPages;
+    document.getElementById('blPrevBtn').disabled = (currentPage <= 0);
+    document.getElementById('blNextBtn').disabled = (pageNum >= totalPages);
+  }
+
+  window.changePage = function(direction) {
+    currentPage += direction;
+    if (currentPage < 0) currentPage = 0;
+    reloadData();
+  };
+
+  // ====================================================================
+  // CSV EXPORT
+  // ====================================================================
+  window.handleExportCSV = function() {
+    var rows = [];
+
+    if (currentTab === 'customer') {
+      // Customer view export
+      rows.push(['Customer', 'Total Billed', 'Pending Estimates', 'On Hold', 'Paid']);
+      for (var c = 0; c < lastCustomerData.length; c++) {
+        var cust = lastCustomerData[c];
+        rows.push([
+          cust.customer_name || cust.name || '',
+          String(cust.total_billed || cust.totalBilled || 0),
+          String(cust.pending_estimates || cust.pendingEstimates || 0),
+          String(cust.on_hold || cust.onHold || 0),
+          String(cust.paid || cust.total_paid || cust.totalPaid || 0)
+        ]);
+      }
+    } else {
+      // Document view export
+      var headers = ['Doc #', 'Customer', 'Task', 'Type', 'Amount', 'Date', 'Status'];
+      if (currentTab === 'hold' || currentTab === 'pending') headers.push('Days Waiting');
+      headers.push('Edited After Send');
+      rows.push(headers);
+
+      for (var d = 0; d < lastDocuments.length; d++) {
+        var doc = lastDocuments[d];
+        var row = [
+          doc.doc_number || doc.docNumber || doc.doc_id || doc.docId || doc.id || '',
+          doc.customer_name || doc.customer || '',
+          doc.task_name || doc.taskName || '',
+          doc.doc_type || doc.docType || doc.type || '',
+          String(doc.amount || doc.total || 0),
+          doc.date || doc.created_at || doc.createdAt || '',
+          doc.status || ''
+        ];
+        if (currentTab === 'hold' || currentTab === 'pending') {
+          row.push(String(calculateDaysWaiting(doc.date || doc.created_at || doc.createdAt)));
+        }
+        row.push(doc.edited_after_send || doc.editedAfterSend ? 'Yes' : 'No');
+        rows.push(row);
+      }
+    }
+
+    // Build CSV
+    var csv = rows.map(function(row) {
+      return row.map(function(cell) {
+        var val = String(cell).replace(/"/g, '""');
+        if (val.indexOf(',') !== -1 || val.indexOf('"') !== -1 || val.indexOf('\n') !== -1) {
+          return '"' + val + '"';
+        }
+        return val;
+      }).join(',');
+    }).join('\n');
+
+    // Download
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    var tabLabel = currentTab === 'customer' ? 'by-customer' : (currentTab === 'hold' ? 'on-hold' : (currentTab === 'pending' ? 'pending-estimates' : 'all'));
+    a.download = 'aas-ledger-' + tabLabel + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // ====================================================================
+  // PRINT
+  // ====================================================================
+  window.handlePrint = function() {
+    window.print();
+  };
+
+  // ====================================================================
+  // HELPERS
+  // ====================================================================
+  function formatCurrency(val) {
+    var num = Number(val) || 0;
+    return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatDate(d) {
+    if (!d) return '-';
+    try {
+      var dt = new Date(d);
+      if (isNaN(dt.getTime())) return String(d);
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch(e) { return String(d); }
+  }
+
+  function capitalizeFirst(s) {
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // ====================================================================
+  // PAGE READY (called by auth.js)
+  // ====================================================================
+  window.onPageReady = function(user, roles, customerId) {
+    // Admin-only check
+    if (!roles || roles.indexOf('admin') === -1) {
+      window.location.href = '/tech/parts/';
+      return;
+    }
+
+    // Show floating user
+    var fu = document.getElementById('floatingUser');
+    fu.style.display = '';
+    document.getElementById('floatingUserName').textContent = user.name || user.email || 'User';
+    var roleName = roles.indexOf('admin') !== -1 ? 'Admin' : (roles.indexOf('tech') !== -1 ? 'Tech' : 'User');
+    document.getElementById('floatingUserRole').textContent = roleName;
+
+    // Set default date range — last 30 days
+    var today = new Date();
+    var thirtyAgo = new Date(today);
+    thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+    document.getElementById('filterDateTo').value = today.toISOString().slice(0, 10);
+    document.getElementById('filterDateFrom').value = thirtyAgo.toISOString().slice(0, 10);
+
+    // Initial load
+    loadLedger();
+  };
+
+})();
+</script>
+</body>
+</html>
