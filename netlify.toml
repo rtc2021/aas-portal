@@ -212,34 +212,35 @@
   status = 200
 
 [[redirects]]
-  from = "/pipeline/preview"
-  to = "/pipeline/preview/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/pipeline/log"
-  to = "/pipeline/log/index.html"
-  status = 200
-
-[[redirects]]
   from = "/pipeline/rates"
   to = "/pipeline/rates/index.html"
   status = 200
 
+# 301 redirects — old pipeline pages → new equivalents
 [[redirects]]
-  from = "/pipeline/estimates"
-  to = "/pipeline/estimates/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/pipeline/status"
-  to = "/pipeline/status/index.html"
-  status = 200
+  from = "/pipeline/preview"
+  to = "/pipeline/triage/"
+  status = 301
 
 [[redirects]]
   from = "/pipeline/review"
-  to = "/pipeline/review/index.html"
-  status = 200
+  to = "/pipeline/triage/"
+  status = 301
+
+[[redirects]]
+  from = "/pipeline/estimates"
+  to = "/pipeline/edit/"
+  status = 301
+
+[[redirects]]
+  from = "/pipeline/log"
+  to = "/pipeline/ledger/"
+  status = 301
+
+[[redirects]]
+  from = "/pipeline/status"
+  to = "/pipeline/ledger/"
+  status = 301
 
 # ============================================================================
 # CORS HEADERS FOR API
