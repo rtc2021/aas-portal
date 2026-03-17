@@ -38,7 +38,8 @@ function getRolesFromToken(authHeader: string | null): string[] {
 
     const payload = JSON.parse(base64UrlDecode(parts[1]));
     const namespace = "https://aas-portal.com";
-    return payload[`${namespace}/roles`] || [];
+    const rawRoles: string[] = payload[`${namespace}/roles`] || [];
+    return rawRoles.map((r: string) => r.toLowerCase());
   } catch {
     return [];
   }
@@ -123,7 +124,7 @@ export default async function handler(req: Request, context: Context): Promise<R
 
   if (requiresAdmin(dropletPath, req.method)) {
     const roles = getRolesFromToken(req.headers.get("Authorization"));
-    if (!roles.includes("Admin")) {
+    if (!roles.includes("admin")) {
       return new Response(JSON.stringify({ error: "Admin role required" }), {
         status: 403,
         headers: baseHeaders(),
