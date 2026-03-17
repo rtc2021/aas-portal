@@ -148,8 +148,12 @@
             <label class="bw-label" for="bwRateTier">Rate Tier</label>
             <select class="bw-select" id="bwRateTier" onchange="applyRateTier()">
               <option value="standard">Standard ($125/hr)</option>
+              <option value="lcmc">LCMC ($110/hr)</option>
+              <option value="ochsner">Ochsner ($110/hr)</option>
               <option value="emergency">Emergency ($185/hr)</option>
-              <option value="contract">Contract ($95/hr)</option>
+              <option value="after_hours">After Hours ($165/hr)</option>
+              <option value="warranty">Warranty ($0/hr)</option>
+              <option value="service_charge">Service Charge ($95/hr)</option>
               <option value="custom">Custom</option>
             </select>
           </div>
@@ -970,9 +974,8 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
   window.applyRateTier = function() {
     var tier = document.getElementById('bwRateTier').value;
     var rateInput = document.getElementById('bwLaborRate');
-    if (tier === 'standard') rateInput.value = 125;
-    else if (tier === 'emergency') rateInput.value = 185;
-    else if (tier === 'contract') rateInput.value = 95;
+    var rates = { standard: 125, lcmc: 110, ochsner: 110, emergency: 185, after_hours: 165, warranty: 0, service_charge: 95 };
+    if (rates[tier] !== undefined) rateInput.value = rates[tier];
     // 'custom' leaves value unchanged
     renderPreview();
   };
@@ -1690,6 +1693,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       doc_type: currentDocType,
       labor_hours: laborHours,
       labor_rate: laborRate,
+      rate_tier: document.getElementById('bwRateTier').value,
       parts: parts,
       customer_qb_id: currentCustomer ? currentCustomer.qb_customer_id : null,
       notes: notes
