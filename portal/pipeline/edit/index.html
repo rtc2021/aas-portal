@@ -971,7 +971,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     renderPartsList();
 
     // Notes
-    var notes = task.notes || task.service_notes || task.description || '';
+    var notes = task.completion_notes || task.notes || task.service_notes || task.description || '';
     document.getElementById('bwNotes').value = notes;
 
     // Apply saved draft (overrides API values)

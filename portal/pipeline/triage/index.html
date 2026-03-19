@@ -665,7 +665,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     card.appendChild(nameEl);
 
     // Description snippet (service notes)
-    var desc = task.description || task.notes || task.service_notes || '';
+    var desc = task.completion_notes || task.description || task.notes || task.service_notes || '';
     if (desc) {
       var descEl = document.createElement('div');
       descEl.className = 'tb-card-desc';
