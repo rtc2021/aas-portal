@@ -694,7 +694,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     card.appendChild(meta);
 
     // Estimated total
-    var total = task.estimated_total || task.total;
+    var total = task.total_estimate || task.estimated_total || task.total;
     if (total != null && total !== '' && total !== 0) {
       var totalEl = document.createElement('div');
       totalEl.className = 'tb-card-total';
@@ -778,11 +778,9 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
 
   function gatherFlags(task) {
     var flags = [];
-    // Unmapped parts
-    if (task.unmapped_parts && (Array.isArray(task.unmapped_parts) ? task.unmapped_parts.length > 0 : task.unmapped_parts > 0)) {
-      flags.push({ cls: 'tb-badge-amber', label: 'Unmapped Parts' });
-    }
-    if (task.has_unmapped_parts) {
+    // Unmapped parts (consolidated — avoid duplicate badges)
+    var hasUnmappedParts = task.has_unmapped_parts || (task.unmapped_parts && (Array.isArray(task.unmapped_parts) ? task.unmapped_parts.length > 0 : task.unmapped_parts > 0));
+    if (hasUnmappedParts) {
       flags.push({ cls: 'tb-badge-amber', label: 'Unmapped Parts' });
     }
     // Unmapped customer
@@ -1072,7 +1070,25 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     confirmBtn.textContent = 'Sending...';
 
     try {
-      var result = await api('POST', '/v2/task/' + taskId + '/send', {});
+      // Build send payload from quickShipContext
+      var ctx = quickShipContext || {};
+      var sendParts = (ctx.parts_on_task || []).map(function(p) {
+        return {
+          qb_item_id: p.qb_item_id || null,
+          name: p.part_name || p.name || '',
+          quantity: p.quantity || p.qty || 1,
+          unit_price: p.qb_unit_price || p.unit_price || p.price || 0
+        };
+      });
+      var sendBody = {
+        doc_type: 'invoice',
+        customer: { qb_customer_id: ctx.customer_qb_id || null },
+        labor: { hours: ctx.labor_hours || (ctx.labor && ctx.labor.hours) || 0, rate: ctx.labor_rate || (ctx.labor && ctx.labor.rate_amount) || 125, description: 'Service Labor' },
+        parts: sendParts,
+        notes: ctx.notes || ctx.description || '',
+        tags: ['@Billed']
+      };
+      var result = await api('POST', '/v2/task/' + taskId + '/send', sendBody);
 
       closeQuickShip();
 

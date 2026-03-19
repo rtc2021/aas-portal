@@ -817,7 +817,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       var doc = docs[i];
       var tr = document.createElement('tr');
       var taskId = doc.task_id || doc.taskId || '';
-      var docId = doc.doc_id || doc.docId || doc.id || '';
+      var docId = doc.qb_doc_id || doc.doc_id || doc.docId || doc.id || '';
 
       // Click handler — open workbench
       (function(tId, dId) {
@@ -868,7 +868,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
 
       // Date
       var tdDate = document.createElement('td');
-      tdDate.textContent = formatDate(doc.date || doc.created_at || doc.createdAt || '');
+      tdDate.textContent = formatDate(doc.date_created || doc.date || doc.created_at || doc.createdAt || '');
       tdDate.style.whiteSpace = 'nowrap';
       tr.appendChild(tdDate);
 
@@ -893,7 +893,8 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       // Aging badge (only for hold and pending tabs)
       if (showAging) {
         var tdAging = document.createElement('td');
-        var daysWaiting = calculateDaysWaiting(doc.date || doc.created_at || doc.createdAt);
+        var dateForAging = (currentTab === 'pending') ? (doc.date_sent || doc.date_created || doc.date || doc.created_at) : (doc.date_created || doc.date || doc.created_at);
+        var daysWaiting = calculateDaysWaiting(dateForAging);
         var agingBadge = createAgingBadge(daysWaiting, currentTab);
         tdAging.appendChild(agingBadge);
         tr.appendChild(tdAging);
@@ -932,15 +933,15 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       tr.appendChild(tdBilled);
 
       var tdPending = document.createElement('td');
-      tdPending.textContent = formatCurrency(cust.pending_estimates || cust.pendingEstimates || 0);
+      tdPending.textContent = formatCurrency(cust.total_pending_estimates || cust.pending_estimates || cust.pendingEstimates || 0);
       tr.appendChild(tdPending);
 
       var tdHold = document.createElement('td');
-      tdHold.textContent = String(cust.on_hold || cust.onHold || 0);
+      tdHold.textContent = String(cust.open_holds || cust.on_hold || cust.onHold || 0);
       tr.appendChild(tdHold);
 
       var tdPaid = document.createElement('td');
-      tdPaid.textContent = formatCurrency(cust.paid || cust.total_paid || cust.totalPaid || 0);
+      tdPaid.textContent = String(cust.invoices_paid || cust.paid || cust.total_paid || cust.totalPaid || 0);
       tr.appendChild(tdPaid);
 
       tbody.appendChild(tr);
@@ -1071,9 +1072,9 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
         rows.push([
           cust.customer_name || cust.name || '',
           String(cust.total_billed || cust.totalBilled || 0),
-          String(cust.pending_estimates || cust.pendingEstimates || 0),
-          String(cust.on_hold || cust.onHold || 0),
-          String(cust.paid || cust.total_paid || cust.totalPaid || 0)
+          String(cust.total_pending_estimates || cust.pending_estimates || cust.pendingEstimates || 0),
+          String(cust.open_holds || cust.on_hold || cust.onHold || 0),
+          String(cust.invoices_paid || cust.paid || cust.total_paid || cust.totalPaid || 0)
         ]);
       }
     } else {
@@ -1086,16 +1087,17 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       for (var d = 0; d < lastDocuments.length; d++) {
         var doc = lastDocuments[d];
         var row = [
-          doc.doc_number || doc.docNumber || doc.doc_id || doc.docId || doc.id || '',
+          doc.qb_doc_id || doc.doc_number || doc.docNumber || doc.doc_id || doc.docId || doc.id || '',
           doc.customer_name || doc.customer || '',
           doc.task_name || doc.taskName || '',
           doc.doc_type || doc.docType || doc.type || '',
           String(doc.amount || doc.total || 0),
-          doc.date || doc.created_at || doc.createdAt || '',
+          doc.date_created || doc.date || doc.created_at || doc.createdAt || '',
           doc.status || ''
         ];
         if (currentTab === 'hold' || currentTab === 'pending') {
-          row.push(String(calculateDaysWaiting(doc.date || doc.created_at || doc.createdAt)));
+          var csvDateForAging = (currentTab === 'pending') ? (doc.date_sent || doc.date_created || doc.date) : (doc.date_created || doc.date || doc.created_at);
+          row.push(String(calculateDaysWaiting(csvDateForAging)));
         }
         row.push(doc.edited_after_send || doc.editedAfterSend ? 'Yes' : 'No');
         rows.push(row);

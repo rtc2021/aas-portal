@@ -851,7 +851,8 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       // Merge sibling objects into task for populateFields
       if (result.customer) {
         task.customer_name = result.customer.name || result.customer.customer_name || task.customer_name;
-        task.customer_qb_id = result.customer.qb_customer_id || result.customer.qb_customer_name || task.customer_qb_id;
+        task.customer_qb_id = result.customer.qb_customer_id || task.customer_qb_id;
+        task.customer_qb_name = result.customer.qb_customer_name || task.customer_qb_name;
         task.customer_mapping_status = result.customer.mapping_status;
       }
       if (result.labor) {
@@ -1588,7 +1589,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     var btn = document.querySelector('.bw-action-draft');
     btn.disabled = true;
 
-    var payload = buildPayload();
+    var payload = buildDraftPayload();
 
     try {
       await api('PATCH', '/v2/task/' + currentTaskId + '/draft', payload);
@@ -1605,7 +1606,6 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
   // TASK 13: ACTIONS — SEND TO QB
   // ====================================================================
   window.sendToQB = function() {
-    var payload = buildPayload();
     var laborTotal = (parseFloat(document.getElementById('bwLaborHours').value) || 0) * (parseFloat(document.getElementById('bwLaborRate').value) || 0);
     var partsTotal = 0;
     for (var i = 0; i < currentParts.length; i++) {
@@ -1672,7 +1672,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     btn.disabled = true;
     btn.textContent = 'Sending...';
 
-    var payload = buildPayload();
+    var payload = buildSendPayload();
     if (replacingDocId) {
       payload.replacing_doc_id = replacingDocId;
     }
@@ -1725,7 +1725,33 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
   // ====================================================================
   // BUILD PAYLOAD
   // ====================================================================
-  function buildPayload() {
+  function buildSendPayload() {
+    var laborHours = parseFloat(document.getElementById('bwLaborHours').value) || 0;
+    var laborRate = parseFloat(document.getElementById('bwLaborRate').value) || 0;
+    var rateTier = document.getElementById('bwRateTier').value;
+    var notes = document.getElementById('bwNotes').value.trim();
+
+    var parts = [];
+    for (var i = 0; i < currentParts.length; i++) {
+      parts.push({
+        qb_item_id: currentParts[i].qb_product_id || null,
+        name: currentParts[i].name,
+        quantity: currentParts[i].qty,
+        unit_price: currentParts[i].price
+      });
+    }
+
+    return {
+      doc_type: currentDocType,
+      customer: { qb_customer_id: currentCustomer ? currentCustomer.qb_customer_id : null },
+      labor: { hours: laborHours, rate: laborRate, description: 'Service Labor — ' + rateTier.charAt(0).toUpperCase() + rateTier.slice(1) },
+      parts: parts,
+      notes: notes,
+      tags: [currentDocType === 'estimate' ? '@Estimated' : '@Billed']
+    };
+  }
+
+  function buildDraftPayload() {
     var laborHours = parseFloat(document.getElementById('bwLaborHours').value) || 0;
     var laborRate = parseFloat(document.getElementById('bwLaborRate').value) || 0;
     var notes = document.getElementById('bwNotes').value.trim();
@@ -1733,20 +1759,20 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     var parts = [];
     for (var i = 0; i < currentParts.length; i++) {
       parts.push({
-        name: currentParts[i].name,
-        qty: currentParts[i].qty,
-        price: currentParts[i].price,
-        qb_product_id: currentParts[i].qb_product_id || null
+        part_name: currentParts[i].name,
+        qb_item_id: currentParts[i].qb_product_id || null,
+        quantity: currentParts[i].qty,
+        unit_price: currentParts[i].price
       });
     }
 
     return {
       doc_type: currentDocType,
-      labor_hours: laborHours,
-      labor_rate: laborRate,
+      labor: { hours: laborHours, rate: laborRate },
       rate_tier: document.getElementById('bwRateTier').value,
       parts: parts,
-      customer_qb_id: currentCustomer ? currentCustomer.qb_customer_id : null,
+      customer: { qb_customer_id: currentCustomer ? currentCustomer.qb_customer_id : null },
+      customer_name: currentCustomer ? currentCustomer.name : null,
       notes: notes
     };
   }
