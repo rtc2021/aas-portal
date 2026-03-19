@@ -949,22 +949,24 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     modal.style.display = '';
 
     try {
-      var ctx = await api('GET', '/v2/task-context/' + taskId);
+      var raw = await api('GET', '/v2/task-context/' + taskId);
+      // Flatten nested response for quick ship checks
+      var ctx = raw.task || raw;
+      ctx.customer_name = (raw.customer && raw.customer.name) || ctx.customer_name || ctx.customer;
+      ctx.customer_qb_id = (raw.customer && raw.customer.qb_customer_id) || ctx.customer_qb_id || ctx.qb_customer_id;
+      ctx.customer_mapping_status = raw.customer && raw.customer.mapping_status;
+      ctx.estimated_total = (raw.labor && raw.labor.hours && raw.labor.rate_amount) ? raw.labor.hours * raw.labor.rate_amount : ctx.estimated_total || ctx.total;
+      ctx.parts_on_task = raw.parts_on_task || ctx.parts_on_task || [];
       quickShipContext = ctx;
 
       // Check mappings
       var issues = [];
-      if (!ctx.customer_qb_id && !ctx.qb_customer_id) {
+      if (!ctx.customer_qb_id) {
         issues.push('Customer not mapped to QuickBooks');
       }
-      if (ctx.unmapped_parts && (Array.isArray(ctx.unmapped_parts) ? ctx.unmapped_parts.length > 0 : ctx.unmapped_parts > 0)) {
-        issues.push('Task has unmapped parts');
-      }
-      if (ctx.has_unmapped_parts) {
-        issues.push('Task has unmapped parts');
-      }
-      if (ctx.has_unmapped_customer || ctx.customer_unmapped) {
-        issues.push('Customer not mapped to QuickBooks');
+      var unmappedParts = ctx.parts_on_task.filter(function(p) { return !p.qb_mapped && !p.qb_item_id; });
+      if (unmappedParts.length > 0) {
+        issues.push(unmappedParts.length + ' unmapped part(s)');
       }
 
       // Deduplicate issues

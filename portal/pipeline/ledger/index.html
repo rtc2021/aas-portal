@@ -706,7 +706,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
         total = result.total || result.count || docs.length;
       } else if (result && Array.isArray(result.documents)) {
         docs = result.documents;
-        total = result.total || result.count || docs.length;
+        total = (result.pagination && result.pagination.total) || result.total || result.count || docs.length;
       }
 
       lastDocuments = docs;
@@ -783,11 +783,11 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
   // SUMMARY STATS
   // ====================================================================
   function updateSummaryStats(summary) {
-    var billed = summary.billed_this_month || summary.billedThisMonth || 0;
-    var estPending = summary.estimates_pending || summary.estimatesPending || 0;
-    var holds = summary.on_hold || summary.onHold || 0;
-    var sent = summary.invoices_sent || summary.invoicesSent || 0;
-    var followUp = summary.needs_follow_up || summary.needsFollowUp || 0;
+    var billed = summary.total_billed_period || summary.billed_this_month || summary.billedThisMonth || 0;
+    var estPending = summary.total_pending_estimates || summary.estimates_pending || summary.estimatesPending || 0;
+    var holds = summary.count_on_hold || summary.on_hold || summary.onHold || 0;
+    var sent = summary.count_invoices_sent || summary.invoices_sent || summary.invoicesSent || 0;
+    var followUp = summary.count_needs_followup || summary.needs_follow_up || summary.needsFollowUp || 0;
 
     document.getElementById('statBilledMonth').textContent = formatCurrency(billed);
     document.getElementById('statEstimatesPending').textContent = formatCurrency(estPending);

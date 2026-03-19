@@ -844,9 +844,33 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     try {
       var result = await api('GET', '/v2/task-context/' + taskId);
 
-      // Normalize: response may be { task: {...} } or flat object
+      // Normalize: API returns { task, customer, labor, parts_on_task, classification, draft }
       var task = result.task || result;
       task.id = task.id || task.task_id || taskId;
+
+      // Merge sibling objects into task for populateFields
+      if (result.customer) {
+        task.customer_name = result.customer.name || result.customer.customer_name || task.customer_name;
+        task.customer_qb_id = result.customer.qb_customer_id || result.customer.qb_customer_name || task.customer_qb_id;
+        task.customer_mapping_status = result.customer.mapping_status;
+      }
+      if (result.labor) {
+        task.labor_hours = result.labor.hours != null ? result.labor.hours : task.labor_hours;
+        task.labor_rate = result.labor.rate_amount || result.labor.rate || task.labor_rate;
+        task.rate_tier = result.labor.rate_tier || task.rate_tier;
+      }
+      if (result.parts_on_task) {
+        task.parts_on_task = result.parts_on_task;
+      }
+      if (result.classification) {
+        task.classification = result.classification;
+      }
+      if (result.draft) {
+        task.draft = result.draft;
+      }
+      if (result.asset) {
+        task.asset = result.asset;
+      }
       window._task = task;
 
       populateFields(task);
@@ -910,9 +934,14 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
 
     // Rate tier
     var tierSelect = document.getElementById('bwRateTier');
-    if (laborRate == 125) tierSelect.value = 'standard';
+    if (task.rate_tier) {
+      tierSelect.value = task.rate_tier;
+    } else if (laborRate == 125) tierSelect.value = 'standard';
+    else if (laborRate == 110) tierSelect.value = 'lcmc';
     else if (laborRate == 185) tierSelect.value = 'emergency';
-    else if (laborRate == 95) tierSelect.value = 'contract';
+    else if (laborRate == 165) tierSelect.value = 'after_hours';
+    else if (laborRate == 95) tierSelect.value = 'service_charge';
+    else if (laborRate == 0) tierSelect.value = 'warranty';
     else tierSelect.value = 'custom';
 
     // Customer
@@ -943,6 +972,27 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     // Notes
     var notes = task.notes || task.service_notes || task.description || '';
     document.getElementById('bwNotes').value = notes;
+
+    // Apply saved draft (overrides API values)
+    if (task.draft && task.draft.draft_data) {
+      var d = task.draft.draft_data;
+      if (d.doc_type) setDocType(d.doc_type);
+      if (d.labor_hours != null) document.getElementById('bwLaborHours').value = d.labor_hours;
+      if (d.labor_rate != null) document.getElementById('bwLaborRate').value = d.labor_rate;
+      if (d.rate_tier) document.getElementById('bwRateTier').value = d.rate_tier;
+      if (d.customer_qb_id) {
+        currentCustomer.qb_customer_id = d.customer_qb_id;
+        currentCustomer.mapped = true;
+      }
+      if (d.notes != null) document.getElementById('bwNotes').value = d.notes;
+      if (Array.isArray(d.parts) && d.parts.length) {
+        currentParts = d.parts.map(function(p) {
+          return { name: p.name || p.part_name, qty: p.qty || p.quantity || 1, price: p.price || p.unit_price || 0, qb_product_id: p.qb_product_id || p.qb_item_id || null, mapped: !!(p.qb_product_id || p.qb_item_id || p.mapped) };
+        });
+      }
+      renderCustomer();
+      renderPartsList();
+    }
   }
 
   function classificationColor(cls) {
