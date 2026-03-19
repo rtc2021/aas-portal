@@ -883,7 +883,8 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     nameEl.textContent = task.task_name || task.name || 'Task #' + task.id;
 
     var statusEl = document.getElementById('bwTaskStatus');
-    var classification = task.classification || task.status || '';
+    var rawClass = task.classification;
+    var classification = typeof rawClass === 'object' && rawClass ? (rawClass.type || '') : String(rawClass || task.status || '');
     if (classification) {
       statusEl.textContent = classification.replace(/_/g, ' ');
       statusEl.style.background = classificationColor(classification) + '22';
@@ -891,7 +892,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     }
 
     // Doc type
-    var docType = task.doc_type || task.classification || 'invoice';
+    var docType = task.doc_type || classification || 'invoice';
     if (docType === 'invoice_ready' || docType === 'invoice') {
       setDocType('invoice');
     } else if (docType === 'estimate' || docType === 'quote') {
