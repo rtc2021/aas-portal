@@ -63,9 +63,16 @@ const PAGE_ACCESS = {
   '/pipeline/rates/': { roles: ['admin'], redirect: '/tech/parts/' },
   '/pipeline/estimates': { roles: ['admin'], redirect: '/tech/parts/' },
   '/pipeline/estimates/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/triage': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/triage/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/edit': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/edit/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/ledger': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/pipeline/ledger/': { roles: ['admin'], redirect: '/tech/parts/' },
 };
 
 let auth0Client = null;
+let cachedAccessToken = null;
 
 function getCreateAuth0Client() {
   if (typeof createAuth0Client === 'function') return createAuth0Client;
@@ -303,11 +310,16 @@ async function getUserRoles() {
 }
 
 async function getToken() {
+  if (cachedAccessToken) return cachedAccessToken;
   const client = await initAuth();
   if (!client) return null;
   try {
-    return await client.getTokenSilently();
-  } catch { return null; }
+    cachedAccessToken = await client.getTokenSilently();
+    return cachedAccessToken;
+  } catch (e) {
+    console.warn('[Auth] getToken failed:', e);
+    return null;
+  }
 }
 
 async function handleAuth() {
@@ -343,6 +355,11 @@ async function handleAuth() {
   if (!isAuth) {
     updateAuthOverlay('login');
     return;
+  }
+
+  // Cache access token for getToken() calls
+  try { cachedAccessToken = await client.getTokenSilently(); } catch (e) {
+    console.warn('[Auth] Token cache failed:', e);
   }
 
   // Get user and roles (normalize to lowercase for consistent checks everywhere)
