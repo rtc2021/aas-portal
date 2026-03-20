@@ -559,8 +559,10 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   background: var(--bw-surface);
   border-top: 1px solid var(--bw-border);
   backdrop-filter: var(--bw-glass);
-  z-index: 100;
+  z-index: 9992;
 }
+/* Push copilot toggle above the fixed action bar */
+.aas-copilot-toggle { bottom: 76px !important; }
 .bw-action-left, .bw-action-right { display: flex; gap: 10px; }
 .bw-action-btn {
   display: inline-flex; align-items: center; gap: 6px;
