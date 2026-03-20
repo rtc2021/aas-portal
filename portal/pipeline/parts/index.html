@@ -170,7 +170,7 @@ body::before {
   pointer-events: none; z-index: 0;
 }
 .page-wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 32px 48px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; padding-right: 60px; /* avoid user-menu avatar overlap */ }
 .header-left { display: flex; flex-direction: column; gap: 4px; }
 .back-link { font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none; transition: color 200ms; }
 .back-link:hover { color: #4f8cff; }
@@ -505,30 +505,69 @@ body.light-theme .qb-result-item:hover { background: rgba(37,99,235,0.06); }
   function closeModal() { document.getElementById('editModal').classList.remove('visible'); editingPartId = null; }
 
   let qbTimeout;
+  function renderQbMessage(container, text, isError) {
+    container.textContent = '';
+    const div = document.createElement('div');
+    div.className = 'qb-result-item cell-muted';
+    if (isError) div.style.color = '#ff4444';
+    div.textContent = text;
+    container.appendChild(div);
+  }
+
+  function renderQbResults(container, items) {
+    container.textContent = '';
+    items.slice(0, 10).forEach(function(i) {
+      const name = i.Name || i.name || '';
+      const id = i.Id || i.id || '';
+      const price = i.UnitPrice != null ? '$' + Number(i.UnitPrice).toFixed(2) : '';
+      const div = document.createElement('div');
+      div.className = 'qb-result-item';
+      div.dataset.id = String(id);
+      div.dataset.name = name;
+
+      const nameText = document.createTextNode(name + ' ');
+      div.appendChild(nameText);
+      if (price) {
+        const priceSpan = document.createElement('span');
+        priceSpan.className = 'cell-price';
+        priceSpan.textContent = price;
+        div.appendChild(priceSpan);
+        div.appendChild(document.createTextNode(' '));
+      }
+      const idSpan = document.createElement('span');
+      idSpan.className = 'qb-id';
+      idSpan.textContent = '#' + String(id);
+      div.appendChild(idSpan);
+
+      div.addEventListener('click', function() {
+        document.getElementById('modalQBName').value = this.dataset.name;
+        document.getElementById('modalQBId').value = this.dataset.id;
+        container.textContent = '';
+      });
+      container.appendChild(div);
+    });
+  }
+
   document.getElementById('modalQBSearch').addEventListener('input', function() {
     clearTimeout(qbTimeout);
     const q = this.value.trim();
-    if (q.length < 2) { document.getElementById('qbResults').innerHTML = ''; return; }
+    const container = document.getElementById('qbResults');
+    if (q.length < 2) { container.textContent = ''; return; }
+    renderQbMessage(container, 'Searching QuickBooks...', false);
     qbTimeout = setTimeout(async () => {
       try {
         const data = await qbApi(`/products/search?q=${encodeURIComponent(q)}`);
-        const items = Array.isArray(data) ? data : (data.QueryResponse?.Item || data.items || []);
-        const container = document.getElementById('qbResults');
-        if (!items.length) { container.innerHTML = '<div class="qb-result-item cell-muted">No results</div>'; return; }
-        container.innerHTML = items.slice(0, 10).map(i => {
-          const name = i.Name || i.name || '';
-          const id = i.Id || i.id || '';
-          const price = i.UnitPrice != null ? `$${Number(i.UnitPrice).toFixed(2)}` : '';
-          return `<div class="qb-result-item" data-id="${esc(String(id))}" data-name="${esc(name)}">${esc(name)} ${price ? `<span class="cell-price">${price}</span>` : ''} <span class="qb-id">#${esc(String(id))}</span></div>`;
-        }).join('');
-        container.querySelectorAll('.qb-result-item').forEach(el => {
-          el.addEventListener('click', function() {
-            document.getElementById('modalQBName').value = this.dataset.name;
-            document.getElementById('modalQBId').value = this.dataset.id;
-            container.innerHTML = '';
-          });
-        });
-      } catch (e) { document.getElementById('qbResults').innerHTML = `<div class="qb-result-item cell-muted">Error: ${esc(e.message)}</div>`; }
+        const items = Array.isArray(data) ? data : (data.QueryResponse?.Item || data.items || data.data || []);
+        if (!items.length) { renderQbMessage(container, 'No QB products found for "' + q + '"', false); return; }
+        renderQbResults(container, items);
+      } catch (e) {
+        const msg = e.message || '';
+        let hint = '';
+        if (msg.includes('502') || msg.includes('503')) hint = ' — Droplet may be down';
+        else if (msg.includes('401') || msg.includes('403')) hint = ' — QB token may need refresh';
+        else if (msg.includes('500')) hint = ' — Server error, check droplet logs';
+        renderQbMessage(container, 'Error: ' + msg + hint, true);
+      }
     }, 400);
   });
 

@@ -237,7 +237,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 }
 
 /* Header */
-.tb-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+.tb-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; padding-right: 60px; /* avoid user-menu avatar overlap */ }
 .tb-header-left { flex: 1; min-width: 200px; }
 .tb-title { font-family: var(--font-display, 'Outfit', sans-serif); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
 .tb-title span { color: var(--tb-accent); }
@@ -554,10 +554,22 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     var board = document.getElementById('tbBoard');
     var syncBtn = document.getElementById('tbSyncBtn');
 
-    loading.style.display = '';
     error.style.display = 'none';
-    board.style.display = 'none';
     syncBtn.classList.add('syncing');
+
+    // Clear the board visually before reloading
+    if (forceRefresh) {
+      // Clear all column bodies so user sees the board empty out
+      var bodies = document.querySelectorAll('.tb-column-body');
+      for (var b = 0; b < bodies.length; b++) {
+        while (bodies[b].firstChild) bodies[b].removeChild(bodies[b].firstChild);
+      }
+      syncBtn.querySelector('.tb-sync-label').textContent = 'Clearing cache...';
+    } else {
+      syncBtn.querySelector('.tb-sync-label').textContent = 'Loading...';
+    }
+    loading.style.display = '';
+    board.style.display = 'none';
 
     try {
       var result = await api('POST', '/v2/classify', {
@@ -587,6 +599,9 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       renderBoard(tasks);
       loading.style.display = 'none';
       board.style.display = '';
+      if (forceRefresh) {
+        showToast('Cache cleared — ' + tasks.length + ' tasks loaded', 'success');
+      }
     } catch (e) {
       console.error('Load board failed:', e);
       loading.style.display = 'none';
@@ -594,6 +609,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       document.getElementById('tbErrorMsg').textContent = 'Failed to load: ' + e.message;
     } finally {
       syncBtn.classList.remove('syncing');
+      syncBtn.querySelector('.tb-sync-label').textContent = 'Sync';
     }
   };
 
