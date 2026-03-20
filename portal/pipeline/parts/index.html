@@ -427,8 +427,8 @@ body.light-theme .qb-result-item:hover { background: rgba(37,99,235,0.06); }
       const partNum = p.aas_catalog_key || '';
       const qbName = p.qbo_item_name || '';
       const qbId = p.qbo_item_id || '';
-      const price = p.price != null ? `$${Number(p.price).toFixed(2)}` : '';
-      const status = p.match_status || 'UNMAPPED';
+      const price = (p.qbo_unit_price ?? p.price) != null ? `$${Number(p.qbo_unit_price ?? p.price).toFixed(2)}` : '';
+      const status = p.status || p.match_status || 'UNMAPPED';
       const isReview = status === 'NEEDS_REVIEW';
 
       const statusLabels = { 'MATCHED': 'Matched', 'NEEDS_REVIEW': 'Review', 'UNMAPPED': 'Unmapped' };
@@ -481,7 +481,7 @@ body.light-theme .qb-result-item:hover { background: rgba(37,99,235,0.06); }
 
   window.confirmPart = async function(id) {
     try {
-      await api(`/parts/${id}`, { method: 'PATCH', body: JSON.stringify({ match_status: 'MATCHED' }) });
+      await api(`/parts/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'MATCHED' }) });
       toast('Part confirmed');
       loadParts(); loadStats();
     } catch (e) { toast(`Error: ${e.message}`, 'error'); }
@@ -579,7 +579,7 @@ body.light-theme .qb-result-item:hover { background: rgba(37,99,235,0.06); }
       toast('Select a QuickBooks item match first', 'error');
       return;
     }
-    const body = { qbo_item_id: String(qbId), qbo_item_name: qbName, match_status: 'MATCHED' };
+    const body = { qbo_item_id: String(qbId), qbo_item_name: qbName, status: 'MATCHED' };
     try {
       await api(`/parts/${editingPartId}`, { method: 'PATCH', body: JSON.stringify(body) });
       toast('Part matched');

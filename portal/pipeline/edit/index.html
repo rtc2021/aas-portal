@@ -853,7 +853,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       // Merge sibling objects into task for populateFields
       if (result.customer) {
         task.customer_name = result.customer.name || result.customer.customer_name || task.customer_name;
-        task.customer_qb_id = result.customer.qb_customer_id || task.customer_qb_id;
+        task.customer_qb_id = result.customer.qb_customer_id || result.customer.qbo_customer_id || task.customer_qb_id;
         task.customer_qb_name = result.customer.qb_customer_name || task.customer_qb_name;
         task.customer_mapping_status = result.customer.mapping_status;
       }
@@ -867,6 +867,12 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       }
       if (result.classification) {
         task.classification = result.classification;
+        // Apply rate/hours overrides from classifier (e.g., emergency → $185, 3hr min)
+        var cls = typeof result.classification === 'object' ? result.classification : {};
+        if (cls.rate_tier_override) task.rate_tier = cls.rate_tier_override;
+        if (cls.minimum_hours_override && (!task.labor_hours || task.labor_hours < cls.minimum_hours_override)) {
+          task.labor_hours = cls.minimum_hours_override;
+        }
       }
       if (result.draft) {
         task.draft = result.draft;
@@ -965,9 +971,9 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       currentParts.push({
         name: p.name || p.description || p.part_name || 'Unknown Part',
         qty: p.qty || p.quantity || 1,
-        price: p.price || p.unit_price || p.rate || 0,
+        price: p.qb_unit_price || p.unit_price || p.price || p.rate || 0,
         qb_product_id: p.qb_product_id || p.qb_item_id || null,
-        mapped: !!(p.qb_product_id || p.qb_item_id || p.mapped)
+        mapped: !!(p.qb_product_id || p.qb_item_id || p.qb_mapped || p.mapped)
       });
     }
     renderPartsList();
@@ -990,7 +996,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       if (d.notes != null) document.getElementById('bwNotes').value = d.notes;
       if (Array.isArray(d.parts) && d.parts.length) {
         currentParts = d.parts.map(function(p) {
-          return { name: p.name || p.part_name, qty: p.qty || p.quantity || 1, price: p.price || p.unit_price || 0, qb_product_id: p.qb_product_id || p.qb_item_id || null, mapped: !!(p.qb_product_id || p.qb_item_id || p.mapped) };
+          return { name: p.name || p.part_name, qty: p.qty || p.quantity || 1, price: p.qb_unit_price || p.unit_price || p.price || 0, qb_product_id: p.qb_product_id || p.qb_item_id || null, mapped: !!(p.qb_product_id || p.qb_item_id || p.qb_mapped || p.mapped) };
         });
       }
       renderCustomer();
@@ -1745,7 +1751,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
 
     return {
       doc_type: currentDocType,
-      customer: { qb_customer_id: currentCustomer ? currentCustomer.qb_customer_id : null },
+      customer: { qb_customer_id: currentCustomer ? currentCustomer.qb_customer_id : null, name: currentCustomer ? currentCustomer.name : null },
       labor: { hours: laborHours, rate: laborRate, description: 'Service Labor — ' + rateTier.charAt(0).toUpperCase() + rateTier.slice(1) },
       parts: parts,
       notes: notes,
