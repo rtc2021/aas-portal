@@ -629,6 +629,13 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
 
     for (var i = 0; i < tasks.length; i++) {
       var task = tasks[i];
+
+      // Frontend safety: force already-billed/estimated tasks to skip
+      if (isAlreadyBilled(task)) {
+        buckets['skip'].push(task);
+        continue;
+      }
+
       var cls = normalizeClassification(task.classification);
       if (!buckets[cls]) cls = 'needs_review';
       buckets[cls].push(task);
@@ -647,6 +654,30 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     }
 
     updateCounts();
+  }
+
+  // Check if task is already billed/estimated — should be in skip column
+  function isAlreadyBilled(task) {
+    // Check tags array (Limble tags)
+    var tags = task.tags || [];
+    if (typeof tags === 'string') tags = [tags];
+    for (var t = 0; t < tags.length; t++) {
+      var tag = (typeof tags[t] === 'string' ? tags[t] : (tags[t].name || '')).toLowerCase();
+      if (tag === '@billed' || tag === '@estimated' || tag === '@estimate sent'
+          || tag === 'billed' || tag === 'estimated') return true;
+    }
+    // Check signals array
+    var signals = task.signals || [];
+    for (var s = 0; s < signals.length; s++) {
+      var sig = String(signals[s]).toLowerCase();
+      if (sig === 'already_billed' || sig === 'billed' || sig === 'already_estimated') return true;
+    }
+    // Check if task has a QB doc recorded
+    if (task.qb_invoice_id || task.qb_estimate_id || task.qb_doc_id) return true;
+    // Check task name prefix — "Inv. 12345" or "Est. 12345" means already exists in QB
+    var name = (task.name || task.task_name || '').trim();
+    if (/^Inv\.\s*\d/i.test(name) || /^Invoice\s*#?\s*\d/i.test(name)) return true;
+    return false;
   }
 
   function normalizeClassification(raw) {
