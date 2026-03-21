@@ -1094,7 +1094,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
 
     try {
       var data = await qbApi('/customers?search=' + encodeURIComponent(query));
-      var customers = Array.isArray(data) ? data : (data.data || data.customers || []);
+      var customers = Array.isArray(data) ? data : ((data.QueryResponse && data.QueryResponse.Customer) || data.data || data.customers || []);
 
       clearChildren(resultsEl);
       if (customers.length === 0) {
@@ -1243,7 +1243,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
 
     try {
       var data = await qbApi('/products?search=' + encodeURIComponent(query));
-      var products = Array.isArray(data) ? data : (data.data || data.products || data.items || []);
+      var products = Array.isArray(data) ? data : ((data.QueryResponse && data.QueryResponse.Item) || data.data || data.products || data.items || []);
 
       clearChildren(resultsEl);
       if (products.length === 0) {
