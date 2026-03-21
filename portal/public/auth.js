@@ -69,6 +69,8 @@ const PAGE_ACCESS = {
   '/pipeline/edit/': { roles: ['admin'], redirect: '/tech/parts/' },
   '/pipeline/ledger': { roles: ['admin'], redirect: '/tech/parts/' },
   '/pipeline/ledger/': { roles: ['admin'], redirect: '/tech/parts/' },
+  '/briefing': { roles: ['admin', 'tech'], redirect: '/' },
+  '/briefing/': { roles: ['admin', 'tech'], redirect: '/' },
 };
 
 let auth0Client = null;

@@ -82,20 +82,31 @@ function extractUserFromToken(authHeader: string | null): {
   }
 }
 
-// Map tech emails to Limble user IDs
+// Map tech emails to Limble user IDs (from TECH_USER_MAP env var or fallback)
 function getTechnicianId(email?: string): string | undefined {
   if (!email) return undefined;
 
-  const techMap: Record<string, string> = {
-    'ruben@automaticaccesssolution.com': '265672',
-    'support@automaticaccesssolution.com': '265670',
-    'partsteam@automaticaccesssolution.com': '360229',
-    'service@automaticaccesssolution.com': '265673',
-    'jonas@automaticaccesssolution.com': '266967',
-    'sdd101603@yahoo.com': '361996',
-    'djjspadoni504@gmail.com': '359401',
-    'uruben730@gmail.com': '384799',
-  };
+  let techMap: Record<string, string>;
+  try {
+    techMap = JSON.parse(process.env.TECH_USER_MAP || "{}");
+  } catch {
+    techMap = {};
+  }
+
+  // Fallback if env var not set
+  if (Object.keys(techMap).length === 0) {
+    techMap = {
+      'ruben@automaticaccesssolution.com': '265672',
+      'support@automaticaccesssolution.com': '265670',
+      'partsteam@automaticaccesssolution.com': '360229',
+      'service@automaticaccesssolution.com': '265673',
+      'jonas@automaticaccesssolution.com': '266967',
+      'sdd101603@yahoo.com': '361996',
+      'djjspadoni504@gmail.com': '359401',
+      'uruben730@gmail.com': '384799',
+      'bigox23@yahoo.com': '265673',
+    };
+  }
 
   return techMap[email.toLowerCase()];
 }
@@ -1348,27 +1359,37 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       case "get_technicians": {
         const nameFilter = (input.name_filter as string || "").toLowerCase();
-        
+
         const url = `${LIMBLE_BASE_URL}/users`;
         const response = await fetch(url, { headers: { Authorization: getLimbleAuth() } });
         if (!response.ok) return JSON.stringify({ error: "Failed to fetch technicians" });
-        
+
         const allUsers = await response.json();
         let users = Array.isArray(allUsers) ? allUsers : (allUsers.data || allUsers.users || []);
-        
+
+        // Filter active users only and deduplicate by email (Jonas has 2 entries)
+        const seen = new Set<string>();
+        users = users.filter((u: any) => {
+          if (u.Active === 0 || u.active === 0) return false;
+          const email = (u.email || u.username || '').toLowerCase();
+          if (email && seen.has(email)) return false;
+          if (email) seen.add(email);
+          return true;
+        });
+
         if (nameFilter) {
           users = users.filter((u: any) => {
             const fullName = `${u.firstName || ''} ${u.lastName || ''} ${u.name || ''}`.toLowerCase();
             return fullName.includes(nameFilter);
           });
         }
-        
+
         const summary = users.slice(0, 50).map((u: any) => ({
           userID: u.userID || u.id,
           name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
           email: u.email, role: u.role || u.roleName
         }));
-        
+
         return JSON.stringify({ count: users.length, showing: summary.length, technicians: summary });
       }
 

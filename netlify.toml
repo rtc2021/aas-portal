@@ -91,6 +91,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/briefing/*"
+  to = "/.netlify/functions/briefing"
+  status = 200
+
+[[redirects]]
+  from = "/api/briefing"
+  to = "/.netlify/functions/briefing"
+  status = 200
+
+[[redirects]]
   from = "/api/pipeline/*"
   to = "/.netlify/functions/pipeline"
   status = 200
