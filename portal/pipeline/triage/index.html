@@ -564,7 +564,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       for (var b = 0; b < bodies.length; b++) {
         while (bodies[b].firstChild) bodies[b].removeChild(bodies[b].firstChild);
       }
-      syncBtn.querySelector('.tb-sync-label').textContent = 'Clearing cache...';
+      syncBtn.querySelector('.tb-sync-label').textContent = 'Syncing Limble...';
     } else {
       syncBtn.querySelector('.tb-sync-label').textContent = 'Loading...';
     }
@@ -572,10 +572,15 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     board.style.display = 'none';
 
     try {
+      // When user clicks Sync, pull fresh data from Limble before classifying
+      if (forceRefresh) {
+        await api('POST', '/v2/sync', {});
+        syncBtn.querySelector('.tb-sync-label').textContent = 'Classifying...';
+      }
+
       var result = await api('POST', '/v2/classify', {
         limit: 200,
-        offset: 0,
-        force_refresh: !!forceRefresh
+        offset: 0
       });
 
       // Normalize response: could be { data: [...] } or { tasks: [...] } or [...]
@@ -600,7 +605,7 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       loading.style.display = 'none';
       board.style.display = '';
       if (forceRefresh) {
-        showToast('Cache cleared — ' + tasks.length + ' tasks loaded', 'success');
+        showToast('Synced from Limble — ' + tasks.length + ' tasks classified', 'success');
       }
     } catch (e) {
       console.error('Load board failed:', e);
