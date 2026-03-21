@@ -853,7 +853,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
       // Merge sibling objects into task for populateFields
       if (result.customer) {
         task.customer_name = result.customer.name || result.customer.customer_name || task.customer_name;
-        task.customer_qb_id = result.customer.qb_customer_id || result.customer.qbo_customer_id || task.customer_qb_id;
+        task.customer_qb_id = result.customer.qbo_customer_id || result.customer.qb_customer_id || task.customer_qb_id;
         task.customer_qb_name = result.customer.qb_customer_name || task.customer_qb_name;
         task.customer_mapping_status = result.customer.mapping_status;
       }
@@ -972,8 +972,8 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
         name: p.name || p.description || p.part_name || 'Unknown Part',
         qty: p.qty || p.quantity || 1,
         price: p.qb_unit_price || p.unit_price || p.price || p.rate || 0,
-        qb_product_id: p.qb_product_id || p.qb_item_id || null,
-        mapped: !!(p.qb_product_id || p.qb_item_id || p.qb_mapped || p.mapped)
+        qb_product_id: p.qb_product_id || p.qb_item_id || p.qbo_item_id || null,
+        mapped: !!(p.qb_product_id || p.qb_item_id || p.qbo_item_id || p.qb_mapped || p.mapped)
       });
     }
     renderPartsList();
@@ -1093,7 +1093,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     resultsEl.classList.add('has-results');
 
     try {
-      var data = await qbApi('/customers?search=' + encodeURIComponent(query));
+      var data = await qbApi('/customers/search?q=' + encodeURIComponent(query));
       var customers = Array.isArray(data) ? data : ((data.QueryResponse && data.QueryResponse.Customer) || data.data || data.customers || []);
 
       clearChildren(resultsEl);
@@ -1242,7 +1242,7 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     resultsEl.classList.add('has-results');
 
     try {
-      var data = await qbApi('/products?search=' + encodeURIComponent(query));
+      var data = await qbApi('/products/search?q=' + encodeURIComponent(query));
       var products = Array.isArray(data) ? data : ((data.QueryResponse && data.QueryResponse.Item) || data.data || data.products || data.items || []);
 
       clearChildren(resultsEl);
@@ -1575,8 +1575,8 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
 
     try {
       await api('PATCH', '/v2/task/' + currentTaskId + '/classify', {
-        classification: 'hold',
-        reason: reason
+        admin_classification: 'hold',
+        admin_classification_reason: reason
       });
       closeHoldModal();
       showToast('Task put on hold', 'success');
@@ -1775,13 +1775,16 @@ body.light-theme .bw-search-loading { color: rgba(26,26,46,0.5); }
     }
 
     return {
-      doc_type: currentDocType,
-      labor: { hours: laborHours, rate: laborRate },
-      rate_tier: document.getElementById('bwRateTier').value,
-      parts: parts,
-      customer: { qb_customer_id: currentCustomer ? currentCustomer.qb_customer_id : null },
-      customer_name: currentCustomer ? currentCustomer.name : null,
-      notes: notes
+      draft_data: {
+        doc_type: currentDocType,
+        labor_hours: laborHours,
+        labor_rate: laborRate,
+        rate_tier: document.getElementById('bwRateTier').value,
+        parts: parts,
+        customer_qb_id: currentCustomer ? currentCustomer.qb_customer_id : null,
+        customer_name: currentCustomer ? currentCustomer.name : null,
+        notes: notes
+      }
     };
   }
 

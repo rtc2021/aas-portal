@@ -972,8 +972,8 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
 
     try {
       await api('PATCH', '/v2/task/' + taskId + '/classify', {
-        classification: newClassification,
-        reason: 'admin_override'
+        admin_classification: newClassification,
+        admin_classification_reason: 'admin_override'
       });
 
       // Update local state

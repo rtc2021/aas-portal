@@ -695,12 +695,15 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
 
       var result = await api('GET', '/v2/ledger?' + params.toString());
 
-      // Normalize response
+      // Normalize response — contract says { entries, summary }
       var docs = [];
       var total = 0;
       if (Array.isArray(result)) {
         docs = result;
         total = result.length;
+      } else if (result && Array.isArray(result.entries)) {
+        docs = result.entries;
+        total = result.total || result.count || docs.length;
       } else if (result && Array.isArray(result.data)) {
         docs = result.data;
         total = result.total || result.count || docs.length;
@@ -753,9 +756,12 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
     try {
       var result = await api('GET', '/v2/ledger/by-customer');
 
+      // Normalize — contract says { by_customer, total_revenue }
       var customers = [];
       if (Array.isArray(result)) {
         customers = result;
+      } else if (result && Array.isArray(result.by_customer)) {
+        customers = result.by_customer;
       } else if (result && Array.isArray(result.data)) {
         customers = result.data;
       } else if (result && Array.isArray(result.customers)) {
