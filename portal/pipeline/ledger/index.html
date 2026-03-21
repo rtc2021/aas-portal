@@ -1167,13 +1167,6 @@ body.light-theme .auth-spinner { border-color: rgba(0,0,0,0.07); border-top-colo
       return;
     }
 
-    // Show floating user
-    var fu = document.getElementById('floatingUser');
-    fu.style.display = '';
-    document.getElementById('floatingUserName').textContent = user.name || user.email || 'User';
-    var roleName = roles.indexOf('admin') !== -1 ? 'Admin' : (roles.indexOf('tech') !== -1 ? 'Tech' : 'User');
-    document.getElementById('floatingUserRole').textContent = roleName;
-
     // Set default date range — last 30 days
     var today = new Date();
     var thirtyAgo = new Date(today);
